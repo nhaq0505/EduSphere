@@ -35,6 +35,10 @@
     <h2>Chào mừng, <sec:authentication property="principal.fullName"/>!</h2>
 
     <div class="dashboard-grid">
+        <a href="${pageContext.request.contextPath}/courses" class="dashboard-card">
+            <span class="card-icon">📚</span>
+            <span>Khám phá khóa học</span>
+        </a>
         <a href="${pageContext.request.contextPath}/profile" class="dashboard-card">
             <span class="card-icon">👤</span>
             <span>Hồ sơ cá nhân</span>

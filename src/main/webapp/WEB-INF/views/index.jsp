@@ -11,6 +11,7 @@
 <div class="page-container" style="text-align:center; padding-top:80px;">
     <h1 class="brand" style="font-size:2.5rem;">EduSphere</h1>
     <p style="color:#666; font-size:1.1rem; margin:16px 0 32px;">Nền tảng học trực tuyến</p>
+    <a href="${pageContext.request.contextPath}/courses" class="btn btn-primary" style="margin-right:12px;">Khám phá khóa học</a>
     <a href="${pageContext.request.contextPath}/login" class="btn btn-primary" style="margin-right:12px;">Đăng nhập</a>
     <a href="${pageContext.request.contextPath}/register" class="btn btn-secondary">Đăng ký</a>
 </div>
