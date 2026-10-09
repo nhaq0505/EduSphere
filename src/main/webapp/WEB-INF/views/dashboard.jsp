@@ -11,21 +11,7 @@
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="nav-brand">
-        <a href="${pageContext.request.contextPath}/dashboard" class="brand">EduSphere</a>
-    </div>
-    <div class="nav-links">
-        <sec:authentication property="principal.fullName" var="fullName"/>
-        <a href="${pageContext.request.contextPath}/profile">${fullName}</a>
-
-        <%-- Logout dùng POST + CSRF --%>
-        <form method="post" action="${pageContext.request.contextPath}/logout" style="display:inline;">
-            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
-            <button type="submit" class="btn-link">Đăng xuất</button>
-        </form>
-    </div>
-</nav>
+<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 
 <div class="page-container">
     <c:if test="${not empty successMessage}">
@@ -65,5 +51,6 @@
     </div>
 </div>
 
+<jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 </body>
 </html>

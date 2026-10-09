@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/main.css">
 </head>
 <body>
+<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 
 <div class="page-container">
     <h2>Hồ sơ cá nhân</h2>
@@ -100,5 +101,6 @@
     </div>
 </div>
 
+<jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 </body>
 </html>

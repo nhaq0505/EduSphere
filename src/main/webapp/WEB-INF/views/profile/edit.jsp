@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/main.css">
 </head>
 <body>
+<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 
 <div class="page-container">
     <h2>Chỉnh sửa hồ sơ</h2>
@@ -47,5 +48,6 @@
     </form:form>
 </div>
 
+<jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 </body>
 </html>
