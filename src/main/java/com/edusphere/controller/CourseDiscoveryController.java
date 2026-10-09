@@ -2,8 +2,11 @@ package com.edusphere.controller;
 
 import com.edusphere.dto.CourseView;
 import com.edusphere.service.CourseDiscoveryService;
+import com.edusphere.repository.EnrollmentRepository;
+import com.edusphere.security.CustomUserDetails;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Page;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,9 +17,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class CourseDiscoveryController {
 
     private final CourseDiscoveryService courseDiscoveryService;
+    private final EnrollmentRepository enrollmentRepository;
 
-    public CourseDiscoveryController(CourseDiscoveryService courseDiscoveryService) {
+    public CourseDiscoveryController(CourseDiscoveryService courseDiscoveryService,
+                                     EnrollmentRepository enrollmentRepository) {
         this.courseDiscoveryService = courseDiscoveryService;
+        this.enrollmentRepository = enrollmentRepository;
     }
 
     @GetMapping("/courses")
@@ -37,11 +43,17 @@ public class CourseDiscoveryController {
     }
 
     @GetMapping("/courses/{courseId}")
-    public String detail(@PathVariable Integer courseId, Model model, HttpServletResponse response) {
+    public String detail(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails user,
+                         Model model, HttpServletResponse response) {
         return courseDiscoveryService.findPublishedCourse(courseId)
                 .map(course -> {
                     model.addAttribute("course", course);
                     model.addAttribute("lessonTitles", courseDiscoveryService.publishedLessonTitles(courseId));
+                    boolean student = user != null && user.getAuthorities().stream()
+                            .anyMatch(a -> "ROLE_STUDENT".equals(a.getAuthority()));
+                    model.addAttribute("student", student);
+                    model.addAttribute("enrolled", student && enrollmentRepository
+                            .existsByStudent_UserIdAndCourse_CourseId(user.getUserId(), courseId));
                     return "courses/detail";
                 })
                 .orElseGet(() -> {

@@ -85,8 +85,8 @@
                 <tr>
                     <th>Vai trò:</th>
                     <td>
-                        <c:forEach var="ur" items="${user.userRolesCollection}">
-                            <span class="badge badge-role">${ur.roles.roleName}</span>
+                        <c:forEach var="roleName" items="${roleNames}">
+                            <span class="badge badge-role"><c:out value="${roleName}"/></span>
                         </c:forEach>
                     </td>
                 </tr>

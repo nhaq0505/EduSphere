@@ -62,7 +62,11 @@
                         <c:otherwise><fmt:formatNumber value="${course.price}" type="number" maxFractionDigits="0"/> <c:out value="${course.currency}"/></c:otherwise>
                     </c:choose>
                 </strong>
-                <p class="course-note">Thông tin ghi danh sẽ được bổ sung trong bước tiếp theo.</p>
+                <c:choose>
+                    <c:when test="${enrolled}"><p class="course-note">Bạn đã ghi danh khóa học này.</p><a class="btn btn-primary" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a></c:when>
+                    <c:when test="${student}"><p class="course-note"><c:if test="${!course.free}">Khóa học có phí yêu cầu quyền truy cập trước khi ghi danh.</c:if></p><form method="post" action="${pageContext.request.contextPath}/courses/${course.courseId}/enroll"><input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"><button class="btn btn-primary" type="submit">Ghi danh khóa học</button></form></c:when>
+                    <c:otherwise><p class="course-note">Đăng nhập bằng tài khoản học viên để ghi danh.</p><a class="btn btn-primary" href="${pageContext.request.contextPath}/login">Đăng nhập</a></c:otherwise>
+                </c:choose>
             </div>
         </aside>
     </div>

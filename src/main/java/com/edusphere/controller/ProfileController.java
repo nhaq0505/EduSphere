@@ -40,6 +40,9 @@ public class ProfileController {
                               Model model) {
         Users user = profileService.getUserById(currentUser.getUserId());
         model.addAttribute("user", user);
+        model.addAttribute("roleNames", currentUser.getAuthorities().stream()
+                .map(authority -> authority.getAuthority().replaceFirst("^ROLE_", ""))
+                .toList());
         return "profile/profile";
     }
 

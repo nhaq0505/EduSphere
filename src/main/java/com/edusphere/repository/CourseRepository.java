@@ -1,6 +1,10 @@
 package com.edusphere.repository;
 
 import com.edusphere.entity.Course;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,4 +22,10 @@ public interface CourseRepository extends JpaRepository<Course, Integer>, JpaSpe
     List<Course> findByInstructor_UserIdOrderByCreatedAtDesc(Integer instructorId);
 
     Optional<Course> findByCourseIdAndStatus(Integer courseId, String status);
+
+    List<Course> findByStatusOrderBySubmittedAtAsc(String status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select course from Course course where course.courseId = :id")
+    Optional<Course> findLockedById(@Param("id") Integer id);
 }

@@ -69,8 +69,10 @@ public class SecurityConfig {
                     "/WEB-INF/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/courses", "/courses/{courseId}").permitAll()
+                .requestMatchers(HttpMethod.POST, "/courses/{courseId}/enroll").hasRole("STUDENT")
+                .requestMatchers("/my-courses").hasRole("STUDENT")
                 .requestMatchers("/admin/**").hasRole("ADMINISTRATOR")
-                .requestMatchers("/instructor/**").hasAnyRole("INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/instructor/**").hasRole("INSTRUCTOR")
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form

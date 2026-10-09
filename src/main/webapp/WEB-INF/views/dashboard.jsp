@@ -48,11 +48,18 @@
             <span>Đổi mật khẩu</span>
         </a>
 
+        <sec:authorize access="hasRole('STUDENT')">
+            <a href="${pageContext.request.contextPath}/my-courses" class="dashboard-card"><span class="card-icon">📖</span><span>Khóa học của tôi</span></a>
+        </sec:authorize>
+        <sec:authorize access="hasRole('INSTRUCTOR')">
+            <a href="${pageContext.request.contextPath}/instructor/courses" class="dashboard-card"><span class="card-icon">📝</span><span>Quản lý khóa học</span></a>
+        </sec:authorize>
+
         <%-- Chỉ ADMINISTRATOR thấy link Admin --%>
         <sec:authorize access="hasRole('ADMINISTRATOR')">
-            <a href="${pageContext.request.contextPath}/admin" class="dashboard-card">
+            <a href="${pageContext.request.contextPath}/admin/courses/review" class="dashboard-card">
                 <span class="card-icon">⚙️</span>
-                <span>Quản trị</span>
+                <span>Duyệt khóa học</span>
             </a>
         </sec:authorize>
     </div>
