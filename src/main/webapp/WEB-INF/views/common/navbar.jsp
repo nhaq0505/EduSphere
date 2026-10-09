@@ -396,15 +396,15 @@
             <div class="nav-center-menu">
                 <c:choose>
                     <c:when test="${isAdmin}">
-                        <a href="${pageContext.request.contextPath}/courses/admin/review" class="nav-link">Duyệt khóa học</a>
+                        <a href="${pageContext.request.contextPath}/admin/courses/review" class="nav-link">Duyệt khóa học</a>
                         <a href="${pageContext.request.contextPath}/dashboard" class="nav-link">Dashboard</a>
                     </c:when>
                     <c:when test="${isInstructor}">
-                        <a href="${pageContext.request.contextPath}/courses/instructor" class="nav-link">Quản lý khóa học</a>
-                        <a href="${pageContext.request.contextPath}/courses/create" class="nav-link">Tạo khóa học</a>
+                        <a href="${pageContext.request.contextPath}/instructor/courses" class="nav-link">Quản lý khóa học</a>
+                        <a href="${pageContext.request.contextPath}/instructor/courses/new" class="nav-link">Tạo khóa học</a>
                     </c:when>
                     <c:when test="${isStudent}">
-                        <a href="${pageContext.request.contextPath}/courses/my-courses" class="nav-link">Khóa học của tôi</a>
+                        <a href="${pageContext.request.contextPath}/my-courses" class="nav-link">Khóa học của tôi</a>
                         <a href="${pageContext.request.contextPath}/courses" class="nav-link">Khám phá</a>
                         <a href="${pageContext.request.contextPath}/dashboard" class="nav-link">Dashboard</a>
                     </c:when>

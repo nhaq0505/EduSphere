@@ -189,7 +189,7 @@
                 <h4 class="footer-heading">Học tập</h4>
                 <ul class="footer-nav-list">
                     <li><a href="${pageContext.request.contextPath}/courses">Khám phá khóa học</a></li>
-                    <li><a href="${pageContext.request.contextPath}/courses/my-courses">Khóa học của tôi</a></li>
+                    <li><a href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a></li>
                     <li><a href="${pageContext.request.contextPath}/dashboard">Bảng điều khiển</a></li>
                 </ul>
             </div>
