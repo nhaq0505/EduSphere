@@ -4,6 +4,8 @@ import com.edusphere.dto.RegisterRequest;
 import com.edusphere.service.auth.AuthService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -28,10 +30,15 @@ public class AuthController {
     // ===================== LOGIN =====================
 
     @GetMapping("/login")
-    public String showLoginPage(@RequestParam(required = false) String error,
+    public String showLoginPage(@AuthenticationPrincipal UserDetails userDetails,
+                                @RequestParam(required = false) String error,
                                 @RequestParam(required = false) String logout,
                                 @RequestParam(required = false) String oauth2Error,
                                 Model model) {
+        if (userDetails != null && logout == null && error == null) {
+            return "redirect:/dashboard";
+        }
+
         if (error != null) {
             String message = switch (error) {
                 case "notVerified"    -> "Tài khoản chưa xác minh OTP. Vui lòng kiểm tra email.";
@@ -50,7 +57,11 @@ public class AuthController {
     // ===================== REGISTER =====================
 
     @GetMapping("/register")
-    public String showRegisterPage(Model model) {
+    public String showRegisterPage(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+        if (userDetails != null) {
+            return "redirect:/dashboard";
+        }
+
         model.addAttribute("registerRequest", new RegisterRequest());
         return "auth/register";
     }

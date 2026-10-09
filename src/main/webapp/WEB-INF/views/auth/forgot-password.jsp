@@ -125,7 +125,7 @@
     <div class="card-body">
         <p class="form-subtitle">
             Nhập email đăng ký của bạn.<br>
-            Chúng tôi sẽ gửi link đặt lại mật khẩu đến email đó.
+            Chúng tôi sẽ gửi mã OTP đặt lại mật khẩu đến email đó.
         </p>
 
         <c:if test="${not empty successMessage}">
@@ -147,7 +147,7 @@
             </div>
             <form:errors path="email" cssClass="field-error"/>
 
-            <button type="submit" class="btn-submit">Gửi hướng dẫn →</button>
+            <button type="submit" class="btn-submit">Gửi mã OTP →</button>
         </form:form>
 
         <a href="${pageContext.request.contextPath}/login" class="back-link">← Quay lại đăng nhập</a>

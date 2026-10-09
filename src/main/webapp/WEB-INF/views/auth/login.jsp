@@ -165,13 +165,13 @@
         }
 
         /* ===== SOCIAL BUTTONS ===== */
-        .social-btns { display: flex; gap: 12px; margin-bottom: 20px; }
+        .social-btns { display: flex; margin-bottom: 20px; }
         .btn-social {
-            flex: 1; display: flex; align-items: center;
-            justify-content: center; gap: 8px;
-            padding: 11px 14px; border-radius: 12px;
+            width: 100%; display: flex; align-items: center;
+            justify-content: center; gap: 10px;
+            padding: 12px 16px; border-radius: 12px;
             border: 1.8px solid #e8edf5; background: #fff;
-            font-size: 0.88rem; font-weight: 600; color: #37474f;
+            font-size: 0.92rem; font-weight: 600; color: #37474f;
             text-decoration: none; cursor: pointer;
             transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
         }
@@ -219,12 +219,41 @@
         Hãy đăng nhập để tiếp tục hành trình học tập.
     </p>
 
-    <c:if test="${not empty successMessage}">
-        <div class="alert alert-success">✓ ${successMessage}</div>
-    </c:if>
-    <c:if test="${not empty errorMessage}">
-        <div class="alert alert-error">✕ ${errorMessage}</div>
-    </c:if>
+    <%-- Thông báo thành công --%>
+    <c:choose>
+        <c:when test="${not empty successMessage}">
+            <div class="alert alert-success">✓ ${successMessage}</div>
+        </c:when>
+        <c:when test="${param.logout != null}">
+            <div class="alert alert-success">✓ Bạn đã đăng xuất thành công.</div>
+        </c:when>
+    </c:choose>
+
+    <%-- Thông báo lỗi --%>
+    <c:choose>
+        <c:when test="${not empty errorMessage}">
+            <div class="alert alert-error">✕ ${errorMessage}</div>
+        </c:when>
+        <c:when test="${param.error != null}">
+            <c:choose>
+                <c:when test="${param.error == 'notVerified'}">
+                    <div class="alert alert-error">✕ Tài khoản chưa xác minh OTP. Vui lòng kiểm tra email.</div>
+                </c:when>
+                <c:when test="${param.error == 'locked'}">
+                    <div class="alert alert-error">✕ Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.</div>
+                </c:when>
+                <c:when test="${param.error == 'badCredentials'}">
+                    <div class="alert alert-error">✕ Email hoặc mật khẩu không đúng.</div>
+                </c:when>
+                <c:otherwise>
+                    <div class="alert alert-error">✕ Đăng nhập thất bại. Vui lòng thử lại.</div>
+                </c:otherwise>
+            </c:choose>
+        </c:when>
+        <c:when test="${param.oauth2Error != null}">
+            <div class="alert alert-error">✕ Đăng nhập Google thất bại. Vui lòng thử lại.</div>
+        </c:when>
+    </c:choose>
 
     <form method="post" action="${pageContext.request.contextPath}/login">
         <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
@@ -262,16 +291,7 @@
                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
             </svg>
-            Google
-        </a>
-        <a href="#" class="btn-social">
-            <svg width="18" height="18" viewBox="0 0 21 21">
-                <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-                <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-                <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-                <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-            </svg>
-            Microsoft
+            Đăng nhập bằng Google
         </a>
     </div>
 
