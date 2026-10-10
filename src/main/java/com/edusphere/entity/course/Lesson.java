@@ -16,7 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Mapping used for the public lesson outline; UC20–UC23 will add authoring rules. */
+/** Bài học thuộc một khóa học, được giảng viên quản lý và học viên xem khi công bố. */
 @Getter
 @Setter
 @NoArgsConstructor

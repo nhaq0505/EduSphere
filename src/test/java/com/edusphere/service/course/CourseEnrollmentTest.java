@@ -8,6 +8,7 @@ import com.edusphere.repository.course.CategoryRepository;
 import com.edusphere.repository.course.CourseRepository;
 import com.edusphere.repository.course.CourseReviewRepository;
 import com.edusphere.repository.course.EnrollmentRepository;
+import com.edusphere.repository.course.LessonRepository;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -34,7 +35,8 @@ class CourseEnrollmentTest {
         when(users.findById(7)).thenReturn(Optional.of(student));
         when(enrollments.findByStudent_UserIdAndCourse_CourseId(7, 42)).thenReturn(Optional.empty());
         CourseManagementService service = new CourseManagementService(courses,
-                mock(CourseReviewRepository.class), enrollments, mock(CategoryRepository.class), users);
+                mock(CourseReviewRepository.class), enrollments, mock(CategoryRepository.class), users,
+                mock(LessonRepository.class));
 
         service.enroll(42, 7);
 
@@ -54,7 +56,7 @@ class CourseEnrollmentTest {
         when(courses.findLockedById(42)).thenReturn(Optional.of(draft));
         CourseManagementService service = new CourseManagementService(courses,
                 mock(CourseReviewRepository.class), enrollments,
-                mock(CategoryRepository.class), mock(UserRepository.class));
+                mock(CategoryRepository.class), mock(UserRepository.class), mock(LessonRepository.class));
 
         assertThrows(CourseActionException.class, () -> service.enroll(42, 7));
         verifyNoInteractions(enrollments);

@@ -16,7 +16,7 @@
 </article><aside class="card detail-aside"><p class="eyebrow">Thông tin ghi danh</p><span class="muted"><c:choose><c:when test="${course.free}">Học phí</c:when><c:otherwise>Học phí dự kiến</c:otherwise></c:choose></span><strong class="price"><c:choose><c:when test="${course.free}">Miễn phí</c:when><c:otherwise><fmt:formatNumber value="${course.price}" type="number" maxFractionDigits="0"/> <c:out value="${course.currency}"/></c:otherwise></c:choose></strong>
 <c:if test="${not course.free}"><p class="status-note">Đang cho ghi danh thử, chưa thu học phí.</p></c:if>
 <c:choose>
-<c:when test="${enrolled}"><p class="status-note">Bạn đã ghi danh khóa học này.</p><a class="button button--primary" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a></c:when>
+<c:when test="${enrolled}"><p class="status-note">Bạn đã ghi danh khóa học này.</p><a class="button button--primary" href="${pageContext.request.contextPath}/courses/${course.courseId}/learn">Vào học</a><a class="button button--outline" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a></c:when>
 <c:when test="${student}"><form method="post" action="${pageContext.request.contextPath}/courses/${course.courseId}/enroll"><input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"><button class="button button--primary" type="submit">Ghi danh khóa học</button></form></c:when>
 <c:otherwise><sec:authorize access="isAnonymous()"><p>Đăng nhập bằng tài khoản học viên để ghi danh.</p><a class="button button--primary" href="${pageContext.request.contextPath}/login?courseId=${course.courseId}">Đăng nhập</a></sec:authorize>
 <sec:authorize access="isAuthenticated()"><p>Chỉ tài khoản học viên mới có thể ghi danh.</p></sec:authorize></c:otherwise>

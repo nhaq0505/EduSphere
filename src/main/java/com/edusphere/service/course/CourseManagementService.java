@@ -13,6 +13,7 @@ import com.edusphere.repository.course.CategoryRepository;
 import com.edusphere.repository.course.CourseRepository;
 import com.edusphere.repository.course.CourseReviewRepository;
 import com.edusphere.repository.course.EnrollmentRepository;
+import com.edusphere.repository.course.LessonRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,15 +31,17 @@ public class CourseManagementService {
     private final CourseRepository courses;
     private final CourseReviewRepository reviews;
     private final EnrollmentRepository enrollments;
+    private final LessonRepository lessons;
     private final CategoryRepository categories;
     private final UserRepository users;
 
     public CourseManagementService(CourseRepository courses, CourseReviewRepository reviews,
                                    EnrollmentRepository enrollments, CategoryRepository categories,
-                                   UserRepository users) {
+                                   UserRepository users, LessonRepository lessons) {
         this.courses = courses;
         this.reviews = reviews;
         this.enrollments = enrollments;
+        this.lessons = lessons;
         this.categories = categories;
         this.users = users;
     }
@@ -135,6 +138,11 @@ public class CourseManagementService {
         course.setStatus("PUBLISHED");
         course.setPublishedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
+        lessons.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(id, "DRAFT")
+                .forEach(lesson -> {
+                    lesson.setStatus("PUBLISHED");
+                    lesson.setUpdatedAt(LocalDateTime.now());
+                });
     }
 
     @Transactional

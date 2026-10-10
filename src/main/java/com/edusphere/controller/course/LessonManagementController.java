@@ -1,0 +1,137 @@
+package com.edusphere.controller.course;
+
+import com.edusphere.dto.course.LessonForm;
+import com.edusphere.dto.course.MaterialForm;
+import com.edusphere.entity.course.Lesson;
+import com.edusphere.security.CustomUserDetails;
+import com.edusphere.service.course.CourseActionException;
+import com.edusphere.service.course.LessonManagementService;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+@Controller
+@RequestMapping("/instructor/courses/{courseId}/lessons")
+public class LessonManagementController {
+    private final LessonManagementService service;
+
+    public LessonManagementController(LessonManagementService service) {
+        this.service = service;
+    }
+
+    @GetMapping
+    public String list(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails instructor,
+                       Model model) {
+        var course = service.ownedCourse(courseId, instructor.getUserId());
+        model.addAttribute("course", course);
+        model.addAttribute("lessons", service.lessons(courseId, instructor.getUserId()));
+        model.addAttribute("editable", !"SUBMITTED".equals(course.getStatus()) && !"ARCHIVED".equals(course.getStatus()));
+        return "courses/instructor-lessons";
+    }
+
+    @GetMapping("/new")
+    public String newForm(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails instructor,
+                          Model model) {
+        service.editableForDisplay(courseId, instructor.getUserId());
+        model.addAttribute("lessonForm", new LessonForm());
+        model.addAttribute("courseId", courseId);
+        model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons");
+        return "courses/lesson-form";
+    }
+
+    @PostMapping
+    public String create(@PathVariable Integer courseId, @Valid @ModelAttribute("lessonForm") LessonForm form,
+                         BindingResult errors, @AuthenticationPrincipal CustomUserDetails instructor,
+                         Model model, RedirectAttributes flash) {
+        if (errors.hasErrors()) {
+            service.editableForDisplay(courseId, instructor.getUserId());
+            model.addAttribute("courseId", courseId);
+            model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons");
+            return "courses/lesson-form";
+        }
+        Integer lessonId = service.create(courseId, instructor.getUserId(), form);
+        flash.addFlashAttribute("success", "Đã tạo bài học.");
+        return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
+    }
+
+    @GetMapping("/{lessonId}")
+    public String detail(@PathVariable Integer courseId, @PathVariable Integer lessonId,
+                         @AuthenticationPrincipal CustomUserDetails instructor, Model model) {
+        var course = service.ownedCourse(courseId, instructor.getUserId());
+        model.addAttribute("course", course);
+        model.addAttribute("lesson", service.lesson(courseId, lessonId, instructor.getUserId()));
+        model.addAttribute("materials", service.materials(courseId, lessonId, instructor.getUserId()));
+        model.addAttribute("materialForm", new MaterialForm());
+        model.addAttribute("editable", !"SUBMITTED".equals(course.getStatus()) && !"ARCHIVED".equals(course.getStatus()));
+        return "courses/instructor-lesson-detail";
+    }
+
+    @GetMapping("/{lessonId}/edit")
+    public String editForm(@PathVariable Integer courseId, @PathVariable Integer lessonId,
+                           @AuthenticationPrincipal CustomUserDetails instructor, Model model) {
+        service.editableForDisplay(courseId, instructor.getUserId());
+        Lesson lesson = service.lesson(courseId, lessonId, instructor.getUserId());
+        LessonForm form = new LessonForm();
+        form.setTitle(lesson.getTitle());
+        form.setContent(lesson.getContent());
+        form.setOrderIndex(lesson.getOrderIndex());
+        model.addAttribute("lessonForm", form);
+        model.addAttribute("courseId", courseId);
+        model.addAttribute("lessonId", lessonId);
+        model.addAttribute("maxOrder", service.lessons(courseId, instructor.getUserId()).size());
+        model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons/" + lessonId + "/edit");
+        return "courses/lesson-form";
+    }
+
+    @PostMapping("/{lessonId}/edit")
+    public String edit(@PathVariable Integer courseId, @PathVariable Integer lessonId,
+                       @Valid @ModelAttribute("lessonForm") LessonForm form, BindingResult errors,
+                       @AuthenticationPrincipal CustomUserDetails instructor, Model model,
+                       RedirectAttributes flash) {
+        if (errors.hasErrors()) {
+            service.editableForDisplay(courseId, instructor.getUserId());
+            service.lesson(courseId, lessonId, instructor.getUserId());
+            model.addAttribute("courseId", courseId);
+            model.addAttribute("lessonId", lessonId);
+            model.addAttribute("maxOrder", service.lessons(courseId, instructor.getUserId()).size());
+            model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons/" + lessonId + "/edit");
+            return "courses/lesson-form";
+        }
+        service.edit(courseId, lessonId, instructor.getUserId(), form);
+        flash.addFlashAttribute("success", "Đã cập nhật bài học.");
+        return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
+    }
+
+    @PostMapping("/{lessonId}/materials")
+    public String addMaterial(@PathVariable Integer courseId, @PathVariable Integer lessonId,
+                              @Valid @ModelAttribute("materialForm") MaterialForm form, BindingResult errors,
+                              @AuthenticationPrincipal CustomUserDetails instructor, Model model,
+                              RedirectAttributes flash) {
+        if (errors.hasErrors()) {
+            service.editableForDisplay(courseId, instructor.getUserId());
+            detail(courseId, lessonId, instructor, model);
+            model.addAttribute("materialForm", form);
+            return "courses/instructor-lesson-detail";
+        }
+        service.addMaterial(courseId, lessonId, instructor.getUserId(), form);
+        flash.addFlashAttribute("success", "Đã thêm tài liệu cho bài học.");
+        return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
+    }
+
+    @ExceptionHandler(CourseActionException.class)
+    public String courseError(CourseActionException ex, HttpServletResponse response, Model model) {
+        response.setStatus(ex.getStatus().value());
+        model.addAttribute("errorMessage", ex.getMessage());
+        return "courses/action-error";
+    }
+}

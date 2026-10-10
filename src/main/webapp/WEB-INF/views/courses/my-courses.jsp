@@ -13,8 +13,8 @@
 <c:choose><c:when test="${empty courses}"><div class="empty-state"><span class="empty-state__mark">+</span><h2>Chưa có khóa học nào</h2><p>Khám phá thư viện và chọn khóa học đầu tiên dành cho bạn.</p><a class="button button--primary" href="${pageContext.request.contextPath}/courses">Khám phá khóa học</a></div></c:when>
 <c:otherwise><div class="course-grid"><c:forEach var="course" items="${courses}"><article class="card course-card"><div class="course-card__visual course-card__visual--alt" aria-hidden="true">EduSphere · Đã ghi danh</div><div class="course-card__body">
 <div class="course-card__meta"><c:choose><c:when test="${course.enrollmentStatus == 'ACTIVE'}"><span class="pill pill--success">Đã ghi danh</span></c:when><c:when test="${course.enrollmentStatus == 'COMPLETED'}"><span class="pill pill--success">Đã hoàn thành</span></c:when><c:otherwise><span class="pill pill--neutral">Đã rời khóa học</span></c:otherwise></c:choose></div>
-<h3><a href="${pageContext.request.contextPath}/courses/${course.courseId}"><c:out value="${course.title}"/></a></h3><p>Giảng viên: <c:out value="${course.instructorName}"/></p><div class="course-card__bottom"><span class="small muted">Thông tin khóa học</span><a href="${pageContext.request.contextPath}/courses/${course.courseId}">Xem chi tiết →</a></div></div></article></c:forEach></div></c:otherwise></c:choose>
-<p class="status-note" style="margin-top:24px">Trang học bài đang được phát triển. Hiện tại bạn có thể xem thông tin những khóa học đã ghi danh.</p>
+<h3><a href="${pageContext.request.contextPath}/courses/${course.courseId}"><c:out value="${course.title}"/></a></h3><p>Giảng viên: <c:out value="${course.instructorName}"/></p><div class="course-card__bottom"><a href="${pageContext.request.contextPath}/courses/${course.courseId}">Xem chi tiết</a><c:if test="${course.enrollmentStatus ne 'DROPPED'}"><a href="${pageContext.request.contextPath}/courses/${course.courseId}/learn">Vào học →</a></c:if></div></div></article></c:forEach></div></c:otherwise></c:choose>
+
 </main>
 <jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 </body></html>

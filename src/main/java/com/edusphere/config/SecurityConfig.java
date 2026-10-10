@@ -84,6 +84,7 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/courses", "/courses/{courseId}").permitAll()
                 .requestMatchers(HttpMethod.POST, "/courses/{courseId}/enroll").hasRole("STUDENT")
+                .requestMatchers("/courses/{courseId}/learn", "/courses/{courseId}/lessons/**").hasRole("STUDENT")
                 .requestMatchers("/my-courses").hasRole("STUDENT")
                 .requestMatchers("/admin/**").hasRole("ADMINISTRATOR")
                 .requestMatchers("/instructor/**").hasRole("INSTRUCTOR")
