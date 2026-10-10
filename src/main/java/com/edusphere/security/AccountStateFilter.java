@@ -1,14 +1,17 @@
 package com.edusphere.security;
 
-import com.edusphere.repository.UserRepository;
-import com.edusphere.repository.UserRoleRepository;
+import com.edusphere.repository.account.UserRepository;
+import com.edusphere.repository.account.UserRoleRepository;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;

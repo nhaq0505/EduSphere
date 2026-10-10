@@ -1,18 +1,27 @@
 package com.edusphere.security.oauth2;
 
-import com.edusphere.entity.*;
-import com.edusphere.repository.*;
+import com.edusphere.entity.account.OauthAccounts;
+import com.edusphere.entity.account.Roles;
+import com.edusphere.entity.account.UserRoles;
+import com.edusphere.entity.account.UserRolesPK;
+import com.edusphere.entity.account.Users;
+import com.edusphere.repository.account.OAuthAccountRepository;
+import com.edusphere.repository.account.RoleRepository;
+import com.edusphere.repository.account.UserRepository;
+import com.edusphere.repository.account.UserRoleRepository;
 import com.edusphere.security.CustomUserDetails;
+
 import jakarta.persistence.EntityManager;
+
+import java.util.Date;
+import java.util.Optional;
+
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Date;
-import java.util.Optional;
 
 /**
  * Xử lý Google OAuth2 / OIDC login.

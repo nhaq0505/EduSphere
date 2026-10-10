@@ -1,7 +1,8 @@
 package com.edusphere.security;
 
-import com.edusphere.entity.Users;
-import com.edusphere.repository.UserRepository;
+import com.edusphere.entity.account.Users;
+import com.edusphere.repository.account.UserRepository;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

@@ -1,20 +1,23 @@
 package com.edusphere.security;
 
-import com.edusphere.entity.Users;
-import com.edusphere.entity.Roles;
-import com.edusphere.entity.UserRoles;
-import com.edusphere.entity.UserRolesPK;
-import com.edusphere.repository.UserRepository;
-import com.edusphere.repository.UserRoleRepository;
+import com.edusphere.entity.account.Roles;
+import com.edusphere.entity.account.UserRoles;
+import com.edusphere.entity.account.UserRolesPK;
+import com.edusphere.entity.account.Users;
+import com.edusphere.repository.account.UserRepository;
+import com.edusphere.repository.account.UserRoleRepository;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
