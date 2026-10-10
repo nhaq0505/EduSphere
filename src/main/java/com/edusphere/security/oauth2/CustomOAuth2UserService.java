@@ -3,6 +3,7 @@ package com.edusphere.security.oauth2;
 import com.edusphere.entity.*;
 import com.edusphere.repository.*;
 import com.edusphere.security.CustomUserDetails;
+import jakarta.persistence.EntityManager;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -32,15 +33,18 @@ public class CustomOAuth2UserService extends OidcUserService {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final OAuthAccountRepository oAuthAccountRepository;
+    private final EntityManager entityManager;
 
     public CustomOAuth2UserService(UserRepository userRepository,
                                    RoleRepository roleRepository,
                                    UserRoleRepository userRoleRepository,
-                                   OAuthAccountRepository oAuthAccountRepository) {
+                                   OAuthAccountRepository oAuthAccountRepository,
+                                   EntityManager entityManager) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
         this.oAuthAccountRepository = oAuthAccountRepository;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -54,7 +58,9 @@ public class CustomOAuth2UserService extends OidcUserService {
         String email          = oidcUser.getEmail();
         String fullName       = oidcUser.getFullName();
 
-        System.out.println("=== GOOGLE OIDC LOGIN === provider=" + provider + ", email=" + email);
+        if (email == null || email.isBlank() || !Boolean.TRUE.equals(oidcUser.getEmailVerified())) {
+            throw new OAuth2AuthenticationException("Google chưa xác minh địa chỉ email.");
+        }
 
         // 1. Kiểm tra oauth_accounts đã có chưa
         Optional<OauthAccounts> existingOAuth =
@@ -63,15 +69,15 @@ public class CustomOAuth2UserService extends OidcUserService {
         Users user;
 
         if (existingOAuth.isPresent()) {
-            System.out.println("=== OAuth account đã tồn tại");
             user = existingOAuth.get().getUserId();
         } else {
-            System.out.println("=== OAuth account chưa có, kiểm tra email...");
             Optional<Users> existingUser = userRepository.findByEmail(email);
 
             if (existingUser.isPresent()) {
-                System.out.println("=== Email tồn tại, liên kết Google vào user_id=" + existingUser.get().getUserId());
                 user = existingUser.get();
+                if ("LOCKED".equals(user.getStatus())) {
+                    throw new OAuth2AuthenticationException("Tài khoản đã bị khóa.");
+                }
                 // Nếu user đang PENDING (chưa verify OTP) → kích hoạt luôn vì Google đã verify
                 if ("PENDING".equals(user.getStatus())) {
                     user.setStatus("ACTIVE");
@@ -79,7 +85,6 @@ public class CustomOAuth2UserService extends OidcUserService {
                     userRepository.save(user);
                 }
             } else {
-                System.out.println("=== Email mới, tạo user mới...");
                 user = new Users();
                 user.setFullName(fullName != null ? fullName : email);
                 user.setEmail(email);
@@ -93,16 +98,20 @@ public class CustomOAuth2UserService extends OidcUserService {
                         .orElseThrow(() -> new OAuth2AuthenticationException("Role STUDENT không tồn tại"));
                 UserRolesPK pk = new UserRolesPK(user.getUserId(), studentRole.getRoleId());
                 userRoleRepository.save(new UserRoles(pk, new Date()));
-                System.out.println("=== Đã tạo user mới, user_id=" + user.getUserId());
             }
 
             // Tạo oauth_accounts record
             OauthAccounts oauthAccount = new OauthAccounts(provider, providerUserId, new Date(), user);
             oAuthAccountRepository.save(oauthAccount);
-            System.out.println("=== Đã lưu oauth_accounts thành công!");
+        }
+
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new OAuth2AuthenticationException("Tài khoản chưa được kích hoạt hoặc đã bị khóa.");
         }
 
         // Load lại user với đầy đủ roles
+        entityManager.flush();
+        entityManager.clear();
         Users finalUser = userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new OAuth2AuthenticationException("Không tìm được user sau OAuth2"));
 

@@ -2,105 +2,13 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hồ sơ cá nhân — EduSphere</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/main.css">
-</head>
-<body>
-<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
-
-<div class="page-container">
-    <h2>Hồ sơ cá nhân</h2>
-
-    <c:if test="${not empty successMessage}">
-        <div class="alert alert-success">${successMessage}</div>
-    </c:if>
-    <c:if test="${not empty errorMessage}">
-        <div class="alert alert-error">${errorMessage}</div>
-    </c:if>
-
-    <div class="profile-card">
-
-        <%-- Avatar --%>
-        <div class="avatar-section">
-            <c:choose>
-                <c:when test="${not empty user.avatarUrl}">
-                    <img src="${pageContext.request.contextPath}${user.avatarUrl}"
-                         alt="Avatar" class="avatar-img">
-                </c:when>
-                <c:otherwise>
-                    <div class="avatar-placeholder">
-                        ${fn:substring(user.fullName, 0, 1)}
-                    </div>
-                </c:otherwise>
-            </c:choose>
-
-            <%-- Form upload avatar --%>
-            <form method="post"
-                  action="${pageContext.request.contextPath}/profile/avatar"
-                  enctype="multipart/form-data"
-                  class="avatar-upload-form">
-                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
-                <label class="btn btn-small btn-secondary">
-                    Đổi ảnh
-                    <input type="file" name="avatarFile" accept="image/*"
-                           style="display:none;" onchange="this.form.submit()">
-                </label>
-            </form>
-        </div>
-
-        <%-- Thông tin --%>
-        <div class="profile-info">
-            <table class="info-table">
-                <tr>
-                    <th>Họ tên:</th>
-                    <td>${user.fullName}</td>
-                </tr>
-                <tr>
-                    <th>Email:</th>
-                    <td>${user.email}</td>
-                </tr>
-                <tr>
-                    <th>Số điện thoại:</th>
-                    <td>
-                        <c:choose>
-                            <c:when test="${not empty user.phone}">${user.phone}</c:when>
-                            <c:otherwise><span class="text-muted">Chưa cập nhật</span></c:otherwise>
-                        </c:choose>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Trạng thái:</th>
-                    <td>
-                        <span class="badge badge-${user.status.toLowerCase()}">${user.status}</span>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Ngày tạo:</th>
-                    <td><fmt:formatDate value="${user.createdAt}" pattern="dd/MM/yyyy HH:mm"/></td>
-                </tr>
-                <tr>
-                    <th>Vai trò:</th>
-                    <td>
-                        <c:forEach var="roleName" items="${roleNames}">
-                            <span class="badge badge-role"><c:out value="${roleName}"/></span>
-                        </c:forEach>
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        <div class="profile-actions">
-            <a href="${pageContext.request.contextPath}/profile/edit" class="btn btn-primary">Chỉnh sửa hồ sơ</a>
-            <a href="${pageContext.request.contextPath}/change-password" class="btn btn-secondary">Đổi mật khẩu</a>
-        </div>
-    </div>
-</div>
-
-<jsp:include page="/WEB-INF/views/common/footer.jsp"/>
-</body>
-</html>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Hồ sơ cá nhân — EduSphere</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css"></head><body><jsp:include page="/WEB-INF/views/common/navbar.jsp"/><main class="shell shell--narrow">
+<a class="back-link" href="${pageContext.request.contextPath}/">← Khu vực của tôi</a>
+<c:if test="${not empty successMessage}"><div class="alert alert--success"><c:out value="${successMessage}"/></div></c:if><c:if test="${not empty errorMessage}"><div class="alert alert--error" role="alert"><c:out value="${errorMessage}"/></div></c:if>
+<section class="card profile-hero"><div class="avatar"><c:choose><c:when test="${not empty user.avatarUrl}"><img src="<c:out value='${user.avatarUrl}'/>" alt="Ảnh đại diện của bạn"></c:when><c:otherwise><c:out value="${fn:substring(user.fullName, 0, 1)}"/></c:otherwise></c:choose></div><div><p class="eyebrow">Hồ sơ cá nhân</p><h1><c:out value="${user.fullName}"/></h1><p><c:out value="${user.email}"/></p></div></section>
+<div class="profile-layout"><section class="card"><h2>Thông tin tài khoản</h2><dl class="info-list"><dt>Họ và tên</dt><dd><c:out value="${user.fullName}"/></dd><dt>Email</dt><dd><c:out value="${user.email}"/></dd><dt>Số điện thoại</dt><dd><c:choose><c:when test="${not empty user.phone}"><c:out value="${user.phone}"/></c:when><c:otherwise><span class="muted">Chưa cập nhật</span></c:otherwise></c:choose></dd>
+<dt>Trạng thái</dt><dd><c:choose><c:when test="${user.status == 'ACTIVE'}"><span class="pill pill--success">Đang hoạt động</span></c:when><c:when test="${user.status == 'LOCKED'}"><span class="pill pill--danger">Đã khóa</span></c:when><c:otherwise><span class="pill pill--gold">Chờ xác minh</span></c:otherwise></c:choose></dd>
+<dt>Ngày tạo</dt><dd><fmt:formatDate value="${user.createdAt}" pattern="dd/MM/yyyy"/></dd><dt>Vai trò</dt><dd><c:forEach var="roleName" items="${roleNames}"><c:choose><c:when test="${roleName == 'STUDENT'}"><span class="pill">Học viên</span></c:when><c:when test="${roleName == 'INSTRUCTOR'}"><span class="pill">Giảng viên</span></c:when><c:when test="${roleName == 'ADMINISTRATOR'}"><span class="pill">Quản trị viên</span></c:when><c:otherwise><span class="pill">Thành viên</span></c:otherwise></c:choose> </c:forEach></dd></dl>
+<div class="form-actions" style="margin-top:28px"><a class="button button--primary" href="${pageContext.request.contextPath}/profile/edit">Chỉnh sửa hồ sơ</a><a class="button button--outline" href="${pageContext.request.contextPath}/change-password">Đổi mật khẩu</a></div></section>
+<aside class="card"><h2>Ảnh đại diện</h2><p class="small">Tải lên một ảnh để cá nhân hóa hồ sơ.</p><form method="post" action="${pageContext.request.contextPath}/profile/avatar" enctype="multipart/form-data"><input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"><label class="small" for="avatarFile">Chọn ảnh</label><input class="file-input" type="file" id="avatarFile" name="avatarFile" accept="image/*" required><button class="button button--outline button--block" type="submit">Cập nhật ảnh</button></form></aside></div></main><jsp:include page="/WEB-INF/views/common/footer.jsp"/></body></html>

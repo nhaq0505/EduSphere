@@ -1,55 +1,11 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đổi mật khẩu — EduSphere</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/auth.css">
-</head>
-<body>
-
-<div class="page-container">
-    <h2>Đổi mật khẩu</h2>
-
-    <c:if test="${not empty errorMessage}">
-        <div class="alert alert-error">${errorMessage}</div>
-    </c:if>
-
-    <form:form method="post"
-               action="${pageContext.request.contextPath}/change-password"
-               modelAttribute="changePasswordRequest"
-               class="form-card">
-
-        <div class="form-group">
-            <label for="currentPassword">Mật khẩu hiện tại</label>
-            <form:password path="currentPassword" id="currentPassword"
-                           placeholder="Nhập mật khẩu hiện tại" cssClass="form-control"/>
-            <form:errors path="currentPassword" cssClass="field-error"/>
-        </div>
-
-        <div class="form-group">
-            <label for="newPassword">Mật khẩu mới</label>
-            <form:password path="newPassword" id="newPassword"
-                           placeholder="Tối thiểu 8 ký tự" cssClass="form-control"/>
-            <form:errors path="newPassword" cssClass="field-error"/>
-        </div>
-
-        <div class="form-group">
-            <label for="confirmPassword">Xác nhận mật khẩu mới</label>
-            <form:password path="confirmPassword" id="confirmPassword"
-                           placeholder="Nhập lại mật khẩu mới" cssClass="form-control"/>
-            <form:errors path="confirmPassword" cssClass="field-error"/>
-        </div>
-
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Đổi mật khẩu</button>
-            <a href="${pageContext.request.contextPath}/profile" class="btn btn-secondary">Huỷ</a>
-        </div>
-    </form:form>
-</div>
-
-</body>
-</html>
+<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Đổi mật khẩu — EduSphere</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css"></head><body><jsp:include page="/WEB-INF/views/common/navbar.jsp"/><main class="shell shell--narrow">
+<a class="back-link" href="${pageContext.request.contextPath}/profile">← Hồ sơ cá nhân</a><header class="page-heading"><div><p class="eyebrow">Bảo mật tài khoản</p><h1>Đổi mật khẩu</h1><p>Cập nhật mật khẩu để giữ an toàn cho tài khoản của bạn.</p></div></header>
+<c:if test="${not empty errorMessage}"><div class="alert alert--error" role="alert"><c:out value="${errorMessage}"/></div></c:if>
+<div class="card form-card"><form:form method="post" action="${pageContext.request.contextPath}/change-password" modelAttribute="changePasswordRequest"><input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+<div class="field"><label for="currentPassword">Mật khẩu hiện tại</label><form:password path="currentPassword" id="currentPassword" autocomplete="current-password"/><form:errors path="currentPassword" cssClass="field-error"/></div>
+<div class="field"><label for="newPassword">Mật khẩu mới</label><form:password path="newPassword" id="newPassword" autocomplete="new-password" minlength="8"/><form:errors path="newPassword" cssClass="field-error"/></div>
+<div class="field"><label for="confirmPassword">Xác nhận mật khẩu mới</label><form:password path="confirmPassword" id="confirmPassword" autocomplete="new-password"/><form:errors path="confirmPassword" cssClass="field-error"/></div>
+<div class="form-actions"><button class="button button--primary" type="submit">Lưu mật khẩu mới</button><a class="button button--outline" href="${pageContext.request.contextPath}/profile">Hủy</a></div></form:form></div></main><jsp:include page="/WEB-INF/views/common/footer.jsp"/></body></html>

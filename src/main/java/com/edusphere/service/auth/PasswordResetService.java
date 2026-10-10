@@ -51,6 +51,7 @@ public class PasswordResetService {
         if (userOpt.isEmpty()) return; // Không tiết lộ email có tồn tại không
 
         Users user = userOpt.get();
+        if (!"ACTIVE".equals(user.getStatus())) return;
 
         // Xóa OTP cũ nếu có
         passwordResetTokenRepository.deleteByUserId(user);
@@ -76,6 +77,9 @@ public class PasswordResetService {
     public String verifyResetOtp(String email, String otp) {
         Users user = userRepository.findByEmail(email.toLowerCase().trim())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài khoản."));
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new IllegalArgumentException("Tài khoản không thể đặt lại mật khẩu.");
+        }
 
         PasswordResetTokens token = passwordResetTokenRepository
                 .findByToken(otp.trim())
@@ -113,6 +117,9 @@ public class PasswordResetService {
 
         Users user = userRepository.findByEmail(email.toLowerCase().trim())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài khoản."));
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new IllegalArgumentException("Tài khoản không thể đặt lại mật khẩu.");
+        }
 
         // Tìm OTP token còn hiệu lực (chưa dùng)
         PasswordResetTokens token = passwordResetTokenRepository

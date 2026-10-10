@@ -4,8 +4,8 @@ import com.edusphere.dto.RegisterRequest;
 import com.edusphere.service.auth.AuthService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -30,19 +30,27 @@ public class AuthController {
     // ===================== LOGIN =====================
 
     @GetMapping("/login")
-    public String showLoginPage(@AuthenticationPrincipal UserDetails userDetails,
+    public String showLoginPage(Authentication authentication,
                                 @RequestParam(required = false) String error,
                                 @RequestParam(required = false) String logout,
                                 @RequestParam(required = false) String oauth2Error,
+                                @RequestParam(required = false) Integer courseId,
+                                HttpSession session,
                                 Model model) {
-        if (userDetails != null && logout == null && error == null) {
-            return "redirect:/dashboard";
+        if (authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)
+                && logout == null && error == null) {
+            return "redirect:/";
+        }
+        if (courseId != null && courseId > 0) {
+            session.setAttribute("postLoginCourseId", courseId);
         }
 
         if (error != null) {
             String message = switch (error) {
                 case "notVerified"    -> "Tài khoản chưa xác minh OTP. Vui lòng kiểm tra email.";
                 case "locked"         -> "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.";
+                case "permissionsChanged" -> "Vai trò hoặc trạng thái tài khoản đã thay đổi. Vui lòng đăng nhập lại.";
                 case "badCredentials" -> "Email hoặc mật khẩu không đúng.";
                 default               -> "Đăng nhập thất bại. Vui lòng thử lại.";
             };
@@ -57,9 +65,10 @@ public class AuthController {
     // ===================== REGISTER =====================
 
     @GetMapping("/register")
-    public String showRegisterPage(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        if (userDetails != null) {
-            return "redirect:/dashboard";
+    public String showRegisterPage(Authentication authentication, Model model) {
+        if (authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)) {
+            return "redirect:/";
         }
 
         model.addAttribute("registerRequest", new RegisterRequest());

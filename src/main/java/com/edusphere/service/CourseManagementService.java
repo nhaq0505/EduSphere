@@ -181,6 +181,14 @@ public class CourseManagementService {
     }
 
     @Transactional(readOnly = true)
+    public boolean hasPaidAccess(Integer courseId, Integer studentId, BigDecimal price, String currency) {
+        return Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT CASE WHEN EXISTS (SELECT 1 FROM dbo.payments WHERE student_id = ? AND course_id = ? " +
+                        "AND status = 'SUCCEEDED' AND amount >= ? AND currency = ?) THEN 1 ELSE 0 END",
+                Boolean.class, studentId, courseId, price, currency));
+    }
+
+    @Transactional(readOnly = true)
     public List<EnrolledCourseView> enrolledCourses(Integer studentId) {
         return enrollments.findByStudent_UserIdOrderByEnrolledAtDesc(studentId).stream()
                 .map(e -> new EnrolledCourseView(e.getCourse().getCourseId(), e.getCourse().getTitle(),

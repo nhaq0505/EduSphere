@@ -70,33 +70,30 @@ public class AuthService {
 
         String email = request.getEmail().toLowerCase().trim();
 
-        // Nếu email đã tồn tại với status ACTIVE → từ chối
-        if (userRepository.existsByEmail(email)) {
-            Users existing = userRepository.findByEmail(email).get();
-            if ("ACTIVE".equals(existing.getStatus())) {
-                throw new IllegalArgumentException("Email này đã được đăng ký. Vui lòng dùng email khác.");
-            }
-            // Nếu PENDING → xóa user cũ để tạo lại (user chưa verify)
-            emailVerificationTokenRepository.deleteByUserId(existing);
-            userRepository.delete(existing);
-            userRepository.flush();
+        Users user = userRepository.findByEmail(email).orElse(null);
+        if (user != null && !"PENDING".equals(user.getStatus())) {
+            throw new IllegalArgumentException("Email này đã được đăng ký. Vui lòng dùng email khác.");
         }
-
-        // Tạo user mới với status PENDING
-        Users user = new Users();
+        boolean newUser = user == null;
+        if (newUser) user = new Users();
         user.setFullName(request.getFullName().trim());
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setPhone(request.getPhone() != null ? request.getPhone().trim() : null);
         user.setStatus("PENDING");
-        user.setCreatedAt(new Date());
+        if (newUser) user.setCreatedAt(new Date());
+        else {
+            user.setUpdatedAt(new Date());
+            emailVerificationTokenRepository.deleteByUserId(user);
+        }
         user = userRepository.save(user);
 
-        // Gán role STUDENT
-        Roles studentRole = roleRepository.findByRoleName("STUDENT")
-                .orElseThrow(() -> new RuntimeException("Role STUDENT không tồn tại."));
-        UserRolesPK pk = new UserRolesPK(user.getUserId(), studentRole.getRoleId());
-        userRoleRepository.save(new UserRoles(pk, new Date()));
+        if (newUser) {
+            Roles studentRole = roleRepository.findByRoleName("STUDENT")
+                    .orElseThrow(() -> new RuntimeException("Role STUDENT không tồn tại."));
+            UserRolesPK pk = new UserRolesPK(user.getUserId(), studentRole.getRoleId());
+            userRoleRepository.save(new UserRoles(pk, new Date()));
+        }
 
         // Tạo OTP 6 số ngẫu nhiên bảo mật
         String otp = generateOtp();
@@ -125,6 +122,9 @@ public class AuthService {
 
         Users user = userRepository.findByEmail(email.toLowerCase().trim())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài khoản."));
+        if (!"PENDING".equals(user.getStatus())) {
+            throw new IllegalArgumentException("Tài khoản không ở trạng thái chờ xác minh.");
+        }
 
         // Lấy OTP token mới nhất chưa verify
         EmailVerificationTokens otpToken = emailVerificationTokenRepository
@@ -164,8 +164,8 @@ public class AuthService {
         Users user = userRepository.findByEmail(email.toLowerCase().trim())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài khoản."));
 
-        if ("ACTIVE".equals(user.getStatus())) {
-            throw new IllegalArgumentException("Tài khoản này đã được xác minh rồi.");
+        if (!"PENDING".equals(user.getStatus())) {
+            throw new IllegalArgumentException("Tài khoản không ở trạng thái chờ xác minh.");
         }
 
         // Xóa OTP cũ

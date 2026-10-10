@@ -1,32 +1,14 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý khóa học — EduSphere</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/main.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/courses.css">
-</head>
-<body>
-<nav class="navbar">
-    <a class="brand" href="${pageContext.request.contextPath}/">EduSphere</a>
-    <div class="nav-links"><a href="${pageContext.request.contextPath}/courses">Khóa học</a><a href="${pageContext.request.contextPath}/dashboard">Trang cá nhân</a></div>
-</nav>
-<main class="course-container">
-    <header class="course-header"><p class="course-eyebrow">GIẢNG VIÊN</p><h1>Quản lý khóa học</h1><p>Tạo và theo dõi các khóa học của bạn.</p></header>
-    <p style="margin-bottom:24px"><a class="btn btn-primary" href="${pageContext.request.contextPath}/instructor/courses/new">Tạo khóa học</a></p>
-    <c:if test="${not empty success}"><div class="alert alert-success"><c:out value="${success}"/></div></c:if>
-    <c:choose>
-        <c:when test="${empty courses}"><div class="course-empty"><h3>Chưa có khóa học</h3><p>Hãy tạo khóa học đầu tiên của bạn.</p></div></c:when>
-        <c:otherwise><div class="course-grid"><c:forEach var="course" items="${courses}"><article class="course-card"><div class="course-card-body">
-            <span class="badge ${course.status == 'PUBLISHED' ? 'badge-active' : 'badge-pending'}"><c:out value="${course.status}"/></span>
-            <h3><a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}"><c:out value="${course.title}"/></a></h3>
-            <p class="course-instructor"><c:out value="${course.categoryName}"/> · Phiên bản <c:out value="${course.versionNo}"/></p>
-            <div class="course-card-footer"><a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}">Xem và quản lý →</a></div>
-        </div></article></c:forEach></div></c:otherwise>
-    </c:choose>
-</main>
-</body>
-</html>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
+<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Quản lý khóa học — EduSphere</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css"></head><body>
+<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
+<main class="shell">
+<header class="page-heading"><div><p class="eyebrow">Không gian giảng viên</p><h1>Quản lý khóa học</h1><p>Tạo bản nháp, gửi duyệt và theo dõi quá trình công bố.</p></div><a class="button button--primary" href="${pageContext.request.contextPath}/instructor/courses/new">+ Tạo khóa học</a></header>
+<c:if test="${not empty success}"><div class="alert alert--success"><c:out value="${success}"/></div></c:if>
+<c:choose><c:when test="${empty courses}"><div class="empty-state"><span class="empty-state__mark">+</span><h2>Bắt đầu với một khóa học</h2><p>Tạo bản nháp đầu tiên, sau đó gửi quản trị viên duyệt.</p><a class="button button--primary" href="${pageContext.request.contextPath}/instructor/courses/new">Tạo khóa học</a></div></c:when>
+<c:otherwise><div class="course-grid"><c:forEach var="course" items="${courses}"><article class="card course-card"><div class="course-card__visual" aria-hidden="true">Không gian giảng viên</div><div class="course-card__body"><c:choose><c:when test="${course.status == 'DRAFT'}"><span class="pill pill--neutral">Bản nháp</span></c:when><c:when test="${course.status == 'SUBMITTED'}"><span class="pill pill--gold">Chờ duyệt</span></c:when><c:when test="${course.status == 'APPROVED'}"><span class="pill pill--success">Đã duyệt</span></c:when><c:when test="${course.status == 'PUBLISHED'}"><span class="pill pill--success">Đã công bố</span></c:when><c:when test="${course.status == 'REJECTED'}"><span class="pill pill--danger">Cần chỉnh sửa</span></c:when><c:when test="${course.status == 'ARCHIVED'}"><span class="pill pill--neutral">Đã lưu trữ</span></c:when><c:otherwise><span class="pill pill--neutral">Đang xử lý</span></c:otherwise></c:choose><h3><a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}"><c:out value="${course.title}"/></a></h3><p><c:out value="${course.categoryName}"/> · Phiên bản <c:out value="${course.versionNo}"/></p><div class="course-card__bottom"><c:choose><c:when test="${course.status == 'DRAFT' || course.status == 'REJECTED'}"><a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/edit">Chỉnh sửa</a></c:when><c:otherwise><span class="small muted">Không thể sửa ở trạng thái này</span></c:otherwise></c:choose><a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}">Xem chi tiết →</a></div></div></article></c:forEach></div></c:otherwise></c:choose></main>
+<jsp:include page="/WEB-INF/views/common/footer.jsp"/>
+</body></html>

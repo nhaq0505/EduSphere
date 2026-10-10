@@ -1,9 +1,11 @@
 package com.edusphere.config;
 
 import com.edusphere.security.CustomUserDetailsService;
+import com.edusphere.security.AccountStateFilter;
+import com.edusphere.security.RoleAwareAuthenticationSuccessHandler;
 import com.edusphere.security.oauth2.CustomOAuth2UserService;
-import com.edusphere.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,6 +17,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
@@ -25,14 +28,24 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
     private final CustomOAuth2UserService oAuth2UserService;
-    private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
+    private final RoleAwareAuthenticationSuccessHandler authenticationSuccessHandler;
+    private final AccountStateFilter accountStateFilter;
 
     public SecurityConfig(CustomUserDetailsService userDetailsService,
                           CustomOAuth2UserService oAuth2UserService,
-                          OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler) {
+                          RoleAwareAuthenticationSuccessHandler authenticationSuccessHandler,
+                          AccountStateFilter accountStateFilter) {
         this.userDetailsService = userDetailsService;
         this.oAuth2UserService = oAuth2UserService;
-        this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+        this.authenticationSuccessHandler = authenticationSuccessHandler;
+        this.accountStateFilter = accountStateFilter;
+    }
+
+    @Bean
+    public FilterRegistrationBean<AccountStateFilter> accountStateFilterRegistration(AccountStateFilter filter) {
+        FilterRegistrationBean<AccountStateFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -78,7 +91,7 @@ public class SecurityConfig {
             .formLogin(form -> form
                 .loginPage("/login")
                 .loginProcessingUrl("/login")
-                .defaultSuccessUrl("/dashboard", true)
+                .successHandler(authenticationSuccessHandler)
                 .failureHandler(customAuthenticationFailureHandler())
                 .permitAll()
             )
@@ -96,10 +109,11 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                     .oidcUserService(oAuth2UserService)  // OIDC cho Google
                 )
-                .successHandler(oAuth2SuccessHandler)
+                .successHandler(authenticationSuccessHandler)
                 .failureUrl("/login?oauth2Error=true")
             )
-            .authenticationProvider(authenticationProvider());
+            .authenticationProvider(authenticationProvider())
+            .addFilterAfter(accountStateFilter, SecurityContextHolderFilter.class);
 
         return http.build();
     }

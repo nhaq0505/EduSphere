@@ -1,7 +1,8 @@
 package com.edusphere.controller;
 
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.edusphere.security.RoleLandingPage;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -12,9 +13,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class HomeController {
 
     @GetMapping("/")
-    public String home(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails != null) {
-            return "redirect:/dashboard";
+    public String home(Authentication authentication) {
+        if (authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)) {
+            return "redirect:" + RoleLandingPage.forUser(authentication);
         }
         return "index";
     }
