@@ -14,7 +14,6 @@ import com.edusphere.repository.CourseReviewRepository;
 import com.edusphere.repository.EnrollmentRepository;
 import com.edusphere.repository.UserRepository;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,17 +31,15 @@ public class CourseManagementService {
     private final EnrollmentRepository enrollments;
     private final CategoryRepository categories;
     private final UserRepository users;
-    private final JdbcTemplate jdbc;
 
     public CourseManagementService(CourseRepository courses, CourseReviewRepository reviews,
                                    EnrollmentRepository enrollments, CategoryRepository categories,
-                                   UserRepository users, JdbcTemplate jdbc) {
+                                   UserRepository users) {
         this.courses = courses;
         this.reviews = reviews;
         this.enrollments = enrollments;
         this.categories = categories;
         this.users = users;
-        this.jdbc = jdbc;
     }
 
     @Transactional(readOnly = true)
@@ -155,37 +152,16 @@ public class CourseManagementService {
         Enrollment existing = enrollments.findByStudent_UserIdAndCourse_CourseId(studentId, courseId).orElse(null);
         if (existing != null && !"DROPPED".equals(existing.getStatus())) throw conflict("Bạn đã ghi danh khóa học này.");
 
-        Integer paymentId = null;
-        if (course.getPrice().compareTo(BigDecimal.ZERO) > 0) {
-            // UC45 xử lý thanh toán riêng. Ở đây chỉ chấp nhận quyền truy cập từ giao dịch đã thành công.
-            List<Integer> payments = jdbc.queryForList(
-                    "SELECT payment_id FROM dbo.payments WHERE student_id = ? AND course_id = ? " +
-                    "AND status = 'SUCCEEDED' AND amount >= ? AND currency = ? ORDER BY completed_at DESC",
-                    Integer.class, studentId, courseId, course.getPrice(), course.getCurrency());
-            if (payments.isEmpty()) throw conflict("Khóa học có phí cần thanh toán thành công trước khi ghi danh.");
-            paymentId = payments.get(0);
-        }
-
         if (existing == null) {
             Enrollment enrollment = new Enrollment();
             enrollment.setStudent(user(studentId));
             enrollment.setCourse(course);
-            enrollment.setPaymentId(paymentId);
             enrollments.save(enrollment);
         } else {
             existing.setStatus("ACTIVE");
             existing.setDroppedAt(null);
             existing.setEnrolledAt(LocalDateTime.now());
-            existing.setPaymentId(paymentId);
         }
-    }
-
-    @Transactional(readOnly = true)
-    public boolean hasPaidAccess(Integer courseId, Integer studentId, BigDecimal price, String currency) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT CASE WHEN EXISTS (SELECT 1 FROM dbo.payments WHERE student_id = ? AND course_id = ? " +
-                        "AND status = 'SUCCEEDED' AND amount >= ? AND currency = ?) THEN 1 ELSE 0 END",
-                Boolean.class, studentId, courseId, price, currency));
     }
 
     @Transactional(readOnly = true)

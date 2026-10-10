@@ -2,7 +2,6 @@ package com.edusphere.controller;
 
 import com.edusphere.dto.CourseView;
 import com.edusphere.service.CourseDiscoveryService;
-import com.edusphere.service.CourseManagementService;
 import com.edusphere.repository.EnrollmentRepository;
 import com.edusphere.security.CustomUserDetails;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,14 +18,11 @@ public class CourseDiscoveryController {
 
     private final CourseDiscoveryService courseDiscoveryService;
     private final EnrollmentRepository enrollmentRepository;
-    private final CourseManagementService courseManagementService;
 
     public CourseDiscoveryController(CourseDiscoveryService courseDiscoveryService,
-                                     EnrollmentRepository enrollmentRepository,
-                                     CourseManagementService courseManagementService) {
+                                     EnrollmentRepository enrollmentRepository) {
         this.courseDiscoveryService = courseDiscoveryService;
         this.enrollmentRepository = enrollmentRepository;
-        this.courseManagementService = courseManagementService;
     }
 
     @GetMapping("/courses")
@@ -56,9 +52,6 @@ public class CourseDiscoveryController {
                     boolean student = user != null && user.getAuthorities().stream()
                             .anyMatch(a -> "ROLE_STUDENT".equals(a.getAuthority()));
                     model.addAttribute("student", student);
-                    model.addAttribute("paidAccess", student && !course.isFree() &&
-                            courseManagementService.hasPaidAccess(courseId, user.getUserId(),
-                                    course.getPrice(), course.getCurrency()));
                     model.addAttribute("enrolled", student && enrollmentRepository
                             .findByStudent_UserIdAndCourse_CourseId(user.getUserId(), courseId)
                             .map(enrollment -> !"DROPPED".equals(enrollment.getStatus()))
