@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
-<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Chi tiết bài học — EduSphere</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css"></head><body>
+<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Chi tiết bài học — EduSphere</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css?v=restore-0bfd0e1-20261014"></head><body>
 <jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 <main class="shell shell--narrow"><a class="back-link" href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons">← Danh sách bài học</a>
 <header class="page-heading"><div><p class="eyebrow">Bài học ${lesson.orderIndex} · <c:out value="${course.title}"/></p><h1><c:out value="${lesson.title}"/></h1><c:choose><c:when test="${lesson.status eq 'PUBLISHED'}"><span class="pill pill--success">Học viên có thể xem</span></c:when><c:otherwise><span class="pill pill--neutral">Bản nháp</span></c:otherwise></c:choose></div><c:if test="${editable}"><a class="button button--outline" href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons/${lesson.lessonId}/edit">Chỉnh sửa bài học</a></c:if></header>

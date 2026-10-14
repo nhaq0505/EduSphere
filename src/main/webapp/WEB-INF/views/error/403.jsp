@@ -1,11 +1,17 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
-<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
-<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
-<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Không có quyền truy cập — EduSphere</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css"></head><body>
-<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
-<main class="shell shell--narrow">
-<div class="empty-state"><p class="error-code">403</p><h1>Không có quyền truy cập</h1><p>Tài khoản của bạn không có quyền xem trang này.</p><a class="button button--primary" href="${pageContext.request.contextPath}/">Về khu vực của tôi</a></div></main>
-<jsp:include page="/WEB-INF/views/common/footer.jsp"/>
-</body></html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>403 — Không có quyền truy cập</title>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/main.css?v=restore-0bfd0e1-20261014">
+</head>
+<body>
+<div class="page-container" style="text-align:center; padding-top:80px;">
+    <h1 style="font-size:5rem; color:#e25c4a; margin:0;">403</h1>
+    <h2>Không có quyền truy cập</h2>
+    <p>Bạn không có quyền xem trang này.</p>
+    <a href="${pageContext.request.contextPath}/dashboard" class="btn btn-primary">Về trang chủ</a>
+</div>
+</body>
+</html>

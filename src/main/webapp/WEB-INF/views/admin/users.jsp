@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Quản lý tài khoản — EduSphere</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css"></head><body>
+<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Quản lý tài khoản — EduSphere</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css?v=restore-0bfd0e1-20261014"></head><body>
 <jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 <main class="shell">
 <header class="page-heading"><div><p class="eyebrow">Không gian quản trị</p><h1>Quản lý tài khoản</h1><p>Gán vai trò, khóa và khôi phục tài khoản. Mọi thay đổi đều được ghi lịch sử.</p></div></header>
