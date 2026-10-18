@@ -65,6 +65,31 @@ class PaymentServiceTest {
     }
 
     @Test
+    void paidStatusFromPayOsGrantsAccessOnReturn() {
+        when(enrollments.findByStudent_UserIdAndCourse_CourseId(7, 42)).thenReturn(Optional.empty());
+        PaymentLink link = paymentLink(PaymentLinkStatus.PAID, 199000L);
+
+        PaymentService.Result result = service.reconcile(1770000000013L, 7, link);
+
+        assertEquals("SUCCEEDED", result.status());
+        assertNotNull(payment.getCompletedAt());
+        verify(enrollments).save(argThat(e -> e.getPaymentId() == 13
+                && e.getCourse().getCourseId() == 42));
+    }
+
+    @Test
+    void pendingOrUnderpaidStatusCannotGrantAccessOnReturn() {
+        PaymentService.Result pending = service.reconcile(1770000000013L, 7,
+                paymentLink(PaymentLinkStatus.PENDING, 0L));
+        PaymentService.Result underpaid = service.reconcile(1770000000013L, 7,
+                paymentLink(PaymentLinkStatus.PAID, 1000L));
+
+        assertEquals("PENDING", pending.status());
+        assertEquals("PENDING", underpaid.status());
+        verifyNoInteractions(enrollments);
+    }
+
+    @Test
     void verifiedWebhookWithWrongAmountCannotGrantAccess() {
         WebhookData data = webhook(1000L);
         assertThrows(CourseActionException.class, () -> service.applyVerifiedWebhook(data));
@@ -124,5 +149,15 @@ class PaymentServiceTest {
         data.setPaymentLinkId("payos-link-13");
         data.setCode("00");
         return data;
+    }
+
+    private PaymentLink paymentLink(PaymentLinkStatus status, long amountPaid) {
+        PaymentLink link = new PaymentLink();
+        link.setOrderCode(1770000000013L);
+        link.setId("payos-link-13");
+        link.setAmount(199000L);
+        link.setAmountPaid(amountPaid);
+        link.setStatus(status);
+        return link;
     }
 }
