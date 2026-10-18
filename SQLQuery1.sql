@@ -201,6 +201,7 @@ CREATE TABLE dbo.payments (
     provider NVARCHAR(50) NOT NULL,
     provider_transaction_id NVARCHAR(255) NULL,
     request_key NVARCHAR(100) NOT NULL CONSTRAINT UQ_payments_request UNIQUE,
+    checkout_url NVARCHAR(2048) NULL,
     amount DECIMAL(18,2) NOT NULL,
     currency CHAR(3) NOT NULL CONSTRAINT DF_payments_currency DEFAULT 'VND',
     status NVARCHAR(20) NOT NULL CONSTRAINT DF_payments_status DEFAULT N'INITIATED',
@@ -214,6 +215,8 @@ CREATE TABLE dbo.payments (
     CONSTRAINT FK_payments_course FOREIGN KEY (course_id) REFERENCES dbo.courses(course_id)
 );
 END;
+IF COL_LENGTH(N'dbo.payments', N'checkout_url') IS NULL
+    ALTER TABLE dbo.payments ADD checkout_url NVARCHAR(2048) NULL;
 IF OBJECT_ID(N'dbo.payment_events', N'U') IS NULL
 BEGIN
 CREATE TABLE dbo.payment_events (

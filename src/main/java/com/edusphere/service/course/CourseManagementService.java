@@ -158,6 +158,7 @@ public class CourseManagementService {
     public void enroll(Integer courseId, Integer studentId) {
         Course course = lockedCourse(courseId);
         if (!"PUBLISHED".equals(course.getStatus())) throw new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy khóa học công khai.");
+        if (course.getPrice().signum() > 0) throw conflict("Khóa học có phí cần thanh toán trước khi ghi danh.");
         Enrollment existing = enrollments.findByStudent_UserIdAndCourse_CourseId(studentId, courseId).orElse(null);
         if (existing != null && !"DROPPED".equals(existing.getStatus())) throw conflict("Bạn đã ghi danh khóa học này.");
 

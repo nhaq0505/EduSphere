@@ -38,7 +38,7 @@ public class Enrollment {
     @JoinColumn(name = "course_id", referencedColumnName = "course_id", nullable = false)
     private Course course;
 
-    // UC45 (payment) is an extension; retain its nullable FK without mapping a Payment entity yet.
+    // Free enrollment has no payment; paid enrollment stores the verified payment ID.
     @Column(name = "payment_id")
     private Integer paymentId;
 
