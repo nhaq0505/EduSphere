@@ -15,11 +15,12 @@ public class CourseView {
     private final String categoryName;
     private final String instructorName;
     private final String levelLabel;
+    private final String thumbnailUrl;
     private final BigDecimal price;
     private final String currency;
 
     public CourseView(Integer courseId, String title, String description, String categoryName,
-                      String instructorName, String levelLabel, BigDecimal price, String currency) {
+                      String instructorName, String levelLabel, String thumbnailUrl, BigDecimal price, String currency) {
         this.courseId = courseId;
         this.title = title;
         this.description = description;
@@ -28,6 +29,7 @@ public class CourseView {
         this.categoryName = categoryName;
         this.instructorName = instructorName;
         this.levelLabel = levelLabel;
+        this.thumbnailUrl = thumbnailUrl;
         this.price = price;
         this.currency = currency;
     }

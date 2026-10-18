@@ -93,7 +93,7 @@ public class CourseDiscoveryService {
         String categoryName = course.getCategory() == null ? "Chưa phân loại" : course.getCategory().getName();
         return new CourseView(course.getCourseId(), course.getTitle(), course.getDescription(),
                 categoryName, course.getInstructor().getFullName(), levelLabel(course.getLevel()),
-                course.getPrice(), course.getCurrency());
+                course.getThumbnailUrl(), course.getPrice(), course.getCurrency());
     }
 
     private String levelLabel(String level) {
