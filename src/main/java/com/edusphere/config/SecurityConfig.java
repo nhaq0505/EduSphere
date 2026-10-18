@@ -83,6 +83,9 @@ public class SecurityConfig {
                     "/WEB-INF/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/courses", "/courses/{courseId}").permitAll()
+                .requestMatchers(HttpMethod.POST, "/payments/payos/webhook").permitAll()
+                .requestMatchers(HttpMethod.POST, "/courses/{courseId}/checkout").hasRole("STUDENT")
+                .requestMatchers(HttpMethod.GET, "/payments/result").hasRole("STUDENT")
                 .requestMatchers(HttpMethod.POST, "/courses/{courseId}/enroll").hasRole("STUDENT")
                 .requestMatchers("/courses/{courseId}/learn", "/courses/{courseId}/lessons/**").hasRole("STUDENT")
                 .requestMatchers("/my-courses").hasRole("STUDENT")
@@ -115,6 +118,7 @@ public class SecurityConfig {
                 .failureUrl("/login?oauth2Error=true")
             )
             .authenticationProvider(authenticationProvider())
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/payments/payos/webhook"))
             .addFilterAfter(accountStateFilter, SecurityContextHolderFilter.class);
 
         return http.build();
