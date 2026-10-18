@@ -14,11 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class HomeController {
 
     @GetMapping("/")
-    public String home(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()
-                && !(authentication instanceof AnonymousAuthenticationToken)) {
-            return "redirect:" + RoleLandingPage.forUser(authentication);
-        }
+    public String home() {
         return "index";
     }
 

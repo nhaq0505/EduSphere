@@ -13,13 +13,13 @@ public final class RoleLandingPage {
                 return "/admin/courses/review";
             }
             if (hasRole(authentication, "ROLE_INSTRUCTOR")) {
-                return "/instructor/courses";
+                return "/";
             }
             if (hasRole(authentication, "ROLE_STUDENT")) {
-                return "/courses";
+                return "/";
             }
         }
-        return "/courses";
+        return "/";
     }
 
     private static boolean hasRole(Authentication authentication, String role) {
