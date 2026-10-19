@@ -46,14 +46,14 @@ class LessonManagementServiceTest {
     }
 
     @Test
-    void newLessonInPublishedCourseIsVisibleToStudents() {
+    void newLessonInPublishedCourseRevertsCourseToDraftAndIncrementsVersion() {
+        course.setVersionNo(1);
+        course.setApprovedAt(java.time.LocalDateTime.now().minusDays(1));
+        course.setPublishedAt(java.time.LocalDateTime.now().minusHours(5));
+
         LessonForm form = new LessonForm();
         form.setTitle("  Bài đầu tiên  ");
         when(lessons.countByCourse_CourseId(12)).thenReturn(0L);
-        Enrollment completed = new Enrollment();
-        completed.setStatus("COMPLETED");
-        when(enrollments.findByCourse_CourseIdAndStatus(12, "COMPLETED"))
-                .thenReturn(List.of(completed));
         when(lessons.save(any(Lesson.class))).thenAnswer(call -> {
             Lesson saved = call.getArgument(0);
             saved.setLessonId(31);
@@ -65,9 +65,68 @@ class LessonManagementServiceTest {
         var captor = org.mockito.ArgumentCaptor.forClass(Lesson.class);
         verify(lessons).save(captor.capture());
         assertEquals("Bài đầu tiên", captor.getValue().getTitle());
-        assertEquals("PUBLISHED", captor.getValue().getStatus());
+        assertEquals("DRAFT", captor.getValue().getStatus());
         assertEquals(1, captor.getValue().getOrderIndex());
-        assertEquals("ACTIVE", completed.getStatus());
+
+        // Verify course bumped to DRAFT v2
+        assertEquals("DRAFT", course.getStatus());
+        assertEquals(2, course.getVersionNo());
+        assertNull(course.getApprovedAt());
+        assertNull(course.getPublishedAt());
+    }
+
+    @Test
+    void editLessonInPublishedCourseRevertsCourseToDraftAndIncrementsVersion() {
+        course.setVersionNo(1);
+        course.setApprovedAt(java.time.LocalDateTime.now().minusDays(1));
+        course.setPublishedAt(java.time.LocalDateTime.now().minusHours(5));
+
+        Lesson lesson = new Lesson();
+        lesson.setLessonId(31);
+        lesson.setCourse(course);
+        lesson.setTitle("Tiêu đề cũ");
+        lesson.setContent("Nội dung cũ");
+        lesson.setOrderIndex(1);
+        lesson.setStatus("PUBLISHED");
+
+        when(lessons.findByLessonIdAndCourse_CourseId(31, 12)).thenReturn(Optional.of(lesson));
+        when(lessons.findByCourse_CourseIdOrderByOrderIndexAsc(12)).thenReturn(List.of(lesson));
+
+        LessonForm form = new LessonForm();
+        form.setTitle("Tiêu đề mới");
+        form.setContent("Nội dung mới");
+        form.setOrderIndex(1);
+
+        service.edit(12, 31, 3, form);
+
+        assertEquals("Tiêu đề mới", lesson.getTitle());
+        assertEquals("Nội dung mới", lesson.getContent());
+        assertEquals("DRAFT", lesson.getStatus());
+
+        assertEquals("DRAFT", course.getStatus());
+        assertEquals(2, course.getVersionNo());
+        assertNull(course.getApprovedAt());
+        assertNull(course.getPublishedAt());
+    }
+
+    @Test
+    void newLessonInDraftCourseKeepsDraftWithoutVersionBump() {
+        course.setStatus("DRAFT");
+        course.setVersionNo(1);
+
+        LessonForm form = new LessonForm();
+        form.setTitle("Bài nháp");
+        when(lessons.countByCourse_CourseId(12)).thenReturn(0L);
+        when(lessons.save(any(Lesson.class))).thenAnswer(call -> {
+            Lesson saved = call.getArgument(0);
+            saved.setLessonId(32);
+            return saved;
+        });
+
+        assertEquals(32, service.create(12, 3, form));
+
+        assertEquals("DRAFT", course.getStatus());
+        assertEquals(1, course.getVersionNo());
     }
 
     @Test

@@ -35,6 +35,15 @@
                 <p>Nội dung sẽ hiển thị cho học viên khi khóa học được công bố.</p>
             </div>
             <div class="ins-form-card__body">
+                <c:if test="${course.status eq 'PUBLISHED' or course.status eq 'APPROVED'}">
+                    <div class="ins-alert ins-alert--warning" style="margin-bottom:20px">
+                        ⚠️ <strong>Lưu ý:</strong> Khóa học hiện đang ở trạng thái
+                        <strong>${course.status eq 'PUBLISHED' ? 'Đã công bố' : 'Tạm ẩn'}</strong>.
+                        Khi bạn lưu bài học này, khóa học sẽ được chuyển về <strong>Bản nháp (phiên bản v${course.versionNo + 1})</strong>
+                        và cần được gửi Admin phê duyệt lại trước khi công bố.
+                    </div>
+                </c:if>
+
                 <form:form method="post" modelAttribute="lessonForm"
                            action="${pageContext.request.contextPath}${formAction}" htmlEscape="true">
                     <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">

@@ -27,6 +27,7 @@
             <div class="ins-detail-main">
                 <div class="ins-detail-main__header">
                     <c:choose>
+                        <c:when test="${course.hidden}">              <span class="ins-status-badge ins-status-badge--hidden">Tạm ẩn</span></c:when>
                         <c:when test="${course.status=='DRAFT'}">     <span class="ins-status-badge ins-status-badge--draft">Bản nháp</span></c:when>
                         <c:when test="${course.status=='SUBMITTED'}"> <span class="ins-status-badge ins-status-badge--submitted">Chờ duyệt</span></c:when>
                         <c:when test="${course.status=='APPROVED'}">  <span class="ins-status-badge ins-status-badge--approved">Đã duyệt</span></c:when>
@@ -72,17 +73,63 @@
                             <th>Phiên bản</th>
                             <td>v<c:out value="${course.versionNo}"/></td>
                         </tr>
+                        <tr>
+                            <th>Số bài học</th>
+                            <td><strong>${course.lessonCount}</strong> bài học</td>
+                        </tr>
                     </table>
 
                     <h2>Mô tả khóa học</h2>
                     <p class="ins-detail-desc"><c:out value="${course.description}" default="Chưa có mô tả."/></p>
 
-                    <div style="margin-top:24px">
-                        <a class="ins-btn-outline" style="width:auto;display:inline-flex"
-                           href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons">
-                            📋 Quản lý bài học →
-                        </a>
-                    </div>
+                    <h2>Danh sách bài học (${course.lessonCount})</h2>
+                    <c:choose>
+                        <c:when test="${empty lessons}">
+                            <div style="background:#FFFBEB; border:1.5px solid #FDE68A; border-radius:var(--r12); padding:16px 20px; margin-bottom:16px;">
+                                <p style="margin:0 0 8px; font-weight:700; color:#B45309;">⚠️ Khóa học chưa có bài học nào!</p>
+                                <p style="margin:0 0 12px; font-size:.85rem; color:#92400E;">Để gửi duyệt lên Admin, khóa học cần được tạo hoàn chỉnh và có ít nhất một bài học.</p>
+                                <a class="ins-btn-primary" style="width:auto; display:inline-flex; padding:8px 16px; font-size:.85rem;"
+                                   href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons/new">
+                                    ➕ Thêm bài học đầu tiên
+                                </a>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="ins-lesson-list" style="margin-bottom:16px;">
+                                <c:forEach var="les" items="${lessons}" varStatus="loop">
+                                    <div class="ins-lesson-item" style="padding:12px 16px;">
+                                        <div style="width:28px; height:28px; border-radius:50%; background:#DCFCE7; color:#15803D; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.8rem;">
+                                            ${loop.index + 1}
+                                        </div>
+                                        <div style="flex:1;">
+                                            <a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons/${les.lessonId}"
+                                               style="font-weight:600; color:var(--ink); text-decoration:none;">
+                                                <c:out value="${les.title}"/>
+                                            </a>
+                                            <c:if test="${empty les.content || les.content.trim().length() == 0}">
+                                                <span style="font-size:.72rem; color:#DC2626; margin-left:8px; font-weight:600;">(Chưa có nội dung)</span>
+                                            </c:if>
+                                        </div>
+                                        <a class="ins-link-btn" href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons/${les.lessonId}" style="font-size:.8rem;">
+                                            Chi tiết →
+                                        </a>
+                                    </div>
+                                </c:forEach>
+                            </div>
+                            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                <a class="ins-btn-outline" style="width:auto; display:inline-flex;"
+                                   href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons">
+                                    📋 Quản lý tất cả bài học →
+                                </a>
+                                <c:if test="${course.status == 'DRAFT' || course.status == 'REJECTED' || course.status == 'APPROVED' || course.status == 'PUBLISHED'}">
+                                    <a class="ins-btn-outline" style="width:auto; display:inline-flex; color:#15803D; border-color:#86EFAC;"
+                                       href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons/new">
+                                        ➕ Thêm bài học mới
+                                    </a>
+                                </c:if>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </div>
 
@@ -92,35 +139,80 @@
                 <div class="ins-aside__body">
                     <c:choose>
                         <c:when test="${course.status == 'DRAFT' || course.status == 'REJECTED'}">
-                            <p class="ins-aside__note">Kiểm tra thông tin và bài học trước khi gửi duyệt.</p>
+                            <c:choose>
+                                <c:when test="${course.readyForSubmit}">
+                                    <p class="ins-aside__note" style="color:#15803D;">✅ Khóa học đã hoàn chỉnh (${course.lessonCount} bài học) và sẵn sàng gửi duyệt.</p>
+                                    <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/submit" style="margin:0 0 12px 0;">
+                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                        <button class="ins-btn-primary" type="submit">📤 Gửi duyệt cho Admin</button>
+                                    </form>
+                                </c:when>
+                                <c:otherwise>
+                                    <p class="ins-aside__note" style="color:#B45309;">⚠️ Khóa học chưa hoàn chỉnh (${course.lessonCount == 0 ? 'chưa có bài học nào' : 'cần kiểm tra mô tả hoặc nội dung bài học'}). Hãy hoàn thiện trước khi gửi duyệt.</p>
+                                    <button class="ins-btn-disabled" type="button" title="Cần có mô tả và ít nhất một bài học hoàn chỉnh để gửi duyệt" disabled>
+                                        📤 Gửi duyệt (Chưa đủ điều kiện)
+                                    </button>
+                                    <div style="margin-top:10px;">
+                                        <a class="ins-btn-outline" style="font-size:.82rem;"
+                                           href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons/new">
+                                           ➕ Thêm bài học mới
+                                        </a>
+                                    </div>
+                                </c:otherwise>
+                            </c:choose>
+                            <div class="ins-aside__divider" style="margin:16px 0;"></div>
                             <a class="ins-btn-outline"
                                href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/edit">
-                               ✏️ Chỉnh sửa thông tin
+                                ✏️ Chỉnh sửa thông tin
                             </a>
-                            <div class="ins-aside__divider"></div>
-                            <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/submit" style="margin:0">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <button class="ins-btn-primary" type="submit">📤 Gửi duyệt</button>
-                            </form>
                         </c:when>
+
                         <c:when test="${course.status == 'SUBMITTED'}">
-                            <p class="ins-aside__note">⏳ Đang chờ quản trị viên xem xét. Bạn không thể chỉnh sửa lúc này.</p>
+                            <p class="ins-aside__note">⏳ Đang chờ quản trị viên xem xét (${course.lessonCount} bài học). Bạn không thể chỉnh sửa lúc này.</p>
                         </c:when>
+
                         <c:when test="${course.status == 'APPROVED'}">
-                            <p class="ins-aside__note">✅ Khóa học đã được duyệt! Công bố để học viên có thể nhìn thấy.</p>
-                            <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/publish" style="margin:0">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <button class="ins-btn-primary" type="submit">🚀 Công bố khóa học</button>
-                            </form>
+                            <c:choose>
+                                <c:when test="${course.hidden}">
+                                    <p class="ins-aside__note" style="color:#4B5563;">👁️ Khóa học đang <strong>tạm ẩn</strong> khỏi danh mục công khai. Học viên mới sẽ không tìm thấy khóa học này. Bạn có thể công bố lại bất cứ khi nào.</p>
+                                    <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/publish" style="margin:0 0 12px 0;">
+                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                        <button class="ins-btn-primary" type="submit">🚀 Công bố lại khóa học</button>
+                                    </form>
+                                </c:when>
+                                <c:otherwise>
+                                    <p class="ins-aside__note" style="color:#15803D;">✅ Khóa học đã được duyệt! Hãy công bố để học viên có thể tìm thấy và đăng ký.</p>
+                                    <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/publish" style="margin:0 0 12px 0;">
+                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                        <button class="ins-btn-primary" type="submit">🚀 Công bố khóa học</button>
+                                    </form>
+                                </c:otherwise>
+                            </c:choose>
+                            <div class="ins-aside__divider" style="margin:12px 0;"></div>
+                            <a class="ins-btn-outline"
+                               href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/edit">
+                                ✏️ Chỉnh sửa thông tin
+                            </a>
                         </c:when>
+
                         <c:when test="${course.status == 'PUBLISHED'}">
                             <p class="ins-aside__note">🌐 Khóa học đang được công khai cho học viên.</p>
-                            <div class="ins-aside__divider"></div>
-                            <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/archive" style="margin:0">
+                            <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/hide" style="margin:0 0 12px 0;">
+                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                <button class="ins-btn-warning" type="submit">👁️ Ẩn khóa học</button>
+                            </form>
+                            <div class="ins-aside__divider" style="margin:12px 0;"></div>
+                            <a class="ins-btn-outline" style="margin-bottom:12px;"
+                               href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/edit">
+                                ✏️ Chỉnh sửa khóa học
+                            </a>
+                            <div class="ins-aside__divider" style="margin:12px 0;"></div>
+                            <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/archive" style="margin:0;">
                                 <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
                                 <button class="ins-btn-danger" type="submit">📦 Lưu trữ khóa học</button>
                             </form>
                         </c:when>
+
                         <c:otherwise>
                             <p class="ins-aside__note">📦 Khóa học đã được lưu trữ.</p>
                         </c:otherwise>

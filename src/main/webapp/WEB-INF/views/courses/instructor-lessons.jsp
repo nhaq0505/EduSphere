@@ -23,7 +23,7 @@
 
         <div class="ins-page-head">
             <div>
-                <span class="ins-page-head__eyebrow">📋 Bài học</span>
+                <span class="ins-page-head__eyebrow">📋 Bài học · Phiên bản v${course.versionNo}</span>
                 <h1 class="ins-page-head__title">Quản lý bài học</h1>
                 <p class="ins-page-head__sub"><c:out value="${course.title}"/></p>
             </div>
@@ -36,6 +36,19 @@
         </div>
 
         <c:if test="${not empty success}"><div class="ins-alert ins-alert--success">✅ <c:out value="${success}"/></div></c:if>
+
+        <c:if test="${course.status eq 'DRAFT'}">
+            <div class="ins-alert ins-alert--warning" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+                <div>
+                    📝 <strong>Khóa học đang ở Bản nháp (v${course.versionNo}):</strong>
+                    Sau khi tạo / chỉnh sửa các bài học, hãy quay lại trang khóa học để gửi Admin xét duyệt.
+                </div>
+                <a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}"
+                   class="ins-link-btn ins-link-btn--primary" style="white-space:nowrap;padding:6px 14px">
+                    Về trang khóa học →
+                </a>
+            </div>
+        </c:if>
 
         <c:if test="${not editable}">
             <div class="ins-alert ins-alert--warning">

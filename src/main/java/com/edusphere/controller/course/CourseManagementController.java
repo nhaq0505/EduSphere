@@ -72,11 +72,13 @@ public class CourseManagementController {
     @GetMapping("/instructor/courses/{id}")
     public String instructorDetail(@PathVariable Integer id, @AuthenticationPrincipal CustomUserDetails user, Model model) {
         model.addAttribute("course", service.instructorCourse(id, user.getUserId()));
+        model.addAttribute("lessons", service.courseLessons(id, user.getUserId()));
         return "courses/instructor-detail";
     }
 
     @GetMapping("/instructor/courses/{id}/edit")
     public String editForm(@PathVariable Integer id, @AuthenticationPrincipal CustomUserDetails user, Model model) {
+        model.addAttribute("course", service.instructorCourse(id, user.getUserId()));
         model.addAttribute("courseForm", service.editForm(id, user.getUserId()));
         model.addAttribute("categories", service.activeCategories());
         model.addAttribute("formAction", "/instructor/courses/" + id);
@@ -88,12 +90,13 @@ public class CourseManagementController {
                        BindingResult errors, @AuthenticationPrincipal CustomUserDetails user,
                        Model model, RedirectAttributes flash) {
         if (errors.hasErrors()) {
+            model.addAttribute("course", service.instructorCourse(id, user.getUserId()));
             model.addAttribute("categories", service.activeCategories());
             model.addAttribute("formAction", "/instructor/courses/" + id);
             return "courses/form";
         }
         service.edit(id, user.getUserId(), form);
-        flash.addFlashAttribute("success", "Đã lưu thay đổi.");
+        flash.addFlashAttribute("success", "Đã lưu thay đổi. Khóa học được nâng phiên bản và chuyển về Bản nháp.");
         return "redirect:/instructor/courses/" + id;
     }
 
@@ -108,6 +111,13 @@ public class CourseManagementController {
     public String publish(@PathVariable Integer id, @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
         service.publish(id, user.getUserId());
         flash.addFlashAttribute("success", "Đã công bố khóa học.");
+        return "redirect:/instructor/courses/" + id;
+    }
+
+    @PostMapping({"/instructor/courses/{id}/hide", "/instructor/courses/{id}/unpublish"})
+    public String hide(@PathVariable Integer id, @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
+        service.hide(id, user.getUserId());
+        flash.addFlashAttribute("success", "Đã ẩn khóa học khỏi danh sách công khai.");
         return "redirect:/instructor/courses/" + id;
     }
 

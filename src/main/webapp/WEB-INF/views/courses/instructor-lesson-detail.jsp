@@ -107,6 +107,12 @@
                         <c:if test="${editable}">
                             <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--line)">
                                 <h2 style="margin-top:0;margin-bottom:16px">Thêm tài liệu mới</h2>
+                                <c:if test="${course.status eq 'PUBLISHED' or course.status eq 'APPROVED'}">
+                                    <div class="ins-alert ins-alert--warning" style="margin-bottom:16px">
+                                        ⚠️ <strong>Lưu ý:</strong> Thêm tài liệu cho bài học sẽ chuyển khóa học về 
+                                        <strong>Bản nháp (v${course.versionNo + 1})</strong> để gửi Admin phê duyệt lại.
+                                    </div>
+                                </c:if>
                                 <form:form method="post" modelAttribute="materialForm"
                                            action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons/${lesson.lessonId}/materials"
                                            htmlEscape="true">

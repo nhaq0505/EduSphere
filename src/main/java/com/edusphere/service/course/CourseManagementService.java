@@ -8,6 +8,7 @@ import com.edusphere.entity.course.Category;
 import com.edusphere.entity.course.Course;
 import com.edusphere.entity.course.CourseReview;
 import com.edusphere.entity.course.Enrollment;
+import com.edusphere.entity.course.Lesson;
 import com.edusphere.repository.account.UserRepository;
 import com.edusphere.repository.course.CategoryRepository;
 import com.edusphere.repository.course.CourseRepository;
@@ -59,7 +60,7 @@ public class CourseManagementService {
     @Transactional(readOnly = true)
     public CourseForm editForm(Integer id, Integer instructorId) {
         Course course = ownedCourse(id, instructorId);
-        if (!canEdit(course)) throw conflict("Khóa học đang được duyệt hoặc đã công bố, không thể chỉnh sửa.");
+        if (!canEdit(course)) throw conflict("Khóa học đang chờ duyệt hoặc đã lưu trữ, không thể chỉnh sửa.");
         CourseForm form = new CourseForm();
         form.setTitle(course.getTitle());
         form.setDescription(course.getDescription());
@@ -85,24 +86,39 @@ public class CourseManagementService {
     @Transactional
     public void edit(Integer id, Integer instructorId, CourseForm form) {
         Course course = lockedOwnedCourse(id, instructorId);
-        if (!canEdit(course)) throw conflict("Khóa học đang được duyệt hoặc đã công bố, không thể chỉnh sửa.");
+        if (!canEdit(course)) throw conflict("Khóa học đang chờ duyệt hoặc đã lưu trữ, không thể chỉnh sửa.");
         applyForm(course, form);
         course.setVersionNo(course.getVersionNo() + 1);
         course.setStatus("DRAFT");
         course.setSubmittedAt(null);
         course.setApprovedAt(null);
+        course.setPublishedAt(null);
         course.setUpdatedAt(LocalDateTime.now());
     }
 
     @Transactional
     public void submit(Integer id, Integer instructorId) {
         Course course = lockedOwnedCourse(id, instructorId);
-        if (!canEdit(course)) throw conflict("Chỉ có thể gửi khóa học nháp hoặc bị từ chối.");
+        if (!canSubmit(course)) throw conflict("Chỉ có thể gửi khóa học nháp hoặc bị từ chối.");
         if (course.getDescription() == null || course.getDescription().isBlank())
             throw conflict("Hãy thêm mô tả trước khi gửi duyệt.");
+        List<Lesson> courseLessons = lessons.findByCourse_CourseIdOrderByOrderIndexAsc(id);
+        if (courseLessons.isEmpty())
+            throw conflict("Khóa học phải có ít nhất một bài học trước khi gửi duyệt.");
+        boolean hasIncompleteLesson = courseLessons.stream()
+                .anyMatch(l -> l.getTitle() == null || l.getTitle().isBlank()
+                            || l.getContent() == null || l.getContent().isBlank());
+        if (hasIncompleteLesson)
+            throw conflict("Tất cả các bài học phải có tiêu đề và nội dung hoàn chỉnh trước khi gửi duyệt.");
         course.setStatus("SUBMITTED");
         course.setSubmittedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Lesson> courseLessons(Integer courseId, Integer instructorId) {
+        ownedCourse(courseId, instructorId);
+        return lessons.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
     }
 
     @Transactional(readOnly = true)
@@ -143,6 +159,22 @@ public class CourseManagementService {
                     lesson.setStatus("PUBLISHED");
                     lesson.setUpdatedAt(LocalDateTime.now());
                 });
+        List<Enrollment> completed = enrollments.findByCourse_CourseIdAndStatus(id, "COMPLETED");
+        if (completed != null) {
+            completed.forEach(enrollment -> {
+                enrollment.setStatus("ACTIVE");
+                enrollment.setCompletedAt(null);
+            });
+        }
+    }
+
+    @Transactional
+    public void hide(Integer id, Integer instructorId) {
+        Course course = lockedOwnedCourse(id, instructorId);
+        if (!"PUBLISHED".equals(course.getStatus()))
+            throw conflict("Chỉ có thể ẩn khóa học đang được công bố.");
+        course.setStatus("APPROVED");
+        course.setUpdatedAt(LocalDateTime.now());
     }
 
     @Transactional
@@ -199,6 +231,10 @@ public class CourseManagementService {
     }
 
     private boolean canEdit(Course course) {
+        return !"SUBMITTED".equals(course.getStatus()) && !"ARCHIVED".equals(course.getStatus());
+    }
+
+    private boolean canSubmit(Course course) {
         return "DRAFT".equals(course.getStatus()) || "REJECTED".equals(course.getStatus());
     }
 
@@ -232,10 +268,18 @@ public class CourseManagementService {
     private ManagedCourseView view(Course course) {
         String reviewComment = reviews.findFirstByCourse_CourseIdOrderByReviewedAtDescReviewIdDesc(course.getCourseId())
                 .map(CourseReview::getComment).orElse(null);
+        List<Lesson> courseLessons = lessons.findByCourse_CourseIdOrderByOrderIndexAsc(course.getCourseId());
+        int lessonCount = courseLessons.size();
+        boolean readyForSubmit = !courseLessons.isEmpty()
+                && course.getDescription() != null && !course.getDescription().isBlank()
+                && courseLessons.stream().noneMatch(l -> l.getTitle() == null || l.getTitle().isBlank()
+                                                      || l.getContent() == null || l.getContent().isBlank());
+        boolean hidden = "APPROVED".equals(course.getStatus()) && course.getPublishedAt() != null;
         return new ManagedCourseView(course.getCourseId(), course.getTitle(), course.getDescription(),
                 course.getCategory() == null ? "Chưa phân loại" : course.getCategory().getName(),
                 course.getInstructor().getFullName(), course.getLevel(), course.getPrice(),
-                course.getStatus(), course.getVersionNo(), reviewComment);
+                course.getStatus(), course.getVersionNo(), reviewComment,
+                lessonCount, readyForSubmit, hidden, course.getPublishedAt());
     }
 
     private CourseActionException conflict(String message) {

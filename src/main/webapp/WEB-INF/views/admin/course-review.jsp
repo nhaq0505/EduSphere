@@ -67,6 +67,7 @@
                                                 <span>📂 <c:out value="${course.categoryName}"/></span>
                                             </c:if>
                                             <span>🔢 Phiên bản <c:out value="${course.versionNo}"/></span>
+                                            <span>📚 <strong>${course.lessonCount}</strong> bài học</span>
                                             <span>💰
                                                 <c:choose>
                                                     <c:when test="${course.price == 0}">Miễn phí</c:when>

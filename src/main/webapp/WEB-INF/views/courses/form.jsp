@@ -23,10 +23,16 @@
         <div class="ins-form-card">
             <div class="ins-form-card__header">
                 <div class="ins-form-card__eyebrow">🧑‍🏫 Giảng viên</div>
-                <h1><c:choose><c:when test="${formAction.contains('/edit')}">Chỉnh sửa khóa học</c:when><c:otherwise>Tạo khóa học mới</c:otherwise></c:choose></h1>
+                <h1><c:choose><c:when test="${not empty course}">Chỉnh sửa khóa học (v${course.versionNo})</c:when><c:otherwise>Tạo khóa học mới</c:otherwise></c:choose></h1>
                 <p>Điền thông tin bên dưới, lưu bản nháp trước khi gửi duyệt.</p>
             </div>
             <div class="ins-form-card__body">
+                <c:if test="${not empty course && (course.status == 'APPROVED' || course.status == 'PUBLISHED')}">
+                    <div style="background:#EFF6FF; border:1.5px solid #BFDBFE; border-radius:var(--r8); padding:12px 16px; margin-bottom:20px; font-size:.85rem; color:#1E40AF;">
+                        💡 <strong>Lưu ý:</strong> Khóa học này hiện đang ở trạng thái <strong>${course.status == 'PUBLISHED' ? 'Đã công bố' : 'Đã duyệt / Tạm ẩn'}</strong>.
+                        Khi bạn lưu thay đổi, hệ thống sẽ nâng lên phiên bản <strong>v${course.versionNo + 1}</strong> và đưa về <strong>Bản nháp</strong> để bạn hoàn thiện trước khi gửi Admin duyệt lại.
+                    </div>
+                </c:if>
                 <form:form method="post" modelAttribute="courseForm"
                            action="${pageContext.request.contextPath}${formAction}" htmlEscape="true">
                     <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">

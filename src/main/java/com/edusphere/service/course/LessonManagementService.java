@@ -78,21 +78,15 @@ public class LessonManagementService {
     @Transactional
     public Integer create(Integer courseId, Integer instructorId, LessonForm form) {
         Course course = editableCourse(courseId, instructorId);
+        bumpCourseToDraftIfPublishedOrApproved(course);
         Lesson lesson = new Lesson();
         lesson.setCourse(course);
         lesson.setTitle(requiredTitle(form.getTitle()));
         lesson.setContent(trimmed(form.getContent()));
         lesson.setOrderIndex(Math.toIntExact(lessons.countByCourse_CourseId(courseId) + 1));
-        lesson.setStatus("PUBLISHED".equals(course.getStatus()) ? "PUBLISHED" : "DRAFT");
+        lesson.setStatus("DRAFT");
         lesson.setCreatedAt(LocalDateTime.now());
-        Integer lessonId = lessons.save(lesson).getLessonId();
-        if ("PUBLISHED".equals(lesson.getStatus())) {
-            enrollments.findByCourse_CourseIdAndStatus(courseId, "COMPLETED").forEach(enrollment -> {
-                enrollment.setStatus("ACTIVE");
-                enrollment.setCompletedAt(null);
-            });
-        }
-        return lessonId;
+        return lessons.save(lesson).getLessonId();
     }
 
     @Transactional
@@ -106,13 +100,14 @@ public class LessonManagementService {
         if (newOrder != lesson.getOrderIndex()) move(lesson, ordered, newOrder);
         lesson.setTitle(requiredTitle(form.getTitle()));
         lesson.setContent(trimmed(form.getContent()));
-        lesson.setStatus("PUBLISHED".equals(course.getStatus()) ? "PUBLISHED" : "DRAFT");
+        bumpCourseToDraftIfPublishedOrApproved(course);
+        lesson.setStatus("DRAFT");
         lesson.setUpdatedAt(LocalDateTime.now());
     }
 
     @Transactional
     public void addMaterial(Integer courseId, Integer lessonId, Integer instructorId, MaterialForm form) {
-        editableCourse(courseId, instructorId);
+        Course course = editableCourse(courseId, instructorId);
         Lesson lesson = lessons.findByLessonIdAndCourse_CourseId(lessonId, courseId)
                 .orElseThrow(() -> notFound("Không tìm thấy bài học."));
         String url = trimmed(form.getFileUrl());
@@ -121,6 +116,9 @@ public class LessonManagementService {
         String type = form.getType();
         if (type == null || !Set.of("DOCUMENT", "LINK", "VIDEO").contains(type))
             throw conflict("Loại tài liệu không hợp lệ.");
+        bumpCourseToDraftIfPublishedOrApproved(course);
+        lesson.setStatus("DRAFT");
+        lesson.setUpdatedAt(LocalDateTime.now());
         Material material = new Material();
         material.setLesson(lesson);
         material.setTitle(requiredTitle(form.getTitle()));
@@ -129,6 +127,17 @@ public class LessonManagementService {
         material.setOrderIndex(materials.findByLesson_LessonIdOrderByOrderIndexAsc(lessonId).size() + 1);
         material.setUploadedBy(users.getReferenceById(instructorId));
         materials.save(material);
+    }
+
+    private void bumpCourseToDraftIfPublishedOrApproved(Course course) {
+        if ("PUBLISHED".equals(course.getStatus()) || "APPROVED".equals(course.getStatus())) {
+            course.setVersionNo((course.getVersionNo() == null ? 1 : course.getVersionNo()) + 1);
+            course.setStatus("DRAFT");
+            course.setApprovedAt(null);
+            course.setPublishedAt(null);
+            course.setSubmittedAt(null);
+            course.setUpdatedAt(LocalDateTime.now());
+        }
     }
 
     private Course editableCourse(Integer courseId, Integer instructorId) {

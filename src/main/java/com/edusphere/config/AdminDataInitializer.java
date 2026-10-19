@@ -51,13 +51,16 @@ public class AdminDataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        // Bỏ qua nếu email đã tồn tại
+        initDefaultAdmin();
+        initDemoAccounts();
+    }
+
+    private void initDefaultAdmin() {
         if (userRepository.existsByEmail(ADMIN_EMAIL)) {
             log.info("[AdminInit] Tài khoản {} đã tồn tại, bỏ qua.", ADMIN_EMAIL);
             return;
         }
 
-        // Tạo user
         Users admin = new Users();
         admin.setFullName(ADMIN_NAME);
         admin.setEmail(ADMIN_EMAIL);
@@ -66,13 +69,11 @@ public class AdminDataInitializer implements ApplicationRunner {
         admin.setCreatedAt(new Date());
         admin = userRepository.save(admin);
 
-        // Tìm role ADMINISTRATOR
         Roles adminRole = roleRepository.findByRoleName("ADMINISTRATOR")
                 .orElseThrow(() -> new IllegalStateException(
                         "[AdminInit] Role 'ADMINISTRATOR' không tồn tại trong bảng roles! " +
                         "Hãy chạy SQLQuery1.sql trước để seed roles."));
 
-        // Gán role
         UserRolesPK pk = new UserRolesPK(admin.getUserId(), adminRole.getRoleId());
         UserRoles userRole = new UserRoles(pk, new Date());
         userRoleRepository.save(userRole);
@@ -82,5 +83,43 @@ public class AdminDataInitializer implements ApplicationRunner {
         log.info("║  Email   : {}              ║", ADMIN_EMAIL);
         log.info("║  Password: {}                  ║", ADMIN_PASSWORD);
         log.info("╚══════════════════════════════════════════════╝");
+    }
+
+    private void initDemoAccounts() {
+        createOrUpdateDemoAccount("admin@admin.com", "123", "Demo Administrator", "ADMINISTRATOR");
+        createOrUpdateDemoAccount("instructor@instructor.com", "123", "Demo Instructor", "INSTRUCTOR");
+        createOrUpdateDemoAccount("student@student.com", "123", "Demo Student", "STUDENT");
+    }
+
+    private void createOrUpdateDemoAccount(String email, String password, String name, String roleName) {
+        Roles role = roleRepository.findByRoleName(roleName).orElse(null);
+        if (role == null) {
+            log.warn("[DemoInit] Role '{}' không tồn tại, bỏ qua {}", roleName, email);
+            return;
+        }
+
+        Users user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            user = new Users();
+            user.setFullName(name);
+            user.setEmail(email);
+            user.setPasswordHash(passwordEncoder.encode(password));
+            user.setStatus("ACTIVE");
+            user.setCreatedAt(new Date());
+            user = userRepository.save(user);
+
+            UserRolesPK pk = new UserRolesPK(user.getUserId(), role.getRoleId());
+            userRoleRepository.save(new UserRoles(pk, new Date()));
+            log.info("[DemoInit] Đã tạo tài khoản demo: {} ({}) / pass: {}", email, roleName, password);
+        } else {
+            user.setPasswordHash(passwordEncoder.encode(password));
+            user.setStatus("ACTIVE");
+            userRepository.save(user);
+
+            UserRolesPK pk = new UserRolesPK(user.getUserId(), role.getRoleId());
+            if (!userRoleRepository.existsById(pk)) {
+                userRoleRepository.save(new UserRoles(pk, new Date()));
+            }
+        }
     }
 }

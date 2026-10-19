@@ -191,6 +191,7 @@
 .ins-status-badge--published { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
 .ins-status-badge--rejected  { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
 .ins-status-badge--archived  { background: #F8FAFC; color: #94A3B8; }
+.ins-status-badge--hidden    { background: #F3F4F6; color: #4B5563; border: 1px solid #D1D5DB; }
 
 .ins-course-card__body { padding: 16px; display: flex; flex-direction: column; flex: 1; gap: 6px; }
 .ins-course-card__cat  { font-size: .7rem; font-weight: 700; color: #15803D; text-transform: uppercase; letter-spacing: .05em; }
@@ -301,6 +302,23 @@
     transition: all .18s; text-decoration: none; text-align: center;
 }
 .ins-btn-danger:hover { background: #EF4444; color: white; border-color: #EF4444; text-decoration: none; }
+ 
+.ins-btn-warning {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; padding: 10px 18px; border-radius: var(--r99);
+    background: #FFFBEB; color: #D97706; border: 1.5px solid #FDE68A;
+    font-size: .88rem; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: all .18s; text-decoration: none; text-align: center;
+}
+.ins-btn-warning:hover { background: #F59E0B; color: white; border-color: #F59E0B; text-decoration: none; }
+
+.ins-btn-disabled {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; padding: 10px 18px; border-radius: var(--r99);
+    background: #E2E8F0; color: #94A3B8; border: 1.5px solid #CBD5E1;
+    font-size: .88rem; font-weight: 700; cursor: not-allowed; font-family: inherit;
+    text-decoration: none; text-align: center; opacity: .7;
+}
 
 /* ══════════════════════════════════════
    LESSON LIST

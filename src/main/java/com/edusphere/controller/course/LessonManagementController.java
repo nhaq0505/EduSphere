@@ -42,7 +42,8 @@ public class LessonManagementController {
     @GetMapping("/new")
     public String newForm(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails instructor,
                           Model model) {
-        service.editableForDisplay(courseId, instructor.getUserId());
+        var course = service.editableForDisplay(courseId, instructor.getUserId());
+        model.addAttribute("course", course);
         model.addAttribute("lessonForm", new LessonForm());
         model.addAttribute("courseId", courseId);
         model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons");
@@ -54,13 +55,19 @@ public class LessonManagementController {
                          BindingResult errors, @AuthenticationPrincipal CustomUserDetails instructor,
                          Model model, RedirectAttributes flash) {
         if (errors.hasErrors()) {
-            service.editableForDisplay(courseId, instructor.getUserId());
+            var course = service.editableForDisplay(courseId, instructor.getUserId());
+            model.addAttribute("course", course);
             model.addAttribute("courseId", courseId);
             model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons");
             return "courses/lesson-form";
         }
         Integer lessonId = service.create(courseId, instructor.getUserId(), form);
-        flash.addFlashAttribute("success", "Đã tạo bài học.");
+        var course = service.ownedCourse(courseId, instructor.getUserId());
+        if ("DRAFT".equals(course.getStatus()) && course.getVersionNo() != null && course.getVersionNo() > 1) {
+            flash.addFlashAttribute("success", "Đã tạo bài học mới. Khóa học đã được chuyển về bản nháp (v" + course.getVersionNo() + ") để bạn hoàn thiện và gửi Admin duyệt lại.");
+        } else {
+            flash.addFlashAttribute("success", "Đã tạo bài học.");
+        }
         return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
     }
 
@@ -79,12 +86,13 @@ public class LessonManagementController {
     @GetMapping("/{lessonId}/edit")
     public String editForm(@PathVariable Integer courseId, @PathVariable Integer lessonId,
                            @AuthenticationPrincipal CustomUserDetails instructor, Model model) {
-        service.editableForDisplay(courseId, instructor.getUserId());
+        var course = service.editableForDisplay(courseId, instructor.getUserId());
         Lesson lesson = service.lesson(courseId, lessonId, instructor.getUserId());
         LessonForm form = new LessonForm();
         form.setTitle(lesson.getTitle());
         form.setContent(lesson.getContent());
         form.setOrderIndex(lesson.getOrderIndex());
+        model.addAttribute("course", course);
         model.addAttribute("lessonForm", form);
         model.addAttribute("courseId", courseId);
         model.addAttribute("lessonId", lessonId);
@@ -99,8 +107,9 @@ public class LessonManagementController {
                        @AuthenticationPrincipal CustomUserDetails instructor, Model model,
                        RedirectAttributes flash) {
         if (errors.hasErrors()) {
-            service.editableForDisplay(courseId, instructor.getUserId());
+            var course = service.editableForDisplay(courseId, instructor.getUserId());
             service.lesson(courseId, lessonId, instructor.getUserId());
+            model.addAttribute("course", course);
             model.addAttribute("courseId", courseId);
             model.addAttribute("lessonId", lessonId);
             model.addAttribute("maxOrder", service.lessons(courseId, instructor.getUserId()).size());
@@ -108,7 +117,12 @@ public class LessonManagementController {
             return "courses/lesson-form";
         }
         service.edit(courseId, lessonId, instructor.getUserId(), form);
-        flash.addFlashAttribute("success", "Đã cập nhật bài học.");
+        var course = service.ownedCourse(courseId, instructor.getUserId());
+        if ("DRAFT".equals(course.getStatus()) && course.getVersionNo() != null && course.getVersionNo() > 1) {
+            flash.addFlashAttribute("success", "Đã cập nhật bài học. Khóa học đã được chuyển về bản nháp (v" + course.getVersionNo() + ") để bạn hoàn thiện và gửi Admin duyệt lại.");
+        } else {
+            flash.addFlashAttribute("success", "Đã cập nhật bài học.");
+        }
         return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
     }
 
@@ -124,7 +138,12 @@ public class LessonManagementController {
             return "courses/instructor-lesson-detail";
         }
         service.addMaterial(courseId, lessonId, instructor.getUserId(), form);
-        flash.addFlashAttribute("success", "Đã thêm tài liệu cho bài học.");
+        var course = service.ownedCourse(courseId, instructor.getUserId());
+        if ("DRAFT".equals(course.getStatus()) && course.getVersionNo() != null && course.getVersionNo() > 1) {
+            flash.addFlashAttribute("success", "Đã thêm tài liệu cho bài học. Khóa học đã được chuyển về bản nháp (v" + course.getVersionNo() + ") để bạn hoàn thiện và gửi Admin duyệt lại.");
+        } else {
+            flash.addFlashAttribute("success", "Đã thêm tài liệu cho bài học.");
+        }
         return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
     }
 

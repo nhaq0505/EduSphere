@@ -46,6 +46,7 @@
                             <div class="ins-course-card__thumb">
                                 📖
                                 <c:choose>
+                                    <c:when test="${course.hidden}">                <span class="ins-status-badge ins-status-badge--hidden">Tạm ẩn</span></c:when>
                                     <c:when test="${course.status == 'DRAFT'}">     <span class="ins-status-badge ins-status-badge--draft">Bản nháp</span></c:when>
                                     <c:when test="${course.status == 'SUBMITTED'}"> <span class="ins-status-badge ins-status-badge--submitted">Chờ duyệt</span></c:when>
                                     <c:when test="${course.status == 'APPROVED'}">  <span class="ins-status-badge ins-status-badge--approved">Đã duyệt</span></c:when>
@@ -61,13 +62,13 @@
                                         <c:out value="${course.title}"/>
                                     </a>
                                 </h3>
-                                <p class="ins-course-card__meta">Phiên bản <c:out value="${course.versionNo}"/></p>
+                                <p class="ins-course-card__meta">Phiên bản <c:out value="${course.versionNo}"/> • ${course.lessonCount} bài học</p>
                                 <div class="ins-course-card__footer">
                                     <a class="ins-link-btn ins-link-btn--primary"
                                        href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}">
                                        Chi tiết →
                                     </a>
-                                    <c:if test="${course.status == 'DRAFT' || course.status == 'REJECTED'}">
+                                    <c:if test="${course.status != 'SUBMITTED' && course.status != 'ARCHIVED'}">
                                         <a class="ins-link-btn"
                                            href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/edit">
                                            ✏️ Sửa

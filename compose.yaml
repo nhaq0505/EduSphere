@@ -1,0 +1,18 @@
+services:
+  edusphere-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    container_name: edusphere-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: ${EDUSPHERE_DB_SA_PASSWORD:?Set EDUSPHERE_DB_SA_PASSWORD in .env}
+      SQLCMDPASSWORD: ${EDUSPHERE_DB_SA_PASSWORD:?Set EDUSPHERE_DB_SA_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:1435:1433"
+    volumes:
+      - edusphere_sqlserver_data:/var/opt/mssql
+    restart: unless-stopped
+
+volumes:
+  edusphere_sqlserver_data:
