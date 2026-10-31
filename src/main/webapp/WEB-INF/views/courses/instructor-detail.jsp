@@ -1,4 +1,4 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
@@ -9,16 +9,15 @@
     <title>Chi tiết khóa học — EduSphere</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/instructor.css">
 </head>
 <body>
+<div class="ins-layout">
+<jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
+<div class="ins-main-wrapper">
 <jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
-<div class="ins-shell">
-    <jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
-    <main class="ins-content">
+    <main class="ins-page">
 
-        <a class="ins-back-link" href="${pageContext.request.contextPath}/instructor/courses">← Danh sách khóa học</a>
 
         <c:if test="${not empty success}"><div class="ins-alert ins-alert--success">✅ <c:out value="${success}"/></div></c:if>
 
@@ -236,8 +235,9 @@
         </div>
     </main>
 </div>
+</div>
 <script>
-function toggleUserMenu(e){e.stopPropagation();e.currentTarget.closest('.hn-user-menu').classList.toggle('open');}
-document.addEventListener('click',()=>document.querySelectorAll('.hn-user-menu.open').forEach(m=>m.classList.remove('open')));
+function insToggleMenu(e){e.stopPropagation();document.getElementById('insUserMenu').classList.toggle('open');}
+document.addEventListener('click',()=>{var m=document.getElementById('insUserMenu');if(m)m.classList.remove('open');});
 </script>
 </body></html>

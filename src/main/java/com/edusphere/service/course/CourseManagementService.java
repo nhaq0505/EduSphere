@@ -2,6 +2,7 @@ package com.edusphere.service.course;
 
 import com.edusphere.dto.course.CourseForm;
 import com.edusphere.dto.course.EnrolledCourseView;
+import com.edusphere.dto.course.InstructorDashboardStats;
 import com.edusphere.dto.course.ManagedCourseView;
 import com.edusphere.entity.account.Users;
 import com.edusphere.entity.course.Category;
@@ -61,6 +62,28 @@ public class CourseManagementService {
     @Transactional(readOnly = true)
     public List<ManagedCourseView> instructorCourses(Integer instructorId) {
         return courses.findByInstructor_UserIdOrderByCreatedAtDesc(instructorId).stream().map(this::view).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public InstructorDashboardStats instructorDashboard(Integer instructorId) {
+        List<ManagedCourseView> all = instructorCourses(instructorId);
+        int totalCourses    = all.size();
+        int publishedCount  = (int) all.stream().filter(c -> "PUBLISHED".equals(c.getStatus())).count();
+        int draftCount      = (int) all.stream().filter(c -> "DRAFT".equals(c.getStatus())).count();
+        int totalLessons    = all.stream().mapToInt(ManagedCourseView::getLessonCount).sum();
+
+        // Đếm tổng học viên (active + completed) qua tất cả khóa học của giáo viên
+        int totalStudents = courses.findByInstructor_UserIdOrderByCreatedAtDesc(instructorId).stream()
+                .mapToInt(course -> {
+                    long active    = enrollments.findByCourse_CourseIdAndStatus(course.getCourseId(), "ACTIVE").size();
+                    long completed = enrollments.findByCourse_CourseIdAndStatus(course.getCourseId(), "COMPLETED").size();
+                    return (int)(active + completed);
+                }).sum();
+
+        // Hiển thị tối đa 5 khóa học gần nhất trên dashboard
+        List<ManagedCourseView> recent = all.stream().limit(5).toList();
+        return new InstructorDashboardStats(totalCourses, publishedCount, draftCount,
+                totalStudents, totalLessons, recent);
     }
 
     @Transactional(readOnly = true)

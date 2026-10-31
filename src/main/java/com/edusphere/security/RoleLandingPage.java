@@ -13,7 +13,7 @@ public final class RoleLandingPage {
                 return "/admin/courses/review";
             }
             if (hasRole(authentication, "ROLE_INSTRUCTOR")) {
-                return "/";
+                return "/instructor/dashboard";
             }
             if (hasRole(authentication, "ROLE_STUDENT")) {
                 return "/";

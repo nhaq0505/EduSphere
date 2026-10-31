@@ -83,6 +83,7 @@ public class SecurityConfig {
                     "/WEB-INF/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/courses", "/courses/{courseId}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/courses/{courseId}/enroll").hasRole("STUDENT")
                 .requestMatchers(HttpMethod.POST, "/payments/payos/webhook").permitAll()
                 .requestMatchers(HttpMethod.POST, "/courses/{courseId}/checkout").hasRole("STUDENT")
                 .requestMatchers(HttpMethod.GET, "/payments/result").hasRole("STUDENT")

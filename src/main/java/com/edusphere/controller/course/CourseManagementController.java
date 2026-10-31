@@ -42,10 +42,22 @@ public class CourseManagementController {
         return "redirect:/my-courses";
     }
 
+    // Nếu ai đó gõ URL GET /courses/{courseId}/enroll thẳng → redirect về trang chi tiết khóa học
+    @GetMapping("/courses/{courseId}/enroll")
+    public String enrollRedirect(@PathVariable Integer courseId) {
+        return "redirect:/courses/" + courseId;
+    }
+
     @GetMapping("/instructor/courses")
     public String instructorCourses(@AuthenticationPrincipal CustomUserDetails user, Model model) {
         model.addAttribute("courses", service.instructorCourses(user.getUserId()));
         return "courses/instructor-list";
+    }
+
+    @GetMapping("/instructor/dashboard")
+    public String instructorDashboard(@AuthenticationPrincipal CustomUserDetails user, Model model) {
+        model.addAttribute("stats", service.instructorDashboard(user.getUserId()));
+        return "courses/instructor-dashboard";
     }
 
     @GetMapping("/instructor/courses/new")

@@ -5,86 +5,124 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý khóa học — EduSphere</title>
+    <title>Khóa học của tôi — EduSphere</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/instructor.css">
 </head>
 <body>
-<jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
-<div class="ins-shell">
+<div class="ins-layout">
     <jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
-    <main class="ins-content">
+    <div class="ins-main-wrapper">
+        <jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
+        <main class="ins-page">
 
-        <div class="ins-page-head">
-            <div>
-                <span class="ins-page-head__eyebrow">🧑‍🏫 Giảng viên</span>
-                <h1 class="ins-page-head__title">Khóa học của tôi</h1>
-                <p class="ins-page-head__sub">Tạo bản nháp, gửi duyệt và theo dõi quá trình công bố.</p>
+            <div class="ins-page-head">
+                <div>
+                    <span class="ins-page-head__eyebrow">Giáo viên</span>
+                    <h1 class="ins-page-head__title">Khóa học của tôi</h1>
+                    <p class="ins-page-head__sub">Tạo bản nháp, gửi duyệt và theo dõi quá trình công bố.</p>
+                </div>
+                <a class="ins-btn ins-btn--primary"
+                   href="${pageContext.request.contextPath}/instructor/courses/new">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="9" stroke="white" stroke-width="2"/>
+                        <path d="M12 8v8M8 12h8" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Tạo khóa học mới
+                </a>
             </div>
-            <a class="ins-btn-primary" style="width:auto;padding:10px 22px"
-               href="${pageContext.request.contextPath}/instructor/courses/new">+ Tạo khóa học mới</a>
-        </div>
 
-        <c:if test="${not empty success}"><div class="ins-alert ins-alert--success">✅ <c:out value="${success}"/></div></c:if>
+            <c:if test="${not empty success}">
+                <div class="ins-alert ins-alert--success">✅ <c:out value="${success}"/></div>
+            </c:if>
 
-        <c:choose>
-            <c:when test="${empty courses}">
-                <div class="ins-empty">
-                    <div class="ins-empty__icon">📚</div>
-                    <h3>Bắt đầu với khóa học đầu tiên</h3>
-                    <p>Tạo bản nháp, thêm bài học rồi gửi quản trị viên duyệt.</p>
-                    <a class="ins-btn-primary" style="width:auto;padding:11px 28px;margin:0 auto"
-                       href="${pageContext.request.contextPath}/instructor/courses/new">+ Tạo khóa học mới</a>
-                </div>
-            </c:when>
-            <c:otherwise>
-                <div class="ins-course-grid">
-                    <c:forEach var="course" items="${courses}">
-                        <article class="ins-course-card">
-                            <div class="ins-course-card__thumb">
-                                📖
-                                <c:choose>
-                                    <c:when test="${course.hidden}">                <span class="ins-status-badge ins-status-badge--hidden">Tạm ẩn</span></c:when>
-                                    <c:when test="${course.status == 'DRAFT'}">     <span class="ins-status-badge ins-status-badge--draft">Bản nháp</span></c:when>
-                                    <c:when test="${course.status == 'SUBMITTED'}"> <span class="ins-status-badge ins-status-badge--submitted">Chờ duyệt</span></c:when>
-                                    <c:when test="${course.status == 'APPROVED'}">  <span class="ins-status-badge ins-status-badge--approved">Đã duyệt</span></c:when>
-                                    <c:when test="${course.status == 'PUBLISHED'}"> <span class="ins-status-badge ins-status-badge--published">Đã công bố</span></c:when>
-                                    <c:when test="${course.status == 'REJECTED'}">  <span class="ins-status-badge ins-status-badge--rejected">Cần chỉnh sửa</span></c:when>
-                                    <c:otherwise>                                   <span class="ins-status-badge ins-status-badge--archived">Đã lưu trữ</span></c:otherwise>
-                                </c:choose>
-                            </div>
-                            <div class="ins-course-card__body">
-                                <span class="ins-course-card__cat"><c:out value="${course.categoryName}" default="Chưa phân loại"/></span>
-                                <h3 class="ins-course-card__title">
-                                    <a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}">
-                                        <c:out value="${course.title}"/>
-                                    </a>
-                                </h3>
-                                <p class="ins-course-card__meta">Phiên bản <c:out value="${course.versionNo}"/> • ${course.lessonCount} bài học</p>
-                                <div class="ins-course-card__footer">
-                                    <a class="ins-link-btn ins-link-btn--primary"
-                                       href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}">
-                                       Chi tiết →
-                                    </a>
-                                    <c:if test="${course.status != 'SUBMITTED' && course.status != 'ARCHIVED'}">
-                                        <a class="ins-link-btn"
-                                           href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/edit">
-                                           ✏️ Sửa
-                                        </a>
-                                    </c:if>
+            <c:choose>
+                <c:when test="${empty courses}">
+                    <div class="ins-empty">
+                        <span class="ins-empty__icon">📚</span>
+                        <h3>Bắt đầu với khóa học đầu tiên</h3>
+                        <p>Tạo bản nháp, thêm bài học rồi gửi quản trị viên duyệt.</p>
+                        <a class="ins-btn ins-btn--primary" style="margin:0 auto"
+                           href="${pageContext.request.contextPath}/instructor/courses/new">+ Tạo khóa học mới</a>
+                    </div>
+                </c:when>
+                <c:otherwise>
+                    <div class="ins-course-grid">
+                        <c:forEach var="course" items="${courses}">
+                            <article class="ins-course-card">
+                                <div class="ins-course-card__thumb">
+                                    📖
+                                    <div class="ins-course-card__status-badge">
+                                        <c:choose>
+                                            <c:when test="${course.hidden}">
+                                                <span class="ins-badge ins-badge--hidden">Tạm ẩn</span>
+                                            </c:when>
+                                            <c:when test="${course.status == 'DRAFT'}">
+                                                <span class="ins-badge ins-badge--draft">Bản nháp</span>
+                                            </c:when>
+                                            <c:when test="${course.status == 'SUBMITTED'}">
+                                                <span class="ins-badge ins-badge--submitted">Chờ duyệt</span>
+                                            </c:when>
+                                            <c:when test="${course.status == 'APPROVED'}">
+                                                <span class="ins-badge ins-badge--approved">Đã duyệt</span>
+                                            </c:when>
+                                            <c:when test="${course.status == 'PUBLISHED'}">
+                                                <span class="ins-badge ins-badge--published">Đã xuất bản</span>
+                                            </c:when>
+                                            <c:when test="${course.status == 'REJECTED'}">
+                                                <span class="ins-badge ins-badge--rejected">Cần chỉnh sửa</span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="ins-badge ins-badge--archived">Đã lưu trữ</span>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </div>
                                 </div>
-                            </div>
-                        </article>
-                    </c:forEach>
-                </div>
-            </c:otherwise>
-        </c:choose>
-    </main>
+                                <div class="ins-course-card__body">
+                                    <span class="ins-course-card__cat">
+                                        <c:out value="${course.categoryName}" default="Chưa phân loại"/>
+                                    </span>
+                                    <h3 class="ins-course-card__title">
+                                        <a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}">
+                                            <c:out value="${course.title}"/>
+                                        </a>
+                                    </h3>
+                                    <div class="ins-course-card__meta">
+                                        <span>v<c:out value="${course.versionNo}"/></span>
+                                        <span>•</span>
+                                        <span>${course.lessonCount} bài học</span>
+                                    </div>
+                                    <div class="ins-course-card__footer">
+                                        <a class="ins-btn ins-btn--primary ins-btn--sm"
+                                           href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}">
+                                            Chi tiết →
+                                        </a>
+                                        <c:if test="${course.status != 'SUBMITTED' && course.status != 'ARCHIVED'}">
+                                            <a class="ins-btn ins-btn--outline ins-btn--sm"
+                                               href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/edit">
+                                                ✏️ Sửa
+                                            </a>
+                                        </c:if>
+                                    </div>
+                                </div>
+                            </article>
+                        </c:forEach>
+                    </div>
+                </c:otherwise>
+            </c:choose>
+        </main>
+    </div>
 </div>
 <script>
-function toggleUserMenu(e){e.stopPropagation();e.currentTarget.closest('.hn-user-menu').classList.toggle('open');}
-document.addEventListener('click',()=>document.querySelectorAll('.hn-user-menu.open').forEach(m=>m.classList.remove('open')));
+function insToggleMenu(e) {
+    e.stopPropagation();
+    document.getElementById('insUserMenu').classList.toggle('open');
+}
+document.addEventListener('click', function() {
+    var m = document.getElementById('insUserMenu');
+    if (m) m.classList.remove('open');
+});
 </script>
-</body></html>
+</body>
+</html>
