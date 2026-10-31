@@ -18,4 +18,6 @@ public interface LessonRepository extends JpaRepository<Lesson, Integer> {
     List<Lesson> findByCourse_CourseIdOrderByOrderIndexAsc(Integer courseId);
 
     long countByCourse_CourseId(Integer courseId);
+
+    long countByCourse_CourseIdAndStatus(Integer courseId, String status);
 }

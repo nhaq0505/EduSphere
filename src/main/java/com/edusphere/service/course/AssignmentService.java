@@ -23,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,11 +40,21 @@ public class AssignmentService {
     private final LessonRepository lessons;
     private final EnrollmentRepository enrollments;
     private final UserRepository users;
+    private final LearningProgressService learningProgressService;
 
     public AssignmentService(AssignmentRepository assignments, SubmissionRepository submissions,
                              GradeRepository grades, CourseRepository courses,
                              LessonRepository lessons, EnrollmentRepository enrollments,
                              UserRepository users) {
+        this(assignments, submissions, grades, courses, lessons, enrollments, users, null);
+    }
+
+    @Autowired
+    public AssignmentService(AssignmentRepository assignments, SubmissionRepository submissions,
+                             GradeRepository grades, CourseRepository courses,
+                             LessonRepository lessons, EnrollmentRepository enrollments,
+                             UserRepository users,
+                             LearningProgressService learningProgressService) {
         this.assignments = assignments;
         this.submissions = submissions;
         this.grades = grades;
@@ -51,6 +62,7 @@ public class AssignmentService {
         this.lessons = lessons;
         this.enrollments = enrollments;
         this.users = users;
+        this.learningProgressService = learningProgressService;
     }
 
     // ===================== INSTRUCTOR OPERATIONS =====================
@@ -200,9 +212,10 @@ public class AssignmentService {
         if (a.getLockAt() != null && now.isAfter(a.getLockAt()))
             throw conflict("Bài tập đã bị khóa, không thể nộp.");
 
+        Users student = user(studentId);
         Submission sub = new Submission();
         sub.setAssignment(a);
-        sub.setStudent(user(studentId));
+        sub.setStudent(student);
         sub.setCourse(a.getCourse());
         sub.setAnswerText(form.getAnswerText());
         sub.setFileUrl(form.getFileUrl());
@@ -211,6 +224,12 @@ public class AssignmentService {
         sub.setLate(a.getDueDate() != null && now.isAfter(a.getDueDate()));
         sub.setStatus("SUBMITTED");
         submissions.save(sub);
+
+        // Ghi lại lịch sử hoạt động nộp bài tập (UC38)
+        if (learningProgressService != null) {
+            learningProgressService.recordActivity(student, a.getCourse(),
+                    "ASSIGNMENT_SUBMITTED", a.getLesson(), a, null, "Đã nộp bài tập: " + a.getTitle());
+        }
     }
 
     @Transactional(readOnly = true)

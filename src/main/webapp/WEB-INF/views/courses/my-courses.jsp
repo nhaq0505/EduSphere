@@ -26,6 +26,7 @@
             <a class="hn-nav__link" href="${pageContext.request.contextPath}/">Trang chủ</a>
             <a class="hn-nav__link" href="${pageContext.request.contextPath}/courses">Khóa học</a>
             <a class="hn-nav__link hn-nav__link--active" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a>
+            <a class="hn-nav__link" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
         </nav>
         <div class="hn-header__right">
             <div class="hn-search">
@@ -68,6 +69,10 @@
                             <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/my-courses">
                                 <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="M8 12l3 3 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 Khóa học của tôi
+                            </a>
+                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/study/plans">
+                                <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="1.7"/></svg>
+                                Kế hoạch học tập
                             </a>
                             <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/change-password">
                                 <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>

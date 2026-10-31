@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,12 +53,23 @@ public class QuizService {
     private final LessonRepository lessons;
     private final EnrollmentRepository enrollments;
     private final UserRepository users;
+    private final LearningProgressService learningProgressService;
 
     public QuizService(QuizRepository quizzes, QuestionRepository questions,
                        AnswerOptionRepository answerOptions, QuizAttemptRepository attempts,
                        QuizAnswerRepository answers, QuizAnswerOptionRepository answerOptionLinks,
                        CourseRepository courses, LessonRepository lessons,
                        EnrollmentRepository enrollments, UserRepository users) {
+        this(quizzes, questions, answerOptions, attempts, answers, answerOptionLinks, courses, lessons, enrollments, users, null);
+    }
+
+    @Autowired
+    public QuizService(QuizRepository quizzes, QuestionRepository questions,
+                       AnswerOptionRepository answerOptions, QuizAttemptRepository attempts,
+                       QuizAnswerRepository answers, QuizAnswerOptionRepository answerOptionLinks,
+                       CourseRepository courses, LessonRepository lessons,
+                       EnrollmentRepository enrollments, UserRepository users,
+                       LearningProgressService learningProgressService) {
         this.quizzes = quizzes;
         this.questions = questions;
         this.answerOptions = answerOptions;
@@ -68,6 +80,7 @@ public class QuizService {
         this.lessons = lessons;
         this.enrollments = enrollments;
         this.users = users;
+        this.learningProgressService = learningProgressService;
     }
 
     // ===================== INSTRUCTOR OPERATIONS =====================
@@ -367,6 +380,14 @@ public class QuizService {
                 .anyMatch(q -> "SHORT_ANSWER".equals(q.getType()) || "ESSAY".equals(q.getType()));
         if (!hasManual) {
             attempt.setStatus("SCORED");
+        }
+        attempts.save(attempt);
+
+        // Ghi lại lịch sử hoạt động nộp bài quiz (UC38)
+        if (learningProgressService != null) {
+            Quiz quiz = attempt.getQuiz();
+            learningProgressService.recordActivity(attempt.getStudent(), quiz.getCourse(),
+                    "QUIZ_SUBMITTED", quiz.getLesson(), null, quiz, "Đã làm bài kiểm tra: " + quiz.getTitle());
         }
     }
 

@@ -16,4 +16,6 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
     List<Enrollment> findByStudent_UserIdOrderByEnrolledAtDesc(Integer studentId);
 
     List<Enrollment> findByCourse_CourseIdAndStatus(Integer courseId, String status);
+
+    List<Enrollment> findByCourse_CourseIdOrderByEnrolledAtDesc(Integer courseId);
 }

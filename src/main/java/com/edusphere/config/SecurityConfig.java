@@ -90,6 +90,7 @@ public class SecurityConfig {
                 .requestMatchers("/courses/{courseId}/learn", "/courses/{courseId}/lessons/**").hasRole("STUDENT")
                 .requestMatchers("/courses/{courseId}/assignments/**", "/courses/{courseId}/quizzes/**", "/courses/{courseId}/results").hasRole("STUDENT")
                 .requestMatchers("/my-courses").hasRole("STUDENT")
+                .requestMatchers("/study/**").hasRole("STUDENT")
                 .requestMatchers("/admin/**").hasRole("ADMINISTRATOR")
                 .requestMatchers("/instructor/**").hasRole("INSTRUCTOR")
                 .anyRequest().authenticated()

@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,16 +36,26 @@ public class CourseManagementService {
     private final LessonRepository lessons;
     private final CategoryRepository categories;
     private final UserRepository users;
+    private final LearningProgressService learningProgressService;
 
     public CourseManagementService(CourseRepository courses, CourseReviewRepository reviews,
                                    EnrollmentRepository enrollments, CategoryRepository categories,
                                    UserRepository users, LessonRepository lessons) {
+        this(courses, reviews, enrollments, categories, users, lessons, null);
+    }
+
+    @Autowired
+    public CourseManagementService(CourseRepository courses, CourseReviewRepository reviews,
+                                   EnrollmentRepository enrollments, CategoryRepository categories,
+                                   UserRepository users, LessonRepository lessons,
+                                   LearningProgressService learningProgressService) {
         this.courses = courses;
         this.reviews = reviews;
         this.enrollments = enrollments;
         this.lessons = lessons;
         this.categories = categories;
         this.users = users;
+        this.learningProgressService = learningProgressService;
     }
 
     @Transactional(readOnly = true)
@@ -194,15 +205,22 @@ public class CourseManagementService {
         Enrollment existing = enrollments.findByStudent_UserIdAndCourse_CourseId(studentId, courseId).orElse(null);
         if (existing != null && !"DROPPED".equals(existing.getStatus())) throw conflict("Bạn đã ghi danh khóa học này.");
 
+        Users student = user(studentId);
         if (existing == null) {
             Enrollment enrollment = new Enrollment();
-            enrollment.setStudent(user(studentId));
+            enrollment.setStudent(student);
             enrollment.setCourse(course);
             enrollments.save(enrollment);
         } else {
             existing.setStatus("ACTIVE");
             existing.setDroppedAt(null);
             existing.setEnrolledAt(LocalDateTime.now());
+        }
+
+        // Ghi lại lịch sử ghi danh khóa học (UC38)
+        if (learningProgressService != null) {
+            learningProgressService.recordActivity(student, course,
+                    "COURSE_ENROLLED", null, null, null, "Đã ghi danh khóa học: " + course.getTitle());
         }
     }
 

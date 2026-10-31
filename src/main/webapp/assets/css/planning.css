@@ -1,0 +1,678 @@
+/* ══════════════════════════════════════════════════════════════════
+   EDUSPHERE - PERSONAL PLANNING & PROGRESS (UC34 - UC39)
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Planning Subnav Tabs */
+.plan-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 28px;
+    padding-bottom: 0;
+    overflow-x: auto;
+}
+.plan-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #64748b;
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.plan-tab:hover {
+    color: #2563eb;
+}
+.plan-tab--active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+.plan-tab__badge {
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 0.75rem;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    font-weight: 700;
+}
+
+/* Header & Action Bar */
+.plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.plan-header__title {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+}
+.plan-header__subtitle {
+    font-size: 0.92rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* Stats Summary Cards */
+.plan-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+.plan-stat-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.plan-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
+.plan-stat-icon--blue { background: #eff6ff; color: #2563eb; }
+.plan-stat-icon--green { background: #f0fdf4; color: #16a34a; }
+.plan-stat-icon--amber { background: #fffbeb; color: #d97706; }
+.plan-stat-icon--purple { background: #faf5ff; color: #9333ea; }
+.plan-stat-info h4 {
+    margin: 0;
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+.plan-stat-info p {
+    margin: 2px 0 0;
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* Plan Cards Grid */
+.plan-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+.plan-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.plan-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -3px rgba(0,0,0,0.08);
+}
+.plan-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.plan-card__title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    text-decoration: none;
+}
+.plan-card__title:hover {
+    color: #2563eb;
+}
+.plan-card__desc {
+    font-size: 0.88rem;
+    color: #64748b;
+    margin-bottom: 16px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.plan-card__meta {
+    font-size: 0.82rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+/* Progress Bar Component */
+.progress-bar-container {
+    margin-bottom: 16px;
+}
+.progress-bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+}
+.progress-bar-track {
+    width: 100%;
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+    transition: width 0.4s ease;
+}
+.progress-bar-fill--green {
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+/* Badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.badge--active { background: #dbeafe; color: #1e40af; }
+.badge--completed, .badge--done { background: #dcfce7; color: #166534; }
+.badge--pending { background: #fef3c7; color: #92400e; }
+.badge--cancelled, .badge--skipped { background: #f1f5f9; color: #475569; }
+
+/* Buttons */
+.btn-primary {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 9px 18px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+.btn-primary:hover {
+    background: #1d4ed8;
+}
+.btn-secondary {
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+.btn-secondary:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.82rem;
+}
+.btn-danger {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+.btn-danger:hover {
+    background: #fecaca;
+}
+
+/* Forms */
+.form-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 32px;
+    max-width: 720px;
+    margin: 0 auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.form-group {
+    margin-bottom: 20px;
+}
+.form-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 6px;
+}
+.form-group .form-control {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+.form-group .form-control:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+.form-hint {
+    font-size: 0.82rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid #f1f5f9;
+}
+
+/* Callout Info Box */
+.callout-info {
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
+    border-radius: 6px;
+    padding: 14px 18px;
+    font-size: 0.88rem;
+    color: #1e40af;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+/* Alert Error / Success */
+.alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.alert-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+/* Task List Table */
+.task-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+.task-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    text-align: left;
+}
+.task-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    padding: 12px 18px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.task-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+.task-table tr:hover {
+    background: #f8fafc;
+}
+.task-title {
+    font-weight: 600;
+    color: #0f172a;
+}
+.task-title--done {
+    text-decoration: line-through;
+    color: #94a3b8;
+}
+.task-resource {
+    font-size: 0.82rem;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+}
+
+/* Calendar View */
+.cal-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.cal-range-text {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    min-width: 220px;
+    text-align: center;
+}
+.cal-week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+}
+@media (max-width: 1024px) {
+    .cal-week-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 640px) {
+    .cal-week-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.cal-day-col {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+}
+.cal-day-col--today {
+    border-color: #3b82f6;
+    background: #f8faff;
+    box-shadow: 0 0 0 1.5px #3b82f6;
+}
+.cal-day-head {
+    text-align: center;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.cal-day-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+.cal-day-date {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-top: 2px;
+}
+.cal-day-col--today .cal-day-date {
+    color: #2563eb;
+}
+.cal-task-item {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-left: 3.5px solid #3b82f6;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    font-size: 0.82rem;
+    text-decoration: none;
+    color: #1e293b;
+    display: block;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.cal-task-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.06);
+}
+.cal-task-item--done {
+    border-left-color: #10b981;
+    background: #f0fdf4;
+    opacity: 0.8;
+}
+.cal-task-item--done .cal-task-title {
+    text-decoration: line-through;
+    color: #64748b;
+}
+.cal-task-time {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+}
+.cal-task-title {
+    font-weight: 600;
+    margin: 2px 0 4px;
+    word-break: break-word;
+}
+.cal-empty {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.82rem;
+    margin-top: 40px;
+}
+
+/* History Feed */
+.history-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+.history-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.history-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+}
+.history-icon--lesson { background: #eff6ff; color: #2563eb; }
+.history-icon--assignment { background: #fef3c7; color: #d97706; }
+.history-icon--quiz { background: #faf5ff; color: #9333ea; }
+.history-icon--course { background: #f0fdf4; color: #16a34a; }
+.history-content {
+    flex: 1;
+}
+.history-course-badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #2563eb;
+    background: #eff6ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 4px;
+}
+.history-title {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 4px;
+}
+.history-details {
+    font-size: 0.88rem;
+    color: #475569;
+    margin: 0;
+}
+.history-time {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 32px;
+}
+.pagination-btn {
+    padding: 8px 14px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.pagination-btn:hover {
+    background: #f1f5f9;
+}
+.pagination-btn--active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+}
+.pagination-btn--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Progress Cards (UC37) */
+.progress-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+}
+.progress-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.progress-card__header {
+    margin-bottom: 14px;
+}
+.progress-card__category {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #2563eb;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+}
+.progress-card__title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 6px;
+}
+.progress-card__instructor {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+.progress-card__stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #475569;
+    margin-bottom: 12px;
+}
+.progress-card__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #f1f5f9;
+}
+
+/* Instructor Student Progress Table (UC39) */
+.student-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #eff6ff;
+    color: #2563eb;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+.student-info-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.student-name {
+    font-weight: 700;
+    color: #0f172a;
+}
+.student-email {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+

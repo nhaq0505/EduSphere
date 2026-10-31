@@ -13,6 +13,7 @@ import com.edusphere.repository.course.LessonCompletionRepository;
 import com.edusphere.repository.course.LessonRepository;
 import com.edusphere.repository.course.MaterialRepository;
 import com.edusphere.repository.account.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,23 +37,40 @@ public class LearningService {
     private final LessonCompletionRepository lessonCompletionRepository;
     private final MaterialRepository materialRepository;
     private final UserRepository userRepository;
+    private final LearningProgressService learningProgressService;
 
     public LearningService(LessonRepository lessonRepository,
                            EnrollmentRepository enrollmentRepository,
                            LessonCompletionRepository lessonCompletionRepository,
                            MaterialRepository materialRepository,
                            UserRepository userRepository) {
+        this(lessonRepository, enrollmentRepository, lessonCompletionRepository, materialRepository, userRepository, null);
+    }
+
+    @Autowired
+    public LearningService(LessonRepository lessonRepository,
+                           EnrollmentRepository enrollmentRepository,
+                           LessonCompletionRepository lessonCompletionRepository,
+                           MaterialRepository materialRepository,
+                           UserRepository userRepository,
+                           LearningProgressService learningProgressService) {
         this.lessonRepository = lessonRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.lessonCompletionRepository = lessonCompletionRepository;
         this.materialRepository = materialRepository;
         this.userRepository = userRepository;
+        this.learningProgressService = learningProgressService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public StudyCourseView getStudyContext(Integer courseId, Integer lessonId, Integer studentId) {
         Enrollment enrollment = verifyEnrollment(studentId, courseId);
         Course course = enrollment.getCourse();
+
+        // Ghi nhận thời điểm truy cập khóa học gần nhất
+        if (learningProgressService != null) {
+            learningProgressService.recordAccess(studentId, courseId);
+        }
 
         List<Lesson> publishedLessons = lessonRepository.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(courseId, PUBLISHED);
         if (publishedLessons.isEmpty()) {
@@ -136,6 +154,11 @@ public class LearningService {
             lessonCompletionRepository.save(completion);
         }
 
+        // Cập nhật tiến độ học tập và ghi lịch sử hoạt động (UC37 & UC38)
+        if (learningProgressService != null) {
+            learningProgressService.updateProgressOnLessonCompleted(studentId, courseId, lessonId);
+        }
+
         List<Lesson> publishedLessons = lessonRepository.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(courseId, PUBLISHED);
         long completedCount = lessonCompletionRepository.countByStudent_UserIdAndCourse_CourseId(studentId, courseId);
 
@@ -143,6 +166,11 @@ public class LearningService {
             enrollment.setStatus("COMPLETED");
             enrollment.setCompletedAt(LocalDateTime.now());
             enrollmentRepository.save(enrollment);
+            // Ghi nhận hoàn thành khóa học vào lịch sử
+            if (learningProgressService != null) {
+                learningProgressService.recordActivity(enrollment.getStudent(), enrollment.getCourse(),
+                        "COURSE_COMPLETED", null, null, null, "Đã hoàn thành tất cả các bài học trong khóa học!");
+            }
         }
 
         int currentIndex = -1;

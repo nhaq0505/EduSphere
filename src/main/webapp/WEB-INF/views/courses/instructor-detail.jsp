@@ -130,6 +130,20 @@
                             </div>
                         </c:otherwise>
                     </c:choose>
+
+                    <!-- UC39 Link -->
+                    <h2 style="margin-top:28px;">Học viên & Tiến độ học tập (UC39)</h2>
+                    <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:var(--r12); padding:18px 22px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                        <div>
+                            <div style="font-weight:700; color:var(--ink); font-size:1rem;">Theo dõi tiến độ học viên trong khóa</div>
+                            <div style="font-size:.85rem; color:#64748B; margin-top:2px;">Xem danh sách học viên, tỷ lệ phần trăm hoàn thành, số bài học đã học và mốc truy cập.</div>
+                        </div>
+                        <a class="ins-btn-primary" style="width:auto; padding:9px 18px; font-size:.88rem; text-decoration:none;"
+                           href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/students">
+                            📊 Xem tiến độ học viên →
+                        </a>
+                    </div>
+
                 </div>
             </div>
 
