@@ -26,4 +26,10 @@ public class AssignmentView {
     private Integer maxAttempts;
     private LocalDateTime unlockAt;
     private LocalDateTime lockAt;
+    /** lessonId mà assignment gắn vào (nullable) */
+    private Integer lessonId;
+    /** Học viên đã nộp bài chưa (dùng trong study page) */
+    private boolean hasSubmitted;
+    /** Số lần đã nộp (dùng trong study page) */
+    private int attemptCount;
 }

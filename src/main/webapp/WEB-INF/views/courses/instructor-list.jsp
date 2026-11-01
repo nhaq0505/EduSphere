@@ -21,7 +21,7 @@
                 <div>
                     <span class="ins-page-head__eyebrow">Giáo viên</span>
                     <h1 class="ins-page-head__title">Khóa học của tôi</h1>
-                    <p class="ins-page-head__sub">Tạo bản nháp, gửi duyệt và theo dõi quá trình công bố.</p>
+                    <p class="ins-page-head__sub">Tạo bản nháp, thiết lập chương mục & bài học, gửi duyệt và công bố.</p>
                 </div>
                 <a class="ins-btn ins-btn--primary"
                    href="${pageContext.request.contextPath}/instructor/courses/new">
@@ -42,7 +42,7 @@
                     <div class="ins-empty">
                         <span class="ins-empty__icon">📚</span>
                         <h3>Bắt đầu với khóa học đầu tiên</h3>
-                        <p>Tạo bản nháp, thêm bài học rồi gửi quản trị viên duyệt.</p>
+                        <p>Tạo bản nháp, thiết lập cấu trúc chương mục và bài học rồi gửi quản trị viên duyệt.</p>
                         <a class="ins-btn ins-btn--primary" style="margin:0 auto"
                            href="${pageContext.request.contextPath}/instructor/courses/new">+ Tạo khóa học mới</a>
                     </div>
@@ -51,8 +51,8 @@
                     <div class="ins-course-grid">
                         <c:forEach var="course" items="${courses}">
                             <article class="ins-course-card">
-                                <div class="ins-course-card__thumb">
-                                    📖
+                                <div class="ins-course-card__thumb" style="<c:if test='${not empty course.thumbnailUrl}'>background-image:url('${course.thumbnailUrl}'); background-size:cover; background-position:center;</c:if>">
+                                    <c:if test="${empty course.thumbnailUrl}">📖</c:if>
                                     <div class="ins-course-card__status-badge">
                                         <c:choose>
                                             <c:when test="${course.hidden}">
@@ -60,6 +60,9 @@
                                             </c:when>
                                             <c:when test="${course.status == 'DRAFT'}">
                                                 <span class="ins-badge ins-badge--draft">Bản nháp</span>
+                                            </c:when>
+                                            <c:when test="${course.status == 'UPDATING'}">
+                                                <span class="ins-badge ins-badge--submitted" style="background:#FEF3C7;color:#92400E;border-color:#FDE68A;">🔄 Đang cập nhật</span>
                                             </c:when>
                                             <c:when test="${course.status == 'SUBMITTED'}">
                                                 <span class="ins-badge ins-badge--submitted">Chờ duyệt</span>
@@ -96,7 +99,7 @@
                                     <div class="ins-course-card__footer">
                                         <a class="ins-btn ins-btn--primary ins-btn--sm"
                                            href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}">
-                                            Chi tiết →
+                                            Course Builder →
                                         </a>
                                         <c:if test="${course.status != 'SUBMITTED' && course.status != 'ARCHIVED'}">
                                             <a class="ins-btn ins-btn--outline ins-btn--sm"

@@ -7,11 +7,6 @@
 
     <display-name>EduSphere</display-name>
 
-    <!--
-        Spring Boot tự đăng ký DispatcherServlet thông qua EduSphereApplication.
-        web.xml này chủ yếu để cấu hình encoding và session.
-    -->
-
     <!-- UTF-8 encoding cho tất cả request -->
     <filter>
         <filter-name>encodingFilter</filter-name>
@@ -45,7 +40,7 @@
     </error-page>
     <error-page>
         <error-code>404</error-code>
-        <location>/WEB-INF/views/error/403.jsp</location>
+        <location>/WEB-INF/views/error/404.jsp</location>
     </error-page>
 
 </web-app>

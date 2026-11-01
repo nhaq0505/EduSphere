@@ -51,13 +51,15 @@ public class CourseDiscoveryController {
                 .map(course -> {
                     model.addAttribute("course", course);
                     model.addAttribute("lessonTitles", courseDiscoveryService.publishedLessonTitles(courseId));
-                    boolean student = user != null && user.getAuthorities().stream()
-                            .anyMatch(a -> "ROLE_STUDENT".equals(a.getAuthority()));
-                    model.addAttribute("student", student);
-                    model.addAttribute("enrolled", student && enrollmentRepository
+
+                    boolean loggedIn = user != null;
+                    boolean enrolled = loggedIn && enrollmentRepository
                             .findByStudent_UserIdAndCourse_CourseId(user.getUserId(), courseId)
                             .map(enrollment -> !"DROPPED".equals(enrollment.getStatus()))
-                            .orElse(false));
+                            .orElse(false);
+
+                    model.addAttribute("student", loggedIn);
+                    model.addAttribute("enrolled", enrolled);
                     return "courses/detail";
                 })
                 .orElseGet(() -> {

@@ -115,6 +115,25 @@ public class QuizService {
         return questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
     }
 
+    /** Lấy quiz + questions kèm options — dùng cho trang quiz builder */
+    @Transactional(readOnly = true)
+    public Quiz getQuizWithQuestions(Integer courseId, Integer quizId, Integer instructorId) {
+        Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
+        // Eagerly initialize options for each question
+        List<Question> qList = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
+        qList.forEach(q -> org.hibernate.Hibernate.initialize(q.getOptions()));
+        return quiz;
+    }
+
+    /** Lấy danh sách câu hỏi kèm options cho builder */
+    @Transactional(readOnly = true)
+    public List<Question> getQuestionsWithOptions(Integer courseId, Integer quizId, Integer instructorId) {
+        getQuizForInstructor(courseId, quizId, instructorId);
+        List<Question> qList = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
+        qList.forEach(q -> org.hibernate.Hibernate.initialize(q.getOptions()));
+        return qList;
+    }
+
     @Transactional
     public void addQuestion(Integer courseId, Integer quizId, Integer instructorId, QuestionForm form) {
         Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
@@ -148,12 +167,103 @@ public class QuizService {
     }
 
     @Transactional
+    public void updateQuiz(Integer courseId, Integer quizId, Integer instructorId, QuizForm form) {
+        Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
+        applyForm(quiz, form);
+    }
+
+    @Transactional
+    public void updateQuestion(Integer courseId, Integer quizId, Integer questionId,
+                               Integer instructorId, QuestionForm form) {
+        getQuizForInstructor(courseId, quizId, instructorId);
+        Question q = questions.findById(questionId)
+                .orElseThrow(() -> notFound("Không tìm thấy câu hỏi."));
+        if (!q.getQuiz().getQuizId().equals(quizId))
+            throw notFound("Câu hỏi không thuộc quiz này.");
+
+        q.setContent(form.getContent().trim());
+        q.setType(form.getType());
+        q.setScore(form.getScore());
+        q.setCorrectAnswer(form.getCorrectAnswer());
+        q.setExplanation(form.getExplanation());
+
+        // Rebuild options (delete old, add new)
+        if (Set.of("SINGLE_CHOICE", "MULTIPLE_CHOICE").contains(form.getType())) {
+            answerOptions.deleteAll(q.getOptions());
+            q.getOptions().clear();
+            List<String> contents = form.getOptionContents();
+            List<Boolean> corrects = form.getOptionCorrects();
+            int idx = 1;
+            for (int i = 0; i < contents.size(); i++) {
+                String c = contents.get(i);
+                if (c == null || c.isBlank()) continue;
+                AnswerOption opt = new AnswerOption();
+                opt.setQuestion(q);
+                opt.setContent(c.trim());
+                opt.setCorrect(corrects != null && i < corrects.size() && Boolean.TRUE.equals(corrects.get(i)));
+                opt.setOrderIndex(idx++);
+                answerOptions.save(opt);
+            }
+        } else {
+            answerOptions.deleteAll(q.getOptions());
+            q.getOptions().clear();
+        }
+        questions.save(q);
+    }
+
+    @Transactional
+    public void deleteQuestion(Integer courseId, Integer quizId, Integer questionId, Integer instructorId) {
+        getQuizForInstructor(courseId, quizId, instructorId);
+        Question q = questions.findById(questionId)
+                .orElseThrow(() -> notFound("Không tìm thấy câu hỏi."));
+        if (!q.getQuiz().getQuizId().equals(quizId))
+            throw notFound("Câu hỏi không thuộc quiz này.");
+        int deletedOrder = q.getOrderIndex();
+        questions.delete(q);
+        // Re-index remaining questions
+        List<Question> remaining = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
+        int idx = 1;
+        for (Question r : remaining) {
+            r.setOrderIndex(idx++);
+            questions.save(r);
+        }
+    }
+
+    @Transactional
+    public void moveQuestion(Integer courseId, Integer quizId, Integer questionId,
+                             String direction, Integer instructorId) {
+        getQuizForInstructor(courseId, quizId, instructorId);
+        List<Question> qList = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
+        int idx = -1;
+        for (int i = 0; i < qList.size(); i++) {
+            if (qList.get(i).getQuestionId().equals(questionId)) { idx = i; break; }
+        }
+        if (idx < 0) throw notFound("Không tìm thấy câu hỏi.");
+        int swapIdx = "up".equals(direction) ? idx - 1 : idx + 1;
+        if (swapIdx < 0 || swapIdx >= qList.size()) return;
+        Question a = qList.get(idx), b = qList.get(swapIdx);
+        int tmp = a.getOrderIndex();
+        a.setOrderIndex(b.getOrderIndex());
+        b.setOrderIndex(tmp);
+        questions.save(a); questions.save(b);
+    }
+
+    @Transactional
     public void publish(Integer courseId, Integer quizId, Integer instructorId) {
         Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
         if (!"DRAFT".equals(quiz.getStatus()))
             throw conflict("Chỉ có thể công bố quiz ở trạng thái Bản nháp.");
         if (questions.countByQuiz_QuizId(quizId) == 0)
             throw conflict("Quiz phải có ít nhất một câu hỏi trước khi công bố.");
+        quiz.setStatus("PUBLISHED");
+    }
+
+    /** Khôi phục quiz từ ARCHIVED về PUBLISHED */
+    @Transactional
+    public void restore(Integer courseId, Integer quizId, Integer instructorId) {
+        Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
+        if (!"ARCHIVED".equals(quiz.getStatus()))
+            throw conflict("Chỉ có thể khôi phục quiz đã lưu trữ.");
         quiz.setStatus("PUBLISHED");
     }
 
@@ -169,6 +279,7 @@ public class QuizService {
     public List<QuizAttemptView> listAttempts(Integer courseId, Integer quizId, Integer instructorId) {
         getQuizForInstructor(courseId, quizId, instructorId);
         return attempts.findByQuizIdOrderByStudentAndAttempt(quizId).stream()
+                .peek(this::initAttempt)
                 .map(this::toAttemptView).toList();
     }
 
@@ -176,13 +287,21 @@ public class QuizService {
     public QuizAttempt getAttemptForInstructor(Integer courseId, Integer quizId, Integer attemptId,
                                                Integer instructorId) {
         getQuizForInstructor(courseId, quizId, instructorId);
-        return attempts.findById(attemptId)
+        QuizAttempt attempt = attempts.findById(attemptId)
                 .orElseThrow(() -> notFound("Không tìm thấy lần làm quiz."));
+        initAttempt(attempt);
+        return attempt;
     }
 
     @Transactional(readOnly = true)
     public List<QuizAnswer> getAnswersForAttempt(Integer attemptId) {
-        return answers.findByAttempt_AttemptIdOrderByQuestion_OrderIndexAsc(attemptId);
+        List<QuizAnswer> list = answers.findByAttempt_AttemptIdOrderByQuestion_OrderIndexAsc(attemptId);
+        list.forEach(a -> {
+            org.hibernate.Hibernate.initialize(a.getQuestion());
+            if (a.getQuestion() != null) org.hibernate.Hibernate.initialize(a.getQuestion().getOptions());
+            org.hibernate.Hibernate.initialize(a.getSelectedOptions());
+        });
+        return list;
     }
 
     @Transactional
@@ -280,14 +399,18 @@ public class QuizService {
 
     @Transactional(readOnly = true)
     public QuizAttempt getAttemptForStudent(Integer attemptId, Integer studentId) {
-        return attempts.findByAttemptIdAndStudent_UserId(attemptId, studentId)
+        QuizAttempt attempt = attempts.findByAttemptIdAndStudent_UserId(attemptId, studentId)
                 .orElseThrow(() -> notFound("Không tìm thấy lần làm quiz."));
+        initAttempt(attempt);
+        return attempt;
     }
 
     @Transactional(readOnly = true)
     public List<Question> getQuestionsForAttempt(Integer courseId, Integer quizId, Integer studentId) {
         getQuizForStudent(courseId, quizId, studentId);
-        return questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
+        List<Question> qList = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
+        qList.forEach(q -> org.hibernate.Hibernate.initialize(q.getOptions()));
+        return qList;
     }
 
     @Transactional
@@ -395,7 +518,9 @@ public class QuizService {
     public List<QuizAttemptView> getMyAttempts(Integer courseId, Integer quizId, Integer studentId) {
         getQuizForStudent(courseId, quizId, studentId);
         return attempts.findByQuiz_QuizIdAndStudent_UserIdOrderByAttemptNumberDesc(quizId, studentId)
-                .stream().map(this::toAttemptView).toList();
+                .stream()
+                .peek(this::initAttempt)
+                .map(this::toAttemptView).toList();
     }
 
     // ===================== HELPERS =====================
@@ -437,10 +562,12 @@ public class QuizService {
         quiz.setDueDate(parseDateTime(form.getDueDate()));
         quiz.setEndTime(parseDateTime(form.getEndTime()));
         quiz.setRules(form.getRules());
-        if (form.getLessonId() != null) {
-            Lesson lesson = lessons.findById(form.getLessonId())
-                    .orElseThrow(() -> conflict("Bài học không tồn tại."));
-            quiz.setLesson(lesson);
+        quiz.setPassingScore(form.getPassingScore());
+        quiz.setShuffleQuestions(form.isShuffleQuestions());
+        quiz.setShuffleOptions(form.isShuffleOptions());
+        if (form.getLessonId() != null && form.getLessonId() > 0) {
+            Lesson lesson = lessons.findById(form.getLessonId()).orElse(null);
+            quiz.setLesson(lesson); // null-safe: nếu không tìm thấy thì không gắn
         } else {
             quiz.setLesson(null);
         }
@@ -476,13 +603,27 @@ public class QuizService {
         BigDecimal maxScore = qList.stream()
                 .map(Question::getScore).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new QuizView(quiz.getQuizId(), quiz.getTitle(), quiz.getStatus(),
-                qCount, maxScore, quiz.getDueDate(), quiz.getTimeLimitMinutes(), quiz.getMaxAttempts());
+                qCount, maxScore, quiz.getDueDate(), quiz.getTimeLimitMinutes(), quiz.getMaxAttempts(),
+                0, quiz.getPassingScore(), null);
     }
 
     private QuizAttemptView toAttemptView(QuizAttempt a) {
         return new QuizAttemptView(a.getAttemptId(), a.getQuiz().getQuizId(), a.getQuiz().getTitle(),
                 a.getStudent().getFullName(), a.getScore(), a.getMaxScore(),
                 a.getStatus(), a.getResultStatus(), a.getSubmittedAt(), a.getAttemptNumber());
+    }
+
+    /** Initialize tất cả lazy association của QuizAttempt trong khi session còn mở */
+    private void initAttempt(QuizAttempt a) {
+        org.hibernate.Hibernate.initialize(a.getQuiz());
+        org.hibernate.Hibernate.initialize(a.getStudent());
+        org.hibernate.Hibernate.initialize(a.getCourse());
+        if (a.getQuiz() != null) {
+            org.hibernate.Hibernate.initialize(a.getQuiz().getLesson());
+        }
+        if (a.getPublishedBy() != null) {
+            org.hibernate.Hibernate.initialize(a.getPublishedBy());
+        }
     }
 
     private CourseActionException notFound(String msg) {

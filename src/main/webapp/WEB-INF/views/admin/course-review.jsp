@@ -85,6 +85,16 @@
 
                             <!-- Actions -->
                             <div class="adm-review-card__actions">
+                                <!-- Xem chi tiết -->
+                                <div class="adm-review-form" style="flex:0 0 auto; align-items:flex-start;">
+                                    <div class="adm-review-form__label">🔍 Xem chi tiết</div>
+                                    <p>Xem toàn bộ nội dung, bài học và tài liệu trước khi duyệt.</p>
+                                    <a class="hn-btn hn-btn--outline adm-btn-sm"
+                                       href="${pageContext.request.contextPath}/admin/courses/${course.courseId}/review">
+                                        Xem nội dung chi tiết →
+                                    </a>
+                                </div>
+
                                 <!-- Phê duyệt -->
                                 <form class="adm-review-form" method="post"
                                       action="${pageContext.request.contextPath}/admin/courses/${course.courseId}/review">

@@ -3,10 +3,12 @@ package com.edusphere.service.course;
 import com.edusphere.dto.course.LessonForm;
 import com.edusphere.dto.course.MaterialForm;
 import com.edusphere.entity.course.Course;
+import com.edusphere.entity.course.CourseSection;
 import com.edusphere.entity.course.Lesson;
 import com.edusphere.entity.course.Material;
 import com.edusphere.repository.account.UserRepository;
 import com.edusphere.repository.course.CourseRepository;
+import com.edusphere.repository.course.CourseSectionRepository;
 import com.edusphere.repository.course.EnrollmentRepository;
 import com.edusphere.repository.course.LessonRepository;
 import com.edusphere.repository.course.MaterialRepository;
@@ -14,31 +16,47 @@ import jakarta.persistence.EntityManager;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import org.hibernate.Hibernate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class LessonManagementService {
-    private static final Set<String> EDITABLE_COURSES = Set.of("DRAFT", "REJECTED", "APPROVED", "PUBLISHED");
+    private static final Set<String> EDITABLE_COURSES = Set.of("DRAFT", "REJECTED", "APPROVED", "PUBLISHED", "UPDATING");
+    private static final Set<String> VALID_LESSON_TYPES = Set.of("ARTICLE", "VIDEO", "QUIZ", "ASSIGNMENT");
+
     private final CourseRepository courses;
     private final LessonRepository lessons;
     private final MaterialRepository materials;
     private final EnrollmentRepository enrollments;
     private final UserRepository users;
     private final EntityManager entityManager;
+    private final CourseSectionRepository sections;
 
     public LessonManagementService(CourseRepository courses, LessonRepository lessons,
                                    MaterialRepository materials, EnrollmentRepository enrollments,
                                    UserRepository users,
                                    EntityManager entityManager) {
+        this(courses, lessons, materials, enrollments, users, entityManager, null);
+    }
+
+    @Autowired
+    public LessonManagementService(CourseRepository courses, LessonRepository lessons,
+                                   MaterialRepository materials, EnrollmentRepository enrollments,
+                                   UserRepository users,
+                                   EntityManager entityManager,
+                                   CourseSectionRepository sections) {
         this.courses = courses;
         this.lessons = lessons;
         this.materials = materials;
         this.enrollments = enrollments;
         this.users = users;
         this.entityManager = entityManager;
+        this.sections = sections;
     }
 
     @Transactional(readOnly = true)
@@ -51,7 +69,13 @@ public class LessonManagementService {
     @Transactional(readOnly = true)
     public List<Lesson> lessons(Integer courseId, Integer instructorId) {
         ownedCourse(courseId, instructorId);
-        return lessons.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
+        List<Lesson> result = lessons.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
+        // Initialize lazy associations while session is still open
+        result.forEach(l -> {
+            Hibernate.initialize(l.getSection());
+            Hibernate.initialize(l.getPrerequisiteLesson());
+        });
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -65,8 +89,12 @@ public class LessonManagementService {
     @Transactional(readOnly = true)
     public Lesson lesson(Integer courseId, Integer lessonId, Integer instructorId) {
         ownedCourse(courseId, instructorId);
-        return lessons.findByLessonIdAndCourse_CourseId(lessonId, courseId)
+        Lesson lesson = lessons.findByLessonIdAndCourse_CourseId(lessonId, courseId)
                 .orElseThrow(() -> notFound("Không tìm thấy bài học."));
+        // Initialize lazy associations while session is still open
+        Hibernate.initialize(lesson.getSection());
+        Hibernate.initialize(lesson.getPrerequisiteLesson());
+        return lesson;
     }
 
     @Transactional(readOnly = true)
@@ -81,8 +109,7 @@ public class LessonManagementService {
         bumpCourseToDraftIfPublishedOrApproved(course);
         Lesson lesson = new Lesson();
         lesson.setCourse(course);
-        lesson.setTitle(requiredTitle(form.getTitle()));
-        lesson.setContent(trimmed(form.getContent()));
+        applyLessonForm(lesson, form, courseId);
         lesson.setOrderIndex(Math.toIntExact(lessons.countByCourse_CourseId(courseId) + 1));
         lesson.setStatus("DRAFT");
         lesson.setCreatedAt(LocalDateTime.now());
@@ -98,11 +125,34 @@ public class LessonManagementService {
         int newOrder = form.getOrderIndex() == null ? lesson.getOrderIndex() : form.getOrderIndex();
         if (newOrder < 1 || newOrder > ordered.size()) throw conflict("Vị trí bài học không hợp lệ.");
         if (newOrder != lesson.getOrderIndex()) move(lesson, ordered, newOrder);
-        lesson.setTitle(requiredTitle(form.getTitle()));
-        lesson.setContent(trimmed(form.getContent()));
+
+        applyLessonForm(lesson, form, courseId);
         bumpCourseToDraftIfPublishedOrApproved(course);
         lesson.setStatus("DRAFT");
         lesson.setUpdatedAt(LocalDateTime.now());
+        lessons.save(lesson);
+    }
+
+    @Transactional
+    public void deleteLesson(Integer courseId, Integer lessonId, Integer instructorId) {
+        Course course = editableCourse(courseId, instructorId);
+        Lesson lesson = lessons.findByLessonIdAndCourse_CourseId(lessonId, courseId)
+                .orElseThrow(() -> notFound("Không tìm thấy bài học."));
+
+        // Delete associated materials
+        materials.deleteByLesson_LessonId(lessonId);
+
+        // Delete lesson
+        lessons.delete(lesson);
+
+        // Re-index remaining lessons
+        List<Lesson> remaining = lessons.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
+        for (int i = 0; i < remaining.size(); i++) {
+            remaining.get(i).setOrderIndex(i + 1);
+            lessons.save(remaining.get(i));
+        }
+
+        bumpCourseToDraftIfPublishedOrApproved(course);
     }
 
     @Transactional
@@ -112,12 +162,12 @@ public class LessonManagementService {
                 .orElseThrow(() -> notFound("Không tìm thấy bài học."));
         String url = trimmed(form.getFileUrl());
         if (url == null || url.length() > 2048 || !validHttpUrl(url))
-            throw conflict("Đường dẫn tài liệu phải là URL http hoặc https hợp lệ.");
+            throw conflict("Đường dẫn tài liệu phải là URL http, https hợp lệ hoặc tệp tải lên từ hệ thống.");
         String type = form.getType();
         if (type == null || !Set.of("DOCUMENT", "LINK", "VIDEO").contains(type))
             throw conflict("Loại tài liệu không hợp lệ.");
-        bumpCourseToDraftIfPublishedOrApproved(course);
-        lesson.setStatus("DRAFT");
+        // Tài liệu đính kèm là nội dung bổ sung — không cần bump course sang UPDATING/DRAFT
+        // Học viên thấy tài liệu ngay lập tức mà không cần qua luồng duyệt lại
         lesson.setUpdatedAt(LocalDateTime.now());
         Material material = new Material();
         material.setLesson(lesson);
@@ -129,15 +179,71 @@ public class LessonManagementService {
         materials.save(material);
     }
 
+    @Transactional
+    public void deleteMaterial(Integer courseId, Integer lessonId, Integer materialId, Integer instructorId) {
+        lesson(courseId, lessonId, instructorId);
+        // Xóa tài liệu đính kèm — không cần bump course status
+        materials.deleteById(materialId);
+    }
+
+    private void applyLessonForm(Lesson lesson, LessonForm form, Integer courseId) {
+        lesson.setTitle(requiredTitle(form.getTitle()));
+        lesson.setContent(trimmed(form.getContent()));
+
+        // Section binding
+        if (form.getSectionId() != null && sections != null) {
+            CourseSection section = sections.findBySectionIdAndCourse_CourseId(form.getSectionId(), courseId).orElse(null);
+            lesson.setSection(section);
+        } else {
+            lesson.setSection(null);
+        }
+
+        // Lesson Type & Video info
+        String type = form.getLessonType() != null ? form.getLessonType().trim().toUpperCase() : "ARTICLE";
+        if (!VALID_LESSON_TYPES.contains(type)) {
+            type = "ARTICLE";
+        }
+        lesson.setLessonType(type);
+        lesson.setVideoUrl(trimmed(form.getVideoUrl()));
+        lesson.setVideoDuration(form.getVideoDuration());
+        lesson.setAllowSeek(form.getAllowSeek() != null ? form.getAllowSeek() : true);
+
+        // Advanced Settings
+        lesson.setIsPreview(Boolean.TRUE.equals(form.getIsPreview()));
+        lesson.setUnlockDaysAfterEnroll(form.getUnlockDaysAfterEnroll());
+        if (form.getPrerequisiteLessonId() != null) {
+            Lesson prereq = lessons.findByLessonIdAndCourse_CourseId(form.getPrerequisiteLessonId(), courseId).orElse(null);
+            lesson.setPrerequisiteLesson(prereq);
+        } else {
+            lesson.setPrerequisiteLesson(null);
+        }
+        lesson.setInstructorNotes(trimmed(form.getInstructorNotes()));
+    }
+
     private void bumpCourseToDraftIfPublishedOrApproved(Course course) {
-        if ("PUBLISHED".equals(course.getStatus()) || "APPROVED".equals(course.getStatus())) {
+        String status = course.getStatus();
+        if ("PUBLISHED".equals(status)) {
+            // Khóa học đang công bố → chuyển sang UPDATING để học viên vẫn học được bài cũ
+            course.setVersionNo((course.getVersionNo() == null ? 1 : course.getVersionNo()) + 1);
+            course.setStatus("UPDATING");
+            course.setSubmittedAt(null);
+            course.setUpdatedAt(LocalDateTime.now());
+            // Giữ nguyên approvedAt và publishedAt để biết lần publish gần nhất
+        } else if ("APPROVED".equals(status)) {
+            // Đã duyệt nhưng chưa publish → reset về DRAFT bình thường
             course.setVersionNo((course.getVersionNo() == null ? 1 : course.getVersionNo()) + 1);
             course.setStatus("DRAFT");
             course.setApprovedAt(null);
             course.setPublishedAt(null);
             course.setSubmittedAt(null);
             course.setUpdatedAt(LocalDateTime.now());
+        } else if ("UPDATING".equals(status)) {
+            // Đang cập nhật → tăng version nhưng giữ trạng thái
+            course.setVersionNo((course.getVersionNo() == null ? 1 : course.getVersionNo()) + 1);
+            course.setSubmittedAt(null);
+            course.setUpdatedAt(LocalDateTime.now());
         }
+        // DRAFT, REJECTED → không thay đổi
     }
 
     private Course editableCourse(Integer courseId, Integer instructorId) {
@@ -168,6 +274,8 @@ public class LessonManagementService {
     }
 
     private boolean validHttpUrl(String value) {
+        if (value == null || value.isBlank()) return false;
+        if (value.startsWith("/") && !value.contains("..")) return true;
         try {
             URI uri = URI.create(value);
             return Set.of("http", "https").contains(uri.getScheme() == null ? "" : uri.getScheme().toLowerCase())

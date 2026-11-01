@@ -80,18 +80,20 @@ public class SecurityConfig {
                     "/forgot-password", "/forgot-password/verify-otp", "/forgot-password/resend-otp",
                     "/reset-password",
                     "/assets/**", "/favicon.ico", "/error",
-                    "/WEB-INF/**"
+                    "/WEB-INF/**",
+                    "/uploads/**",
+                    "/courses/*/enroll",
+                    "/courses/{courseId}/enroll"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/courses", "/courses/{courseId}").permitAll()
-                .requestMatchers(HttpMethod.GET, "/courses/{courseId}/enroll").hasRole("STUDENT")
                 .requestMatchers(HttpMethod.POST, "/payments/payos/webhook").permitAll()
-                .requestMatchers(HttpMethod.POST, "/courses/{courseId}/checkout").hasRole("STUDENT")
-                .requestMatchers(HttpMethod.GET, "/payments/result").hasRole("STUDENT")
-                .requestMatchers(HttpMethod.POST, "/courses/{courseId}/enroll").hasRole("STUDENT")
-                .requestMatchers("/courses/{courseId}/learn", "/courses/{courseId}/lessons/**").hasRole("STUDENT")
-                .requestMatchers("/courses/{courseId}/assignments/**", "/courses/{courseId}/quizzes/**", "/courses/{courseId}/results").hasRole("STUDENT")
-                .requestMatchers("/my-courses").hasRole("STUDENT")
-                .requestMatchers("/study/**").hasRole("STUDENT")
+                // Ghi danh & Vào học: hỗ trợ Học viên, Giảng viên (trải nghiệm khóa học) & Quản trị viên
+                .requestMatchers(HttpMethod.POST, "/courses/{courseId}/checkout").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers(HttpMethod.GET, "/payments/result").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/courses/{courseId}/learn", "/courses/{courseId}/lessons/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/courses/{courseId}/assignments/**", "/courses/{courseId}/quizzes/**", "/courses/{courseId}/results").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/my-courses").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/study/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/admin/**").hasRole("ADMINISTRATOR")
                 .requestMatchers("/instructor/**").hasRole("INSTRUCTOR")
                 .anyRequest().authenticated()
@@ -115,13 +117,13 @@ public class SecurityConfig {
             .oauth2Login(oauth2 -> oauth2
                 .loginPage("/login")
                 .userInfoEndpoint(userInfo -> userInfo
-                    .oidcUserService(oAuth2UserService)  // OIDC cho Google
+                    .oidcUserService(oAuth2UserService)
                 )
                 .successHandler(authenticationSuccessHandler)
                 .failureUrl("/login?oauth2Error=true")
             )
             .authenticationProvider(authenticationProvider())
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/payments/payos/webhook"))
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/payments/payos/webhook", "/courses/*/enroll"))
             .addFilterAfter(accountStateFilter, SecurityContextHolderFilter.class);
 
         return http.build();

@@ -212,6 +212,9 @@
                                                         <c:when test="${course.status == 'DRAFT'}">
                                                             <span class="ins-badge ins-badge--draft">Bản nháp</span>
                                                         </c:when>
+                                                        <c:when test="${course.status == 'UPDATING'}">
+                                                            <span class="ins-badge ins-badge--submitted" style="background:#FEF3C7;color:#92400E;border-color:#FDE68A;">🔄 Đang cập nhật</span>
+                                                        </c:when>
                                                         <c:when test="${course.status == 'SUBMITTED'}">
                                                             <span class="ins-badge ins-badge--submitted">Chờ duyệt</span>
                                                         </c:when>

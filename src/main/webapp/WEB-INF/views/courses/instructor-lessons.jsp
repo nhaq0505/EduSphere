@@ -49,6 +49,19 @@
                 </div>
             </c:if>
 
+            <c:if test="${course.status eq 'UPDATING'}">
+                <div class="ins-alert" style="background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;justify-content:space-between;align-items:center;gap:12px">
+                    <div>
+                        🔄 <strong>Đang cập nhật nội dung (v${course.versionNo}):</strong>
+                        Học viên vẫn học bình thường với bài đã công bố. Hoàn thiện xong hãy gửi Admin duyệt.
+                    </div>
+                    <a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}"
+                       class="ins-btn ins-btn--outline ins-btn--sm" style="white-space:nowrap;">
+                        Gửi duyệt →
+                    </a>
+                </div>
+            </c:if>
+
             <c:if test="${not editable}">
                 <div class="ins-alert ins-alert--warning">
                     ⚠️ Khóa học đang chờ duyệt hoặc đã lưu trữ — không thể thêm/sửa bài học.

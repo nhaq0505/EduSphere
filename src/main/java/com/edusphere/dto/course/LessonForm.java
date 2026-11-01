@@ -9,6 +9,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class LessonForm {
+
     @NotBlank(message = "Vui lòng nhập tên bài học.")
     @Size(max = 255, message = "Tên bài học tối đa 255 ký tự.")
     private String title;
@@ -17,4 +18,19 @@ public class LessonForm {
 
     @Min(value = 1, message = "Vị trí bài học phải từ 1 trở lên.")
     private Integer orderIndex;
+
+    // Bước 2: Thuộc chương mục nào
+    private Integer sectionId;
+
+    // Bước 3: Loại nội dung & thông tin video
+    private String lessonType = "ARTICLE"; // ARTICLE, VIDEO, QUIZ, ASSIGNMENT
+    private String videoUrl;
+    private Integer videoDuration; // Số phút
+    private Boolean allowSeek = true;
+
+    // Bước 4: Cấu hình nâng cao
+    private Boolean isPreview = false; // Học thử / xem trước
+    private Integer unlockDaysAfterEnroll; // Mở sau X ngày (Drip content)
+    private Integer prerequisiteLessonId; // Cần học bài này trước
+    private String instructorNotes; // Ghi chú riêng cho GV
 }

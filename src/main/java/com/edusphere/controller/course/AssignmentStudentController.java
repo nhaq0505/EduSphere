@@ -52,7 +52,12 @@ public class AssignmentStudentController {
                          @ModelAttribute("submissionForm") SubmissionForm form,
                          @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
         service.submit(courseId, assignmentId, user.getUserId(), form);
-        flash.addFlashAttribute("success", "Nộp bài thành công!");
+        flash.addFlashAttribute("success", "Nộp bài thành công! Giảng viên sẽ sớm chấm và công bố kết quả.");
+        // Nếu assignment gắn với lesson → redirect về trang học lesson đó (tab bài tập)
+        var assignment = service.getAssignmentForStudent(courseId, assignmentId, user.getUserId());
+        if (assignment.getLesson() != null) {
+            return "redirect:/courses/" + courseId + "/lessons/" + assignment.getLesson().getLessonId() + "?tab=exercise";
+        }
         return "redirect:/courses/" + courseId + "/assignments/" + assignmentId;
     }
 

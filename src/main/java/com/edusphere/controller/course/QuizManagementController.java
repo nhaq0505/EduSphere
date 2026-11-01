@@ -2,6 +2,8 @@ package com.edusphere.controller.course;
 
 import com.edusphere.dto.quiz.QuestionForm;
 import com.edusphere.dto.quiz.QuizForm;
+import com.edusphere.entity.course.Quiz;
+import com.edusphere.repository.course.LessonRepository;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
 import com.edusphere.service.course.QuizService;
@@ -29,9 +31,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class QuizManagementController {
 
     private final QuizService service;
+    private final LessonRepository lessonRepository;
 
-    public QuizManagementController(QuizService service) {
+    public QuizManagementController(QuizService service, LessonRepository lessonRepository) {
         this.service = service;
+        this.lessonRepository = lessonRepository;
     }
 
     @GetMapping
@@ -43,9 +47,14 @@ public class QuizManagementController {
     }
 
     @GetMapping("/new")
-    public String newForm(@PathVariable Integer courseId, Model model) {
-        model.addAttribute("quizForm", new QuizForm());
+    public String newForm(@PathVariable Integer courseId,
+                          @RequestParam(required = false) Integer lessonId,
+                          Model model) {
+        QuizForm form = new QuizForm();
+        if (lessonId != null) form.setLessonId(lessonId);
+        model.addAttribute("quizForm", form);
         model.addAttribute("courseId", courseId);
+        model.addAttribute("lessons", lessonRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId));
         return "quizzes/quiz-form";
     }
 
@@ -56,6 +65,7 @@ public class QuizManagementController {
                          Model model, RedirectAttributes flash) {
         if (errors.hasErrors()) {
             model.addAttribute("courseId", courseId);
+            model.addAttribute("lessons", lessonRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId));
             return "quizzes/quiz-form";
         }
         Integer quizId = service.create(courseId, user.getUserId(), form);
@@ -66,11 +76,119 @@ public class QuizManagementController {
     @GetMapping("/{quizId}")
     public String detail(@PathVariable Integer courseId, @PathVariable Integer quizId,
                          @AuthenticationPrincipal CustomUserDetails user, Model model) {
-        model.addAttribute("quiz", service.getQuizForInstructor(courseId, quizId, user.getUserId()));
-        model.addAttribute("questions", service.getQuestionsForInstructor(courseId, quizId, user.getUserId()));
+        model.addAttribute("quiz", service.getQuizWithQuestions(courseId, quizId, user.getUserId()));
+        model.addAttribute("questions", service.getQuestionsWithOptions(courseId, quizId, user.getUserId()));
         model.addAttribute("courseId", courseId);
         model.addAttribute("quizId", quizId);
-        return "quizzes/instructor-detail";
+        return "quizzes/quiz-builder";
+    }
+
+    // ── Edit quiz settings ──
+    @GetMapping("/{quizId}/edit")
+    public String editForm(@PathVariable Integer courseId, @PathVariable Integer quizId,
+                           @AuthenticationPrincipal CustomUserDetails user, Model model) {
+        Quiz quiz = service.getQuizForInstructor(courseId, quizId, user.getUserId());
+        QuizForm form = new QuizForm();
+        form.setTitle(quiz.getTitle());
+        form.setDescription(quiz.getDescription());
+        form.setTimeLimitMinutes(quiz.getTimeLimitMinutes());
+        form.setMaxAttempts(quiz.getMaxAttempts());
+        form.setStartTime(quiz.getStartTime() != null ? quiz.getStartTime().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")) : null);
+        form.setDueDate(quiz.getDueDate() != null ? quiz.getDueDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")) : null);
+        form.setEndTime(quiz.getEndTime() != null ? quiz.getEndTime().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")) : null);
+        form.setRules(quiz.getRules());
+        form.setLessonId(quiz.getLesson() != null ? quiz.getLesson().getLessonId() : null);
+        form.setPassingScore(quiz.getPassingScore());
+        form.setShuffleQuestions(quiz.isShuffleQuestions());
+        form.setShuffleOptions(quiz.isShuffleOptions());
+        model.addAttribute("quizForm", form);
+        model.addAttribute("courseId", courseId);
+        model.addAttribute("quizId", quizId);
+        model.addAttribute("lessons", lessonRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId));
+        return "quizzes/quiz-form";
+    }
+
+    @PostMapping("/{quizId}/edit")
+    public String update(@PathVariable Integer courseId, @PathVariable Integer quizId,
+                         @Valid @ModelAttribute("quizForm") QuizForm form, BindingResult errors,
+                         @AuthenticationPrincipal CustomUserDetails user,
+                         Model model, RedirectAttributes flash) {
+        if (errors.hasErrors()) {
+            model.addAttribute("courseId", courseId);
+            model.addAttribute("quizId", quizId);
+            model.addAttribute("lessons", lessonRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId));
+            return "quizzes/quiz-form";
+        }
+        service.updateQuiz(courseId, quizId, user.getUserId(), form);
+        flash.addFlashAttribute("success", "Đã cập nhật cài đặt quiz.");
+        return "redirect:/instructor/courses/" + courseId + "/quizzes/" + quizId;
+    }
+
+    // ── Edit / Delete question ──
+    @GetMapping("/{quizId}/questions/{questionId}/edit")
+    public String editQuestionForm(@PathVariable Integer courseId, @PathVariable Integer quizId,
+                                   @PathVariable Integer questionId,
+                                   @AuthenticationPrincipal CustomUserDetails user, Model model) {
+        var qList = service.getQuestionsWithOptions(courseId, quizId, user.getUserId());
+        var q = qList.stream().filter(x -> x.getQuestionId().equals(questionId))
+                .findFirst().orElseThrow(() -> new com.edusphere.service.course.CourseActionException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy câu hỏi."));
+        QuestionForm form = new QuestionForm();
+        form.setContent(q.getContent());
+        form.setType(q.getType());
+        form.setScore(q.getScore());
+        form.setCorrectAnswer(q.getCorrectAnswer());
+        form.setExplanation(q.getExplanation());
+        var optContents = new java.util.ArrayList<String>();
+        var optCorrects = new java.util.ArrayList<Boolean>();
+        for (var opt : q.getOptions()) {
+            optContents.add(opt.getContent());
+            optCorrects.add(opt.isCorrect());
+        }
+        // Pad to 6 slots
+        while (optContents.size() < 6) { optContents.add(""); optCorrects.add(false); }
+        form.setOptionContents(optContents);
+        form.setOptionCorrects(optCorrects);
+        model.addAttribute("questionForm", form);
+        model.addAttribute("courseId", courseId);
+        model.addAttribute("quizId", quizId);
+        model.addAttribute("questionId", questionId);
+        return "quizzes/question-form";
+    }
+
+    @PostMapping("/{quizId}/questions/{questionId}/edit")
+    public String updateQuestion(@PathVariable Integer courseId, @PathVariable Integer quizId,
+                                 @PathVariable Integer questionId,
+                                 @Valid @ModelAttribute("questionForm") QuestionForm form, BindingResult errors,
+                                 @AuthenticationPrincipal CustomUserDetails user,
+                                 Model model, RedirectAttributes flash) {
+        if (errors.hasErrors()) {
+            model.addAttribute("courseId", courseId);
+            model.addAttribute("quizId", quizId);
+            model.addAttribute("questionId", questionId);
+            return "quizzes/question-form";
+        }
+        service.updateQuestion(courseId, quizId, questionId, user.getUserId(), form);
+        flash.addFlashAttribute("success", "Đã cập nhật câu hỏi.");
+        return "redirect:/instructor/courses/" + courseId + "/quizzes/" + quizId;
+    }
+
+    @PostMapping("/{quizId}/questions/{questionId}/delete")
+    public String deleteQuestion(@PathVariable Integer courseId, @PathVariable Integer quizId,
+                                 @PathVariable Integer questionId,
+                                 @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
+        service.deleteQuestion(courseId, quizId, questionId, user.getUserId());
+        flash.addFlashAttribute("success", "Đã xóa câu hỏi.");
+        return "redirect:/instructor/courses/" + courseId + "/quizzes/" + quizId;
+    }
+
+    @PostMapping("/{quizId}/questions/{questionId}/move")
+    public String moveQuestion(@PathVariable Integer courseId, @PathVariable Integer quizId,
+                               @PathVariable Integer questionId,
+                               @RequestParam String direction,
+                               @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
+        service.moveQuestion(courseId, quizId, questionId, direction, user.getUserId());
+        return "redirect:/instructor/courses/" + courseId + "/quizzes/" + quizId;
     }
 
     @GetMapping("/{quizId}/questions/new")
@@ -111,6 +229,14 @@ public class QuizManagementController {
                           @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
         service.archive(courseId, quizId, user.getUserId());
         flash.addFlashAttribute("success", "Đã lưu trữ quiz.");
+        return "redirect:/instructor/courses/" + courseId + "/quizzes/" + quizId;
+    }
+
+    @PostMapping("/{quizId}/restore")
+    public String restore(@PathVariable Integer courseId, @PathVariable Integer quizId,
+                          @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
+        service.restore(courseId, quizId, user.getUserId());
+        flash.addFlashAttribute("success", "Đã khôi phục quiz. Học viên có thể làm bài trở lại.");
         return "redirect:/instructor/courses/" + courseId + "/quizzes/" + quizId;
     }
 

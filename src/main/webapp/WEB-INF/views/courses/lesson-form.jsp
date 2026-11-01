@@ -1,4 +1,4 @@
-﻿<%@ page contentType="text/html;charset=UTF-8" %>
+<%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
@@ -6,10 +6,66 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bài học — EduSphere</title>
+    <title>Bước 3 & 4: Thiết lập Bài học & Cấu hình nâng cao — EduSphere</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/instructor.css">
+    <style>
+        .type-selector {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px; margin-bottom: 20px;
+        }
+        .type-card {
+            border: 2px solid #E2E8F0; border-radius: var(--r8); padding: 14px 16px;
+            cursor: pointer; transition: all .2s; background: #fff; text-align: center;
+        }
+        .type-card:hover { border-color: #93C5FD; }
+        .type-card.active { border-color: #2563EB; background: #EFF6FF; }
+        .type-card input { display: none; }
+        .type-card__icon { font-size: 1.5rem; margin-bottom: 6px; }
+        .type-card__title { font-weight: 700; font-size: .88rem; color: #1E293B; }
+        .type-card__desc { font-size: .75rem; color: #64748B; margin-top: 2px; }
+
+        .editor-toolbar {
+            display: flex; gap: 6px; background: #F1F5F9; border: 1px solid #CBD5E1;
+            border-bottom: none; border-radius: var(--r8) var(--r8) 0 0; padding: 6px 10px;
+        }
+        .editor-btn {
+            background: #fff; border: 1px solid #CBD5E1; border-radius: 4px;
+            padding: 4px 10px; font-size: .8rem; font-weight: 600; cursor: pointer; color: #334155;
+        }
+        .editor-btn:hover { background: #E2E8F0; }
+
+        .advanced-box {
+            background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: var(--r12);
+            padding: 20px 22px; margin-top: 28px;
+        }
+        .advanced-box__title {
+            font-size: 1rem; font-weight: 800; color: #0F172A; display: flex; align-items: center; gap: 8px;
+            margin-bottom: 16px;
+        }
+        .switch-label {
+            display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; font-size: .88rem;
+        }
+        .upload-row {
+            display: flex; gap: 8px; align-items: center; margin-top: 4px;
+        }
+        .upload-btn {
+            background: #F1F5F9; border: 1.5px solid #CBD5E1; border-radius: var(--r8);
+            padding: 8px 14px; font-size: .84rem; font-weight: 700; color: #1E293B;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            white-space: nowrap; transition: all .2s;
+        }
+        .upload-btn:hover {
+            background: #E2E8F0; border-color: #94A3B8;
+        }
+        .upload-status {
+            font-size: .8rem; margin-top: 4px; font-weight: 600;
+        }
+        .upload-status--loading { color: #2563EB; }
+        .upload-status--success { color: #16A34A; }
+        .upload-status--error { color: #DC2626; }
+    </style>
 </head>
 <body>
 <div class="ins-layout">
@@ -18,17 +74,16 @@
         <jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
         <main class="ins-page">
 
-
         <div class="ins-form-card">
             <div class="ins-form-card__header">
-                <div class="ins-form-card__eyebrow">📝 Bài học</div>
+                <div class="ins-form-card__eyebrow">📚 Khóa học: <c:out value="${course.title}"/></div>
                 <h1>
                     <c:choose>
-                        <c:when test="${empty lessonId}">Tạo bài học mới</c:when>
+                        <c:when test="${empty lessonId}">Thêm bài học mới (Bước 3 & 4)</c:when>
                         <c:otherwise>Chỉnh sửa bài học</c:otherwise>
                     </c:choose>
                 </h1>
-                <p>Nội dung sẽ hiển thị cho học viên khi khóa học được công bố.</p>
+                <p>Chọn loại nội dung (Video, Văn bản, Bài tập), nhập tài nguyên học tập và cấu hình điều kiện truy cập.</p>
             </div>
             <div class="ins-form-card__body">
                 <c:if test="${course.status eq 'PUBLISHED' or course.status eq 'APPROVED'}">
@@ -41,26 +96,109 @@
                 </c:if>
 
                 <form:form method="post" modelAttribute="lessonForm"
-                           action="${pageContext.request.contextPath}${formAction}" htmlEscape="true">
+                           action="${pageContext.request.contextPath}${formAction}" htmlEscape="true" id="lessonForm">
                     <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+
+                    <!-- Bước 2: Chọn chương mục -->
+                    <div class="ins-field">
+                        <label for="sectionId">Chương mục (Section / Module)</label>
+                        <form:select path="sectionId" id="sectionId">
+                            <form:option value="" label="-- Chọn chương mục hoặc để mục chung --"/>
+                            <c:forEach var="sec" items="${sections}">
+                                <c:if test="${not empty sec.sectionId}">
+                                    <form:option value="${sec.sectionId}" label="Chương ${sec.orderIndex}: ${sec.title}"/>
+                                </c:if>
+                            </c:forEach>
+                        </form:select>
+                        <span class="ins-field__hint">Xếp bài học vào đúng chương mục giúp học viên học có hệ thống.</span>
+                    </div>
 
                     <div class="ins-field">
                         <label for="title">Tên bài học <span style="color:#EF4444">*</span></label>
                         <form:input path="title" id="title" maxlength="255"
-                                    placeholder="VD: Giới thiệu về Spring Boot"/>
+                                    placeholder="VD: Bài 1: Cài đặt môi trường & Cấu trúc dự án"/>
                         <form:errors path="title" cssClass="ins-field__error"/>
                     </div>
 
-                    <div class="ins-field">
-                        <label for="content">Nội dung bài học</label>
-                        <form:textarea path="content" id="content" rows="14"
-                                       placeholder="Viết nội dung bài học ở đây..."/>
+                    <!-- Bước 3: Content Type Selector -->
+                    <label style="display:block; font-weight:700; font-size:.88rem; margin-bottom:8px; color:var(--ink);">
+                        Loại nội dung bài học (Content Type) <span style="color:#EF4444">*</span>
+                    </label>
+                    <div class="type-selector">
+                        <div class="type-card <c:if test='${lessonForm.lessonType eq "VIDEO"}'>active</c:if>' id="cardVideo" onclick="setType('VIDEO')">
+                            <input type="radio" name="lessonType" value="VIDEO" <c:if test='${lessonForm.lessonType eq "VIDEO"}'>checked</c:if> id="typeVideo"/>
+                            <div class="type-card__icon">🎥</div>
+                            <div class="type-card__title">Bài giảng Video</div>
+                            <div class="type-card__desc">Tải video từ máy, link YouTube, Vimeo</div>
+                        </div>
+
+                        <div class="type-card <c:if test='${empty lessonForm.lessonType or lessonForm.lessonType eq "ARTICLE"}'>active</c:if>' id="cardArticle" onclick="setType('ARTICLE')">
+                            <input type="radio" name="lessonType" value="ARTICLE" <c:if test='${empty lessonForm.lessonType or lessonForm.lessonType eq "ARTICLE"}'>checked</c:if> id="typeArticle"/>
+                            <div class="type-card__icon">📄</div>
+                            <div class="type-card__title">Bài viết / Văn bản</div>
+                            <div class="type-card__desc">Tài liệu, Code snippet & Markdown</div>
+                        </div>
+
+                        <div class="type-card <c:if test='${lessonForm.lessonType eq "QUIZ"}'>active</c:if>' id="cardQuiz" onclick="setType('QUIZ')">
+                            <input type="radio" name="lessonType" value="QUIZ" <c:if test='${lessonForm.lessonType eq "QUIZ"}'>checked</c:if> id="typeQuiz"/>
+                            <div class="type-card__icon">📝</div>
+                            <div class="type-card__title">Bài tập / Quiz</div>
+                            <div class="type-card__desc">Trắc nghiệm, tự luận & đánh giá</div>
+                        </div>
+                    </div>
+
+                    <!-- 3.1: Video Fields (Hỗ trợ cả tải file từ máy tính lẫn dán URL) -->
+                    <div id="videoFields" style="<c:if test='${lessonForm.lessonType ne "VIDEO"}'>display:none;</c:if>">
+                        <div class="ins-form-grid">
+                            <div class="ins-field">
+                                <label for="videoUrl">Đường dẫn Video (Video URL) <span style="color:#EF4444">*</span></label>
+                                <div class="upload-row">
+                                    <form:input path="videoUrl" id="videoUrl"
+                                                placeholder="Dán link YouTube hoặc tải video MP4..."/>
+                                    <button type="button" class="upload-btn" onclick="document.getElementById('lessonVideoFileInput').click()">
+                                        📤 Tải video từ máy
+                                    </button>
+                                    <input type="file" id="lessonVideoFileInput" accept="video/mp4,video/webm,video/mov" style="display:none;" onchange="uploadLessonVideo(this)"/>
+                                </div>
+                                <div id="lessonVideoStatus" class="upload-status"></div>
+                                <span class="ins-field__hint">Hỗ trợ tải video MP4 từ máy tính hoặc dán link YouTube, Vimeo ẩn.</span>
+                                <form:errors path="videoUrl" cssClass="ins-field__error"/>
+                            </div>
+                            <div class="ins-field">
+                                <label for="videoDuration">Thời lượng video (Số phút)</label>
+                                <form:input path="videoDuration" id="videoDuration" type="number" min="1" placeholder="VD: 15"/>
+                                <span class="ins-field__hint">Thời lượng ước tính để học viên phân bổ thời gian.</span>
+                            </div>
+                        </div>
+                        <div class="ins-field" style="margin-top:8px;">
+                            <label class="switch-label">
+                                <form:checkbox path="allowSeek" id="allowSeek"/>
+                                <span>Cho phép học viên tua video (Tắt nếu muốn học viên xem tuần tự bắt buộc)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 3.2: Text / Article / Notes Content -->
+                    <div class="ins-field" style="margin-top:16px;">
+                        <label for="content">
+                            <span id="contentLabel">Nội dung chi tiết bài học</span>
+                        </label>
+                        <div class="editor-toolbar">
+                            <button type="button" class="editor-btn" onclick="insertTag('**', '**')"><b>B</b></button>
+                            <button type="button" class="editor-btn" onclick="insertTag('*', '*')"><i>I</i></button>
+                            <button type="button" class="editor-btn" onclick="insertTag('### ', '')">H3</button>
+                            <button type="button" class="editor-btn" onclick="insertTag('```java\n', '\n```')">Mã code</button>
+                            <button type="button" class="editor-btn" onclick="insertTag('> ', '')">Trích dẫn</button>
+                            <button type="button" class="editor-btn" onclick="insertTag('- ', '')">Gạch đầu dòng</button>
+                        </div>
+                        <form:textarea path="content" id="content" rows="12" style="border-radius:0 0 var(--r8) var(--r8);"
+                                       placeholder="Viết nội dung bài giảng, tài liệu hướng dẫn hoặc giải thích chi tiết ở đây..."/>
                         <form:errors path="content" cssClass="ins-field__error"/>
                     </div>
 
                     <c:if test="${not empty lessonId}">
-                        <div class="ins-field" style="max-width:200px">
-                            <label for="orderIndex">Vị trí trong khóa học</label>
+                        <div class="ins-field" style="max-width:220px; margin-top:16px;">
+                            <label for="orderIndex">Vị trí bài học trong khóa</label>
                             <form:input path="orderIndex" id="orderIndex" type="number"
                                         min="1" max="${maxOrder}"/>
                             <span class="ins-field__hint">Từ 1 đến ${maxOrder}</span>
@@ -68,11 +206,49 @@
                         </div>
                     </c:if>
 
-                    <div class="ins-form-actions">
+                    <!-- Bước 4: Cấu hình Nâng cao (Lesson Settings) -->
+                    <div class="advanced-box">
+                        <div class="advanced-box__title">⚙️ Bước 4: Cấu hình Nâng cao cho Bài học</div>
+
+                        <div class="ins-field" style="margin-bottom:14px;">
+                            <label class="switch-label">
+                                <form:checkbox path="isPreview" id="isPreview"/>
+                                <span>👁️ Cho phép xem trước miễn phí (Free Preview) trước khi mua khóa học</span>
+                            </label>
+                            <span class="ins-field__hint" style="margin-left:26px;">Học viên chưa đăng ký/mua khóa học vẫn có thể xem bài này để trải nghiệm chất lượng giảng dạy.</span>
+                        </div>
+
+                        <div class="ins-form-grid" style="margin-top:14px;">
+                            <div class="ins-field">
+                                <label for="unlockDaysAfterEnroll">⏳ Mở khóa tuần tự (Drip Content - Số ngày sau ghi danh)</label>
+                                <form:input path="unlockDaysAfterEnroll" id="unlockDaysAfterEnroll" type="number" min="0" placeholder="VD: 3"/>
+                                <span class="ins-field__hint">Bỏ trống hoặc nhập 0 nếu mở ngay lập tức khi đăng ký.</span>
+                            </div>
+
+                            <div class="ins-field">
+                                <label for="prerequisiteLessonId">🔗 Điều kiện tiên quyết (Prerequisite Lesson)</label>
+                                <form:select path="prerequisiteLessonId" id="prerequisiteLessonId">
+                                    <form:option value="" label="-- Không yêu cầu bài trước --"/>
+                                    <c:forEach var="exist" items="${existingLessons}">
+                                        <form:option value="${exist.lessonId}" label="Bài ${exist.orderIndex}: ${exist.title}"/>
+                                    </c:forEach>
+                                </form:select>
+                                <span class="ins-field__hint">Học viên phải hoàn thành bài này trước khi mở bài học hiện tại.</span>
+                            </div>
+                        </div>
+
+                        <div class="ins-field" style="margin-top:14px;">
+                            <label for="instructorNotes">🗒️ Ghi chú riêng cho Giảng viên (Instructor Notes)</label>
+                            <form:textarea path="instructorNotes" id="instructorNotes" rows="2"
+                                           placeholder="Ghi chú kế hoạch giảng dạy, câu hỏi thảo luận, tài liệu tham khảo nội bộ (học viên không thấy)..."/>
+                        </div>
+                    </div>
+
+                    <div class="ins-form-actions" style="margin-top:24px;">
                         <button class="ins-form-btn-primary" type="submit">💾 Lưu bài học</button>
                         <a class="ins-form-btn-cancel"
-                           href="${pageContext.request.contextPath}/instructor/courses/${courseId}/lessons">
-                            Hủy
+                           href="${pageContext.request.contextPath}/instructor/courses/${courseId}">
+                            Quay lại
                         </a>
                     </div>
                 </form:form>
@@ -82,8 +258,81 @@
         </main>
     </div>
 </div>
+
 <script>
 function insToggleMenu(e){e.stopPropagation();document.getElementById('insUserMenu').classList.toggle('open');}
 document.addEventListener('click',function(){var m=document.getElementById('insUserMenu');if(m)m.classList.remove('open');});
+
+function setType(type) {
+    document.querySelectorAll('.type-card').forEach(function(c){ c.classList.remove('active'); });
+    var r = document.getElementById('type' + type.charAt(0) + type.slice(1).toLowerCase());
+    if (r) r.checked = true;
+    var card = document.getElementById('card' + type.charAt(0) + type.slice(1).toLowerCase());
+    if (card) card.classList.add('active');
+
+    var videoFields = document.getElementById('videoFields');
+    var contentLabel = document.getElementById('contentLabel');
+    if (type === 'VIDEO') {
+        videoFields.style.display = 'block';
+        contentLabel.textContent = 'Ghi chú & Tóm tắt bài giảng Video';
+    } else if (type === 'QUIZ') {
+        videoFields.style.display = 'none';
+        contentLabel.textContent = 'Mô tả bài tập / Hướng dẫn làm Quiz & Điểm đạt';
+    } else {
+        videoFields.style.display = 'none';
+        contentLabel.textContent = 'Nội dung chi tiết bài học (Văn bản / Markdown)';
+    }
+}
+
+function insertTag(open, close) {
+    var ta = document.getElementById('content');
+    var start = ta.selectionStart;
+    var end = ta.selectionEnd;
+    var text = ta.value;
+    var sel = text.substring(start, end);
+    ta.value = text.substring(0, start) + open + sel + close + text.substring(end);
+    ta.focus();
+    ta.selectionStart = start + open.length;
+    ta.selectionEnd = end + open.length;
+}
+
+// Upload lesson video asynchronously
+function uploadLessonVideo(inputElem) {
+    if (!inputElem.files || inputElem.files.length === 0) return;
+    var file = inputElem.files[0];
+    var statusElem = document.getElementById('lessonVideoStatus');
+    statusElem.className = 'upload-status upload-status--loading';
+    statusElem.textContent = '⏳ Đang tải video lên (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)... Vui lòng đợi trong giây lát.';
+
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', 'video');
+
+    var csrfToken = document.querySelector('input[name="${_csrf.parameterName}"]').value;
+
+    fetch('${pageContext.request.contextPath}/instructor/upload', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken
+        },
+        body: formData
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.success) {
+            document.getElementById('videoUrl').value = data.url;
+            statusElem.className = 'upload-status upload-status--success';
+            statusElem.textContent = '✅ Đã tải lên thành công: ' + data.originalName;
+        } else {
+            statusElem.className = 'upload-status upload-status--error';
+            statusElem.textContent = '❌ Lỗi: ' + (data.message || 'Không thể tải tệp lên');
+        }
+    })
+    .catch(function(err) {
+        statusElem.className = 'upload-status upload-status--error';
+        statusElem.textContent = '❌ Lỗi kết nối: ' + err.message;
+    });
+}
 </script>
-</body></html>
+</body>
+</html>

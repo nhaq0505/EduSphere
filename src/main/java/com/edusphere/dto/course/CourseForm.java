@@ -4,9 +4,13 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
+@Getter
+@Setter
 public class CourseForm {
 
     @NotBlank(message = "Tên khóa học không được để trống")
@@ -23,14 +27,9 @@ public class CourseForm {
     @DecimalMin(value = "0.00", message = "Học phí không được âm")
     private BigDecimal price = BigDecimal.ZERO;
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public Integer getCategoryId() { return categoryId; }
-    public void setCategoryId(Integer categoryId) { this.categoryId = categoryId; }
-    public String getLevel() { return level; }
-    public void setLevel(String level) { this.level = level; }
-    public BigDecimal getPrice() { return price; }
-    public void setPrice(BigDecimal price) { this.price = price; }
+    // Bước 1: Thông tin nâng cao
+    private String thumbnailUrl;
+    private String promoVideoUrl;
+    private String objectives;   // What students will learn (Mục tiêu đầu ra)
+    private String requirements; // Prerequisites (Yêu cầu đầu vào)
 }

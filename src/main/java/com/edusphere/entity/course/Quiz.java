@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import lombok.Getter;
@@ -62,6 +63,18 @@ public class Quiz {
 
     @Column(name = "rules", columnDefinition = "nvarchar(max)")
     private String rules;
+
+    /** Điểm tối thiểu để qua bài (% tổng điểm, ví dụ 50.0 = 50%). null = không yêu cầu. */
+    @Column(name = "passing_score", precision = 5, scale = 2)
+    private java.math.BigDecimal passingScore;
+
+    /** Xáo trộn thứ tự câu hỏi */
+    @Column(name = "shuffle_questions", nullable = false)
+    private boolean shuffleQuestions = false;
+
+    /** Xáo trộn thứ tự đáp án */
+    @Column(name = "shuffle_options", nullable = false)
+    private boolean shuffleOptions = false;
 
     /** DRAFT / PUBLISHED / ARCHIVED */
     @Column(name = "status", nullable = false, length = 20)

@@ -57,6 +57,18 @@ public class Course {
     @Column(name = "thumbnail_url", length = 2048)
     private String thumbnailUrl;
 
+    /** Video giới thiệu khóa học (Promo video / Trailer) */
+    @Column(name = "promo_video_url", length = 2048)
+    private String promoVideoUrl;
+
+    /** Mục tiêu đầu ra (What students will learn) */
+    @Column(name = "objectives", columnDefinition = "nvarchar(max)")
+    private String objectives;
+
+    /** Yêu cầu đầu vào (Requirements / Prerequisites) */
+    @Column(name = "requirements", columnDefinition = "nvarchar(max)")
+    private String requirements;
+
     @Column(name = "status", nullable = false, length = 20)
     private String status = "DRAFT";
 
@@ -80,6 +92,10 @@ public class Course {
 
     @Column(name = "archived_at")
     private LocalDateTime archivedAt;
+
+    /** Chú thích thay đổi từ Instructor khi gửi duyệt lại (UPDATING → SUBMITTED) */
+    @Column(name = "change_note", columnDefinition = "nvarchar(2000)")
+    private String changeNote;
 
     @jakarta.persistence.PrePersist
     private void setCreatedAt() {

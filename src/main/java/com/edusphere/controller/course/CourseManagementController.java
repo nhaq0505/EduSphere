@@ -4,10 +4,12 @@ import com.edusphere.dto.course.CourseForm;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
 import com.edusphere.service.course.CourseManagementService;
+import com.edusphere.service.course.LearningService;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,9 +25,16 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 public class CourseManagementController {
     private final CourseManagementService service;
+    private final LearningService learningService;
 
     public CourseManagementController(CourseManagementService service) {
+        this(service, null);
+    }
+
+    @Autowired
+    public CourseManagementController(CourseManagementService service, LearningService learningService) {
         this.service = service;
+        this.learningService = learningService;
     }
 
     @GetMapping("/my-courses")
@@ -37,15 +46,30 @@ public class CourseManagementController {
     @PostMapping("/courses/{courseId}/enroll")
     public String enroll(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails user,
                          RedirectAttributes flash) {
-        service.enroll(courseId, user.getUserId());
-        flash.addFlashAttribute("success", "Ghi danh thành công.");
-        return "redirect:/my-courses";
+        if (user == null) {
+            return "redirect:/login?courseId=" + courseId;
+        }
+        try {
+            service.enroll(courseId, user.getUserId());
+            flash.addFlashAttribute("success", "Ghi danh thành công.");
+        } catch (Exception ex) {
+            // Khóa học đã ghi danh hoặc có trạng thái đặc biệt -> tiếp tục vào học
+        }
+        return "redirect:/courses/" + courseId + "/learn";
     }
 
-    // Nếu ai đó gõ URL GET /courses/{courseId}/enroll thẳng → redirect về trang chi tiết khóa học
+    // Nếu ai đó truy cập URL GET /courses/{courseId}/enroll → chuyển thẳng vào học hoặc ghi danh
     @GetMapping("/courses/{courseId}/enroll")
-    public String enrollRedirect(@PathVariable Integer courseId) {
-        return "redirect:/courses/" + courseId;
+    public String enrollRedirect(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails user) {
+        if (user == null) {
+            return "redirect:/login?courseId=" + courseId;
+        }
+        try {
+            service.enroll(courseId, user.getUserId());
+        } catch (Exception ex) {
+            // Đã ghi danh hoặc miễn phí -> vào học
+        }
+        return "redirect:/courses/" + courseId + "/learn";
     }
 
     @GetMapping("/instructor/courses")
@@ -77,7 +101,7 @@ public class CourseManagementController {
             return "courses/form";
         }
         Integer id = service.create(user.getUserId(), form);
-        flash.addFlashAttribute("success", "Đã tạo khóa học nháp.");
+        flash.addFlashAttribute("success", "Đã khởi tạo khóa học. Tiếp tục thiết lập chương mục và bài học!");
         return "redirect:/instructor/courses/" + id;
     }
 
@@ -86,6 +110,28 @@ public class CourseManagementController {
         model.addAttribute("course", service.instructorCourse(id, user.getUserId()));
         model.addAttribute("lessons", service.courseLessons(id, user.getUserId()));
         return "courses/instructor-detail";
+    }
+
+    @GetMapping("/instructor/courses/{id}/preview")
+    public String previewAsStudent(@PathVariable Integer id,
+                                   @RequestParam(required = false) Integer lessonId,
+                                   @AuthenticationPrincipal CustomUserDetails user,
+                                   Model model) {
+        if (learningService != null) {
+            var studyContext = learningService.getStudyContextForPreview(id, lessonId, user.getUserId());
+            model.addAttribute("study", studyContext);
+            model.addAttribute("studyContext", studyContext);
+            return "courses/study";
+        }
+        return "redirect:/instructor/courses/" + id;
+    }
+
+    @GetMapping("/instructor/courses/{id}/preview/lessons/{lessonId}")
+    public String previewLessonAsStudent(@PathVariable Integer id,
+                                         @PathVariable Integer lessonId,
+                                         @AuthenticationPrincipal CustomUserDetails user,
+                                         Model model) {
+        return previewAsStudent(id, lessonId, user, model);
     }
 
     @GetMapping("/instructor/courses/{id}/edit")
@@ -113,8 +159,10 @@ public class CourseManagementController {
     }
 
     @PostMapping("/instructor/courses/{id}/submit")
-    public String submit(@PathVariable Integer id, @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
-        service.submit(id, user.getUserId());
+    public String submit(@PathVariable Integer id,
+                         @RequestParam(required = false) String changeNote,
+                         @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
+        service.submitWithNote(id, user.getUserId(), changeNote);
         flash.addFlashAttribute("success", "Đã gửi khóa học để duyệt.");
         return "redirect:/instructor/courses/" + id;
     }
@@ -123,6 +171,13 @@ public class CourseManagementController {
     public String publish(@PathVariable Integer id, @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
         service.publish(id, user.getUserId());
         flash.addFlashAttribute("success", "Đã công bố khóa học.");
+        return "redirect:/instructor/courses/" + id;
+    }
+
+    @PostMapping("/instructor/courses/{id}/republish")
+    public String republish(@PathVariable Integer id, @AuthenticationPrincipal CustomUserDetails user, RedirectAttributes flash) {
+        service.republish(id, user.getUserId());
+        flash.addFlashAttribute("success", "Đã tái công bố nội dung mới. Học viên có thể xem bài học vừa cập nhật.");
         return "redirect:/instructor/courses/" + id;
     }
 
@@ -144,6 +199,12 @@ public class CourseManagementController {
     public String pending(Model model) {
         model.addAttribute("courses", service.pendingCourses());
         return "admin/course-review";
+    }
+
+    @GetMapping("/admin/courses/{id}/review")
+    public String reviewDetail(@PathVariable Integer id, Model model) {
+        model.addAttribute("course", service.adminCourseDetail(id));
+        return "admin/course-review-detail";
     }
 
     @PostMapping("/admin/courses/{id}/review")

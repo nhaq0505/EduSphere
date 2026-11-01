@@ -33,8 +33,37 @@ public class Lesson {
     @JoinColumn(name = "course_id", referencedColumnName = "course_id", nullable = false)
     private Course course;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "section_id", referencedColumnName = "section_id")
+    private CourseSection section;
+
     @Column(name = "title", nullable = false, length = 255)
     private String title;
+
+    @Column(name = "lesson_type", length = 20)
+    private String lessonType = "ARTICLE";
+
+    @Column(name = "video_url", length = 2048)
+    private String videoUrl;
+
+    @Column(name = "video_duration")
+    private Integer videoDuration;
+
+    @Column(name = "allow_seek")
+    private Boolean allowSeek = true;
+
+    @Column(name = "is_preview")
+    private Boolean isPreview = false;
+
+    @Column(name = "unlock_days_after_enroll")
+    private Integer unlockDaysAfterEnroll;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "prerequisite_lesson_id", referencedColumnName = "lesson_id")
+    private Lesson prerequisiteLesson;
+
+    @Column(name = "instructor_notes", columnDefinition = "nvarchar(max)")
+    private String instructorNotes;
 
     @Column(name = "content", columnDefinition = "nvarchar(max)")
     private String content;

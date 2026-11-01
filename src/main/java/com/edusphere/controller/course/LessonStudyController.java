@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
-@PreAuthorize("hasRole('STUDENT')")
+@PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMINISTRATOR')")
 public class LessonStudyController {
 
     private final LearningService learningService;
@@ -41,11 +41,15 @@ public class LessonStudyController {
     @GetMapping("/courses/{courseId}/lessons/{lessonId}")
     public String studyLesson(@PathVariable Integer courseId,
                              @PathVariable Integer lessonId,
+                             @org.springframework.web.bind.annotation.RequestParam(required = false) String tab,
                              @AuthenticationPrincipal CustomUserDetails user,
                              Model model) {
         StudyCourseView context = learningService.getStudyContext(courseId, lessonId, user.getUserId());
         model.addAttribute("study", context);
         model.addAttribute("studyContext", context);
+        if ("exercise".equals(tab)) {
+            model.addAttribute("initialTab", "exercise");
+        }
         return "courses/study";
     }
 

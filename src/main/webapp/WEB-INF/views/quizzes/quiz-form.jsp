@@ -24,7 +24,7 @@
         </div>
 
         <div class="ins-form-card" style="max-width:640px">
-            <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${courseId}/quizzes">
+            <form method="post" action="${not empty quizId ? pageContext.request.contextPath.concat('/instructor/courses/').concat(courseId).concat('/quizzes/').concat(quizId).concat('/edit') : pageContext.request.contextPath.concat('/instructor/courses/').concat(courseId).concat('/quizzes')}">
                 <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
 
                 <div class="ins-field">
@@ -68,8 +68,45 @@
                 </div>
 
                 <div class="ins-field">
-                    <label class="ins-label" for="lessonId">Gắn với bài học (tuỳ chọn)</label>
-                    <input class="ins-input" type="number" id="lessonId" name="lessonId" value="${quizForm.lessonId}" placeholder="Nhập ID bài học (nếu có)">
+                    <label class="ins-label" for="passingScore">Điểm đạt yêu cầu (%, để trống nếu không bắt buộc)</label>
+                    <input class="ins-input" type="number" id="passingScore" name="passingScore" min="0" max="100" step="1"
+                           value="${quizForm.passingScore}" placeholder="VD: 50 = phải đạt 50% mới tính hoàn thành">
+                </div>
+
+                <div class="ins-field" style="display:flex;gap:20px;flex-wrap:wrap;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:600;">
+                        <input type="checkbox" name="shuffleQuestions" value="true" ${quizForm.shuffleQuestions ? 'checked' : ''}/>
+                        🔀 Xáo trộn câu hỏi
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:600;">
+                        <input type="checkbox" name="shuffleOptions" value="true" ${quizForm.shuffleOptions ? 'checked' : ''}/>
+                        🔀 Xáo trộn đáp án
+                    </label>
+                </div>
+
+                <div class="ins-field">
+                    <label class="ins-label" for="lessonId">Gắn với bài học loại Quiz (tùy chọn)</label>
+                    <c:choose>
+                        <c:when test="${not empty lessons}">
+                            <select class="ins-input" id="lessonId" name="lessonId">
+                                <option value="">-- Không gắn với bài học cụ thể --</option>
+                                <c:forEach var="les" items="${lessons}">
+                                    <option value="${les.lessonId}"
+                                        ${quizForm.lessonId == les.lessonId ? 'selected' : ''}>
+                                        Bài ${les.orderIndex}: <c:out value="${les.title}"/>
+                                    </option>
+                                </c:forEach>
+                            </select>
+                        </c:when>
+                        <c:otherwise>
+                            <select class="ins-input" id="lessonId" name="lessonId">
+                                <option value="">-- Không gắn với bài học cụ thể --</option>
+                            </select>
+                            <p class="ins-field__hint" style="color:#94A3B8;font-size:.78rem;">
+                                Chưa có bài học loại Quiz trong khóa học này.
+                            </p>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
 
                 <div style="display:flex;gap:12px;margin-top:8px">

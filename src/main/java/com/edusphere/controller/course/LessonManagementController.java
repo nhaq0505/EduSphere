@@ -5,6 +5,7 @@ import com.edusphere.dto.course.MaterialForm;
 import com.edusphere.entity.course.Lesson;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
+import com.edusphere.service.course.CourseSectionService;
 import com.edusphere.service.course.LessonManagementService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -18,15 +19,20 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/instructor/courses/{courseId}/lessons")
 public class LessonManagementController {
     private final LessonManagementService service;
+    private final CourseSectionService sectionService;
 
-    public LessonManagementController(LessonManagementService service) {
+    public LessonManagementController(LessonManagementService service, CourseSectionService sectionService) {
         this.service = service;
+        this.sectionService = sectionService;
     }
 
     @GetMapping
@@ -35,17 +41,26 @@ public class LessonManagementController {
         var course = service.ownedCourse(courseId, instructor.getUserId());
         model.addAttribute("course", course);
         model.addAttribute("lessons", service.lessons(courseId, instructor.getUserId()));
+        model.addAttribute("sections", sectionService.getSectionsWithLessons(courseId, instructor.getUserId()));
         model.addAttribute("editable", !"SUBMITTED".equals(course.getStatus()) && !"ARCHIVED".equals(course.getStatus()));
         return "courses/instructor-lessons";
     }
 
     @GetMapping("/new")
-    public String newForm(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails instructor,
+    public String newForm(@PathVariable Integer courseId,
+                          @RequestParam(required = false) Integer sectionId,
+                          @AuthenticationPrincipal CustomUserDetails instructor,
                           Model model) {
         var course = service.editableForDisplay(courseId, instructor.getUserId());
+        LessonForm form = new LessonForm();
+        if (sectionId != null) {
+            form.setSectionId(sectionId);
+        }
         model.addAttribute("course", course);
-        model.addAttribute("lessonForm", new LessonForm());
+        model.addAttribute("lessonForm", form);
         model.addAttribute("courseId", courseId);
+        model.addAttribute("sections", sectionService.getSectionsWithLessons(courseId, instructor.getUserId()));
+        model.addAttribute("existingLessons", service.lessons(courseId, instructor.getUserId()));
         model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons");
         return "courses/lesson-form";
     }
@@ -58,6 +73,8 @@ public class LessonManagementController {
             var course = service.editableForDisplay(courseId, instructor.getUserId());
             model.addAttribute("course", course);
             model.addAttribute("courseId", courseId);
+            model.addAttribute("sections", sectionService.getSectionsWithLessons(courseId, instructor.getUserId()));
+            model.addAttribute("existingLessons", service.lessons(courseId, instructor.getUserId()));
             model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons");
             return "courses/lesson-form";
         }
@@ -66,9 +83,9 @@ public class LessonManagementController {
         if ("DRAFT".equals(course.getStatus()) && course.getVersionNo() != null && course.getVersionNo() > 1) {
             flash.addFlashAttribute("success", "Đã tạo bài học mới. Khóa học đã được chuyển về bản nháp (v" + course.getVersionNo() + ") để bạn hoàn thiện và gửi Admin duyệt lại.");
         } else {
-            flash.addFlashAttribute("success", "Đã tạo bài học.");
+            flash.addFlashAttribute("success", "Đã tạo bài học thành công.");
         }
-        return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
+        return "redirect:/instructor/courses/" + courseId;
     }
 
     @GetMapping("/{lessonId}")
@@ -92,11 +109,26 @@ public class LessonManagementController {
         form.setTitle(lesson.getTitle());
         form.setContent(lesson.getContent());
         form.setOrderIndex(lesson.getOrderIndex());
+        form.setSectionId(lesson.getSection() != null ? lesson.getSection().getSectionId() : null);
+        form.setLessonType(lesson.getLessonType() != null ? lesson.getLessonType() : "ARTICLE");
+        form.setVideoUrl(lesson.getVideoUrl());
+        form.setVideoDuration(lesson.getVideoDuration());
+        form.setAllowSeek(lesson.getAllowSeek() != null ? lesson.getAllowSeek() : true);
+        form.setIsPreview(Boolean.TRUE.equals(lesson.getIsPreview()));
+        form.setUnlockDaysAfterEnroll(lesson.getUnlockDaysAfterEnroll());
+        form.setPrerequisiteLessonId(lesson.getPrerequisiteLesson() != null ? lesson.getPrerequisiteLesson().getLessonId() : null);
+        form.setInstructorNotes(lesson.getInstructorNotes());
+
+        List<Lesson> allLessons = service.lessons(courseId, instructor.getUserId());
+        List<Lesson> candidatePrereqs = allLessons.stream().filter(l -> !l.getLessonId().equals(lessonId)).toList();
+
         model.addAttribute("course", course);
         model.addAttribute("lessonForm", form);
         model.addAttribute("courseId", courseId);
         model.addAttribute("lessonId", lessonId);
-        model.addAttribute("maxOrder", service.lessons(courseId, instructor.getUserId()).size());
+        model.addAttribute("sections", sectionService.getSectionsWithLessons(courseId, instructor.getUserId()));
+        model.addAttribute("existingLessons", candidatePrereqs);
+        model.addAttribute("maxOrder", allLessons.size());
         model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons/" + lessonId + "/edit");
         return "courses/lesson-form";
     }
@@ -108,10 +140,11 @@ public class LessonManagementController {
                        RedirectAttributes flash) {
         if (errors.hasErrors()) {
             var course = service.editableForDisplay(courseId, instructor.getUserId());
-            service.lesson(courseId, lessonId, instructor.getUserId());
             model.addAttribute("course", course);
             model.addAttribute("courseId", courseId);
             model.addAttribute("lessonId", lessonId);
+            model.addAttribute("sections", sectionService.getSectionsWithLessons(courseId, instructor.getUserId()));
+            model.addAttribute("existingLessons", service.lessons(courseId, instructor.getUserId()).stream().filter(l -> !l.getLessonId().equals(lessonId)).toList());
             model.addAttribute("maxOrder", service.lessons(courseId, instructor.getUserId()).size());
             model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons/" + lessonId + "/edit");
             return "courses/lesson-form";
@@ -123,7 +156,17 @@ public class LessonManagementController {
         } else {
             flash.addFlashAttribute("success", "Đã cập nhật bài học.");
         }
-        return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
+        return "redirect:/instructor/courses/" + courseId;
+    }
+
+    @PostMapping("/{lessonId}/delete")
+    public String deleteLesson(@PathVariable Integer courseId,
+                               @PathVariable Integer lessonId,
+                               @AuthenticationPrincipal CustomUserDetails instructor,
+                               RedirectAttributes flash) {
+        service.deleteLesson(courseId, lessonId, instructor.getUserId());
+        flash.addFlashAttribute("success", "Đã xóa bài học.");
+        return "redirect:/instructor/courses/" + courseId;
     }
 
     @PostMapping("/{lessonId}/materials")
@@ -144,6 +187,17 @@ public class LessonManagementController {
         } else {
             flash.addFlashAttribute("success", "Đã thêm tài liệu cho bài học.");
         }
+        return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
+    }
+
+    @PostMapping("/{lessonId}/materials/{materialId}/delete")
+    public String deleteMaterial(@PathVariable Integer courseId,
+                                 @PathVariable Integer lessonId,
+                                 @PathVariable Integer materialId,
+                                 @AuthenticationPrincipal CustomUserDetails instructor,
+                                 RedirectAttributes flash) {
+        service.deleteMaterial(courseId, lessonId, materialId, instructor.getUserId());
+        flash.addFlashAttribute("success", "Đã xóa tài liệu.");
         return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
     }
 

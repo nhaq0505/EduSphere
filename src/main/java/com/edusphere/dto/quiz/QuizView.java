@@ -22,4 +22,10 @@ public class QuizView {
     private LocalDateTime dueDate;
     private Integer timeLimitMinutes;
     private Integer maxAttempts;
+    /** Số lần học viên đã làm (dùng trong study page) */
+    private int myAttemptCount;
+    /** Điểm đạt yêu cầu % (nullable) */
+    private BigDecimal passingScore;
+    /** Học viên đang có bài làm IN_PROGRESS */
+    private Integer inProgressAttemptId;
 }

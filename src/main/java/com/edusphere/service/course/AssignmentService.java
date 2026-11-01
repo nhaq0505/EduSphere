@@ -15,6 +15,7 @@ import com.edusphere.repository.course.AssignmentRepository;
 import com.edusphere.repository.course.CourseRepository;
 import com.edusphere.repository.course.EnrollmentRepository;
 import com.edusphere.repository.course.GradeRepository;
+import com.edusphere.repository.course.LessonCompletionRepository;
 import com.edusphere.repository.course.LessonRepository;
 import com.edusphere.repository.course.SubmissionRepository;
 
@@ -41,6 +42,7 @@ public class AssignmentService {
     private final EnrollmentRepository enrollments;
     private final UserRepository users;
     private final LearningProgressService learningProgressService;
+    private final LessonCompletionRepository lessonCompletions;
 
     public AssignmentService(AssignmentRepository assignments, SubmissionRepository submissions,
                              GradeRepository grades, CourseRepository courses,
@@ -63,6 +65,7 @@ public class AssignmentService {
         this.enrollments = enrollments;
         this.users = users;
         this.learningProgressService = learningProgressService;
+        this.lessonCompletions = null;
     }
 
     // ===================== INSTRUCTOR OPERATIONS =====================
@@ -196,6 +199,16 @@ public class AssignmentService {
     public void submit(Integer courseId, Integer assignmentId, Integer studentId, SubmissionForm form) {
         Assignment a = getAssignmentForStudent(courseId, assignmentId, studentId);
 
+        // Gate: nếu assignment gắn với lesson cụ thể, học viên phải hoàn thành lesson đó trước
+        if (a.getLesson() != null && lessonCompletions != null) {
+            boolean lessonDone = lessonCompletions.existsByStudent_UserIdAndLesson_LessonId(
+                    studentId, a.getLesson().getLessonId());
+            if (!lessonDone) {
+                throw conflict("Bạn cần hoàn thành bài học «" + a.getLesson().getTitle()
+                        + "» trước khi nộp bài tập này.");
+            }
+        }
+
         if (form.getAnswerText() == null || form.getAnswerText().isBlank()) {
             if (form.getFileUrl() == null || form.getFileUrl().isBlank())
                 throw conflict("Bạn phải nhập nội dung trả lời hoặc URL file đính kèm.");
@@ -297,15 +310,13 @@ public class AssignmentService {
     }
 
     private AssignmentView toView(Assignment a) {
-        long subCount = submissions.countByAssignment_AssignmentIdAndStudent_UserId(a.getAssignmentId(), -1) >= 0
-                ? submissions.findByAssignment_AssignmentIdOrderBySubmittedAtDesc(a.getAssignmentId()).size()
-                : 0;
-        // simpler approach
         long count = submissions.findByAssignment_AssignmentIdOrderBySubmittedAtDesc(a.getAssignmentId()).size();
         String lessonTitle = a.getLesson() != null ? a.getLesson().getTitle() : null;
+        Integer lessonId = a.getLesson() != null ? a.getLesson().getLessonId() : null;
         return new AssignmentView(a.getAssignmentId(), a.getTitle(), a.getDescription(),
                 a.getDueDate(), a.getMaxScore(), a.getStatus(), count, lessonTitle,
-                a.isAllowResubmit(), a.getMaxAttempts(), a.getUnlockAt(), a.getLockAt());
+                a.isAllowResubmit(), a.getMaxAttempts(), a.getUnlockAt(), a.getLockAt(),
+                lessonId, false, 0);
     }
 
     private CourseActionException notFound(String msg) {

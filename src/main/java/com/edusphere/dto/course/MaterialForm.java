@@ -19,7 +19,7 @@ public class MaterialForm {
 
     @NotBlank(message = "Vui lòng nhập đường dẫn tài liệu.")
     @Size(max = 2048, message = "Đường dẫn tối đa 2048 ký tự.")
-    @Pattern(regexp = "https?://[^\\s]+", flags = Pattern.Flag.CASE_INSENSITIVE,
-             message = "Đường dẫn phải bắt đầu bằng http:// hoặc https://.")
+    @Pattern(regexp = "https?://[^\\s]+|/[^\\s]*", flags = Pattern.Flag.CASE_INSENSITIVE,
+             message = "Đường dẫn phải bắt đầu bằng http://, https:// hoặc là đường dẫn tệp tải lên (/).")
     private String fileUrl;
 }
