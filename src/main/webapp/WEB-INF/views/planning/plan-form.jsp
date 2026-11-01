@@ -1,4 +1,4 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <!DOCTYPE html>
@@ -11,25 +11,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css?v=planning">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning.css">
 </head>
 <body>
 
-<!-- ══════ NAVBAR ══════ -->
-<header class="hn-header">
-    <div class="hn-header__inner">
-        <a class="hn-logo" href="${pageContext.request.contextPath}/">
-            <div class="hn-logo__icon">🎓</div>
-            <span>EduSphere</span>
-        </a>
-        <nav class="hn-nav">
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/">Trang chủ</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/courses">Khóa học</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a>
-            <a class="hn-nav__link hn-nav__link--active" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
-        </nav>
-    </div>
-</header>
+<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 
 <main style="max-width: 800px; margin: 40px auto; padding: 0 20px; min-height: 70vh;">
 
@@ -100,6 +87,7 @@
     </div>
 
 </main>
+<jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 </body>
 </html>
 

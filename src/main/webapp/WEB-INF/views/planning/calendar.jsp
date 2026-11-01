@@ -1,4 +1,4 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
@@ -12,45 +12,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css?v=planning">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning.css">
 </head>
 <body>
 
-<!-- ══════ NAVBAR ══════ -->
-<header class="hn-header">
-    <div class="hn-header__inner">
-        <a class="hn-logo" href="${pageContext.request.contextPath}/">
-            <div class="hn-logo__icon">🎓</div>
-            <span>EduSphere</span>
-        </a>
-        <nav class="hn-nav">
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/">Trang chủ</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/courses">Khóa học</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a>
-            <a class="hn-nav__link hn-nav__link--active" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
-        </nav>
-        <div class="hn-header__right">
-            <sec:authorize access="isAuthenticated()">
-                <div class="hn-user-menu">
-                    <button class="hn-user-btn" onclick="toggleUserMenu(event)">
-                        <span class="hn-user-btn__name"><sec:authentication property="principal.fullName"/></span>
-                    </button>
-                    <div class="hn-user-dropdown" id="userDropdown">
-                        <div class="hn-user-dropdown__body">
-                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
-                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/study/calendar">Lịch học</a>
-                            <div class="hn-user-dropdown__divider"></div>
-                            <form method="post" action="${pageContext.request.contextPath}/logout" style="margin:0">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <button class="hn-user-dropdown__item hn-user-dropdown__item--danger" type="submit">Đăng xuất</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </sec:authorize>
-        </div>
-    </div>
-</header>
+<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 
 <main style="max-width: 1300px; margin: 32px auto; padding: 0 20px; min-height: 70vh;">
 
@@ -152,6 +119,7 @@ document.addEventListener('click', function() {
     document.querySelectorAll('.hn-user-menu.open').forEach(m => m.classList.remove('open'));
 });
 </script>
+<jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 </body>
 </html>
 
