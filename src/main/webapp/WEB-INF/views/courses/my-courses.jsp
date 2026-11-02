@@ -26,7 +26,11 @@
             <a class="hn-nav__link" href="${pageContext.request.contextPath}/">Trang chủ</a>
             <a class="hn-nav__link" href="${pageContext.request.contextPath}/courses">Khóa học</a>
             <a class="hn-nav__link hn-nav__link--active" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
+            <a class="hn-nav__link" href="#">Về chúng tôi</a>
+            <a class="hn-nav__link" href="#">Liên hệ</a>
+            <sec:authorize access="hasRole('STUDENT')">
+                <a class="hn-nav__link" href="${pageContext.request.contextPath}/study/plans">Kế Hoạch &amp; Tiến Độ</a>
+            </sec:authorize>
         </nav>
         <div class="hn-header__right">
             <div class="hn-search">

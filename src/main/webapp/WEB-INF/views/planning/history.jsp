@@ -1,167 +1,74 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
-<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lịch sử hoạt động học tập — EduSphere</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning.css">
-</head>
-<body>
+<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lịch sử hoạt động — EduSphere</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning-new.css">
+</head><body>
+<jsp:include page="/WEB-INF/views/planning/planning-navbar.jsp"/>
+<div class="pl-shell" style="max-width:900px;">
+<nav class="pl-tabs">
+    <a class="pl-tab" href="${pageContext.request.contextPath}/study/plans">📋 Kế hoạch học tập</a>
+    <a class="pl-tab" href="${pageContext.request.contextPath}/study/calendar">📅 Lịch học cá nhân</a>
+    <a class="pl-tab" href="${pageContext.request.contextPath}/study/progress">📈 Theo dõi tiến độ</a>
+    <a class="pl-tab active" href="${pageContext.request.contextPath}/study/history">⏱️ Lịch sử hoạt động</a>
+</nav>
 
-<!-- ══════ NAVBAR ══════ -->
-<header class="hn-header">
-    <div class="hn-header__inner">
-        <a class="hn-logo" href="${pageContext.request.contextPath}/">
-            <div class="hn-logo__icon">🎓</div>
-            <span>EduSphere</span>
-        </a>
-        <nav class="hn-nav">
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/">Trang chủ</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/courses">Khóa học</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a>
-            <a class="hn-nav__link hn-nav__link--active" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
-        </nav>
-        <div class="hn-header__right">
-            <sec:authorize access="isAuthenticated()">
-                <div class="hn-user-menu">
-                    <button class="hn-user-btn" onclick="toggleUserMenu(event)">
-                        <span class="hn-user-btn__name"><sec:authentication property="principal.fullName"/></span>
-                    </button>
-                    <div class="hn-user-dropdown" id="userDropdown">
-                        <div class="hn-user-dropdown__body">
-                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
-                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/study/history">Lịch sử học tập</a>
-                            <div class="hn-user-dropdown__divider"></div>
-                            <form method="post" action="${pageContext.request.contextPath}/logout" style="margin:0">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <button class="hn-user-dropdown__item hn-user-dropdown__item--danger" type="submit">Đăng xuất</button>
-                            </form>
+<div class="pl-page-head">
+    <div>
+        <h1>Lịch sử hoạt động học tập</h1>
+        <p>Ghi nhận hoàn thành bài học, nộp bài tập, làm quiz và ghi danh (UC38)</p>
+    </div>
+</div>
+
+<c:choose>
+    <c:when test="${empty historyPage.content}">
+        <div class="pl-empty">
+            <div class="pl-empty__icon">⏱️</div>
+            <h3>Chưa có hoạt động nào</h3>
+            <p>Khi bạn học bài, làm bài tập hay quiz, mọi hoạt động sẽ hiển thị tại đây!</p>
+            <a class="pl-btn pl-btn--primary" href="${pageContext.request.contextPath}/my-courses">Đến khóa học của tôi →</a>
+        </div>
+    </c:when>
+    <c:otherwise>
+        <div class="pl-history-feed">
+            <c:forEach items="${historyPage.content}" var="h">
+                <div class="pl-history-item">
+                    <c:choose>
+                        <c:when test="${h.activityType == 'LESSON_COMPLETED'}"><div class="pl-history-icon pl-history-icon--lesson">📖</div></c:when>
+                        <c:when test="${h.activityType == 'ASSIGNMENT_SUBMITTED'}"><div class="pl-history-icon pl-history-icon--assignment">📝</div></c:when>
+                        <c:when test="${h.activityType == 'QUIZ_SUBMITTED'}"><div class="pl-history-icon pl-history-icon--quiz">📊</div></c:when>
+                        <c:otherwise><div class="pl-history-icon pl-history-icon--course">🎓</div></c:otherwise>
+                    </c:choose>
+                    <div class="pl-history-body">
+                        <div class="pl-history-badge">📚 <c:out value="${h.courseTitle}"/></div>
+                        <div class="pl-history-title"><c:out value="${h.activityLabel}"/></div>
+                        <div class="pl-history-detail">
+                            <c:choose>
+                                <c:when test="${not empty h.details}"><c:out value="${h.details}"/></c:when>
+                                <c:otherwise>
+                                    <c:if test="${not empty h.lessonTitle}">Bài học: <c:out value="${h.lessonTitle}"/></c:if>
+                                    <c:if test="${not empty h.assignmentTitle}">Bài tập: <c:out value="${h.assignmentTitle}"/></c:if>
+                                    <c:if test="${not empty h.quizTitle}">Quiz: <c:out value="${h.quizTitle}"/></c:if>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
                     </div>
+                    <div class="pl-history-time"><c:out value="${h.occurredAt}"/></div>
                 </div>
-            </sec:authorize>
+            </c:forEach>
         </div>
-    </div>
-</header>
-
-<main style="max-width: 900px; margin: 32px auto; padding: 0 20px; min-height: 70vh;">
-
-    <!-- Subnav Tabs -->
-    <nav class="plan-tabs">
-        <a class="plan-tab" href="${pageContext.request.contextPath}/study/plans">
-            📋 Kế hoạch
-        </a>
-        <a class="plan-tab" href="${pageContext.request.contextPath}/study/calendar">
-            📅 Lịch học (Calendar)
-        </a>
-        <a class="plan-tab" href="${pageContext.request.contextPath}/study/progress">
-            📈 Tiến độ khóa học
-        </a>
-        <a class="plan-tab plan-tab--active" href="${pageContext.request.contextPath}/study/history">
-            ⏱️ Lịch sử hoạt động
-        </a>
-    </nav>
-
-    <!-- Header -->
-    <div class="plan-header">
-        <div>
-            <h1 class="plan-header__title">Lịch sử hoạt động học tập (Learning History)</h1>
-            <p class="plan-header__subtitle">Ghi nhận các sự kiện: hoàn thành bài học, nộp bài tập, làm quiz và ghi danh (UC38)</p>
-        </div>
-    </div>
-
-    <!-- History Timeline Feed -->
-    <c:choose>
-        <c:when test="${empty historyPage.content}">
-            <div style="text-align: center; padding: 60px 20px; background: #fff; border: 1px dashed #cbd5e1; border-radius: 14px;">
-                <div style="font-size: 3rem; margin-bottom: 16px;">⏱️</div>
-                <h3 style="color: #1e293b; margin: 0 0 8px;">Chưa có hoạt động nào được ghi nhận</h3>
-                <p style="color: #64748b; margin-bottom: 24px;">Khi bạn học bài, làm bài tập hoặc kiểm tra quiz, mọi hoạt động sẽ hiển thị tại đây!</p>
-                <a class="btn-primary" href="${pageContext.request.contextPath}/my-courses">
-                    Đến khóa học của tôi &rarr;
-                </a>
+        <c:if test="${totalPages > 1}">
+            <div class="pl-pagination">
+                <a class="pl-page-btn ${currentPage == 0 ? 'pl-page-btn--disabled' : ''}" href="${pageContext.request.contextPath}/study/history?page=${currentPage - 1}">← Trang trước</a>
+                <span style="font-size:.85rem;color:#64748b;font-weight:600;">Trang ${currentPage + 1} / ${totalPages}</span>
+                <a class="pl-page-btn ${currentPage + 1 >= totalPages ? 'pl-page-btn--disabled' : ''}" href="${pageContext.request.contextPath}/study/history?page=${currentPage + 1}">Trang sau →</a>
             </div>
-        </c:when>
-        <c:otherwise>
-            <div class="history-feed">
-                <c:forEach items="${historyPage.content}" var="h">
-                    <div class="history-item">
-                        <c:choose>
-                            <c:when test="${h.activityType == 'LESSON_COMPLETED'}">
-                                <div class="history-icon-box history-icon--lesson">📖</div>
-                            </c:when>
-                            <c:when test="${h.activityType == 'ASSIGNMENT_SUBMITTED'}">
-                                <div class="history-icon-box history-icon--assignment">📝</div>
-                            </c:when>
-                            <c:when test="${h.activityType == 'QUIZ_SUBMITTED'}">
-                                <div class="history-icon-box history-icon--quiz">📊</div>
-                            </c:when>
-                            <c:otherwise>
-                                <div class="history-icon-box history-icon--course">🎓</div>
-                            </c:otherwise>
-                        </c:choose>
-
-                        <div class="history-content">
-                            <span class="history-course-badge">📚 ${h.courseTitle}</span>
-                            <h4 class="history-title">${h.activityLabel}</h4>
-                            <p class="history-details">
-                                <c:if test="${not empty h.details}">
-                                    ${h.details}
-                                </c:if>
-                                <c:if test="${empty h.details}">
-                                    <c:if test="${not empty h.lessonTitle}">Bài học: ${h.lessonTitle}</c:if>
-                                    <c:if test="${not empty h.assignmentTitle}">Bài tập: ${h.assignmentTitle}</c:if>
-                                    <c:if test="${not empty h.quizTitle}">Quiz: ${h.quizTitle}</c:if>
-                                </c:if>
-                            </p>
-                        </div>
-
-                        <div class="history-time">
-                            ${h.occurredAt}
-                        </div>
-                    </div>
-                </c:forEach>
-            </div>
-
-            <!-- Pagination -->
-            <c:if test="${totalPages > 1}">
-                <div class="pagination">
-                    <a class="pagination-btn ${currentPage == 0 ? 'pagination-btn--disabled' : ''}"
-                       href="${pageContext.request.contextPath}/study/history?page=${currentPage - 1}">
-                        &larr; Trang trước
-                    </a>
-                    <span style="font-size: 0.88rem; color: #64748b; font-weight: 600;">
-                        Trang ${currentPage + 1} / ${totalPages}
-                    </span>
-                    <a class="pagination-btn ${currentPage + 1 >= totalPages ? 'pagination-btn--disabled' : ''}"
-                       href="${pageContext.request.contextPath}/study/history?page=${currentPage + 1}">
-                        Trang sau &rarr;
-                    </a>
-                </div>
-            </c:if>
-        </c:otherwise>
-    </c:choose>
-
-</main>
-
-<script>
-function toggleUserMenu(e) {
-    e.stopPropagation();
-    const menu = e.currentTarget.closest('.hn-user-menu');
-    menu.classList.toggle('open');
-}
-document.addEventListener('click', function() {
-    document.querySelectorAll('.hn-user-menu.open').forEach(m => m.classList.remove('open'));
-});
-</script>
-</body>
-</html>
-
+        </c:if>
+    </c:otherwise>
+</c:choose>
+</div>
+<jsp:include page="/WEB-INF/views/planning/planning-footer.jsp"/>
+</body></html>

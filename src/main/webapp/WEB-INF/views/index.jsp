@@ -38,6 +38,9 @@
             </sec:authorize>
             <a class="hn-nav__link" href="#">Về chúng tôi</a>
             <a class="hn-nav__link" href="#">Liên hệ</a>
+            <sec:authorize access="hasRole('STUDENT')">
+                <a class="hn-nav__link" href="${pageContext.request.contextPath}/study/plans">Kế Hoạch &amp; Tiến Độ</a>
+            </sec:authorize>
         </nav>
 
         <!-- Search + Auth -->

@@ -1,157 +1,70 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
-<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lịch học tập cá nhân (Calendar) — EduSphere</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning.css">
-</head>
-<body>
+<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lịch học — EduSphere</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning-new.css">
+</head><body>
+<jsp:include page="/WEB-INF/views/planning/planning-navbar.jsp"/>
+<div class="pl-shell">
+<nav class="pl-tabs">
+    <a class="pl-tab" href="${pageContext.request.contextPath}/study/plans">📋 Kế hoạch học tập</a>
+    <a class="pl-tab active" href="${pageContext.request.contextPath}/study/calendar">📅 Lịch học cá nhân</a>
+    <a class="pl-tab" href="${pageContext.request.contextPath}/study/progress">📈 Theo dõi tiến độ</a>
+    <a class="pl-tab" href="${pageContext.request.contextPath}/study/history">⏱️ Lịch sử hoạt động</a>
+</nav>
 
-<!-- ══════ NAVBAR ══════ -->
-<header class="hn-header">
-    <div class="hn-header__inner">
-        <a class="hn-logo" href="${pageContext.request.contextPath}/">
-            <div class="hn-logo__icon">🎓</div>
-            <span>EduSphere</span>
-        </a>
-        <nav class="hn-nav">
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/">Trang chủ</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/courses">Khóa học</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a>
-            <a class="hn-nav__link hn-nav__link--active" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
-        </nav>
-        <div class="hn-header__right">
-            <sec:authorize access="isAuthenticated()">
-                <div class="hn-user-menu">
-                    <button class="hn-user-btn" onclick="toggleUserMenu(event)">
-                        <span class="hn-user-btn__name"><sec:authentication property="principal.fullName"/></span>
-                    </button>
-                    <div class="hn-user-dropdown" id="userDropdown">
-                        <div class="hn-user-dropdown__body">
-                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
-                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/study/calendar">Lịch học</a>
-                            <div class="hn-user-dropdown__divider"></div>
-                            <form method="post" action="${pageContext.request.contextPath}/logout" style="margin:0">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <button class="hn-user-dropdown__item hn-user-dropdown__item--danger" type="submit">Đăng xuất</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </sec:authorize>
-        </div>
+<div class="pl-cal-controls">
+    <div>
+        <h1 style="font-size:1.4rem;font-weight:800;color:#0f172a;margin:0;">Lịch học cá nhân theo tuần</h1>
+        <p style="color:#64748b;font-size:.82rem;margin:3px 0 0;">Xem nhiệm vụ theo mốc thời gian cá nhân (UC36)</p>
     </div>
-</header>
-
-<main style="max-width: 1300px; margin: 32px auto; padding: 0 20px; min-height: 70vh;">
-
-    <!-- Planning Subnav Tabs -->
-    <nav class="plan-tabs">
-        <a class="plan-tab" href="${pageContext.request.contextPath}/study/plans">
-            📋 Kế hoạch
-        </a>
-        <a class="plan-tab plan-tab--active" href="${pageContext.request.contextPath}/study/calendar">
-            📅 Lịch học (Calendar)
-        </a>
-        <a class="plan-tab" href="${pageContext.request.contextPath}/study/progress">
-            📈 Tiến độ khóa học
-        </a>
-        <a class="plan-tab" href="${pageContext.request.contextPath}/study/history">
-            ⏱️ Lịch sử hoạt động
-        </a>
-    </nav>
-
-    <!-- Calendar Controls -->
-    <div class="cal-controls">
-        <div>
-            <h1 style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0;">Lịch học theo tuần</h1>
-            <p style="color: #64748b; font-size: 0.88rem; margin: 2px 0 0;">Theo dõi các nhiệm vụ học tập theo mốc thời gian cụ thể (UC36)</p>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:6px 12px;">
+            <a href="${pageContext.request.contextPath}/study/calendar?date=${prevWeekDate}" style="color:#64748b;text-decoration:none;font-weight:700;font-size:.9rem;padding:4px 8px;border-radius:8px;transition:background .15s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'">←</a>
+            <span style="font-size:.85rem;font-weight:700;color:#0f172a;min-width:180px;text-align:center;"><c:out value="${week[0].date}"/> – <c:out value="${week[6].date}"/></span>
+            <a href="${pageContext.request.contextPath}/study/calendar?date=${nextWeekDate}" style="color:#64748b;text-decoration:none;font-weight:700;font-size:.9rem;padding:4px 8px;border-radius:8px;transition:background .15s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'">→</a>
         </div>
-
-        <div class="cal-nav">
-            <a class="btn-secondary btn-sm" href="${pageContext.request.contextPath}/study/calendar?date=${prevWeekDate}">
-                &larr; Tuần trước
-            </a>
-            <a class="btn-secondary btn-sm" href="${pageContext.request.contextPath}/study/calendar?date=${todayDate}">
-                Hôm nay
-            </a>
-            <span class="cal-range-text">
-                Tuần: ${week[0].date} &rarr; ${week[6].date}
-            </span>
-            <a class="btn-secondary btn-sm" href="${pageContext.request.contextPath}/study/calendar?date=${nextWeekDate}">
-                Tuần sau &rarr;
-            </a>
-        </div>
+        <a href="${pageContext.request.contextPath}/study/calendar?date=${todayDate}" class="pl-btn pl-btn--outline pl-btn--sm">Hôm nay</a>
+        <a href="${pageContext.request.contextPath}/study/plans/new" class="pl-btn pl-btn--primary pl-btn--sm">+ Thêm nhiệm vụ</a>
     </div>
+</div>
 
-    <!-- 7-Day Grid -->
-    <div class="cal-week-grid">
-        <c:forEach items="${week}" var="day">
-            <div class="cal-day-col ${day.today ? 'cal-day-col--today' : ''}">
-                <div class="cal-day-head">
-                    <div class="cal-day-name">${day.dayOfWeekName}</div>
-                    <div class="cal-day-date">${day.date}</div>
-                </div>
-
-                <c:choose>
-                    <c:when test="${empty day.tasks}">
-                        <div class="cal-empty">
-                            <span>Không có lịch</span>
-                        </div>
-                    </c:when>
-                    <c:otherwise>
-                        <c:forEach items="${day.tasks}" var="t">
-                            <a class="cal-task-item ${t.status == 'DONE' ? 'cal-task-item--done' : ''}"
-                               href="${pageContext.request.contextPath}/study/plans/${t.planId}"
-                               title="Kế hoạch: ${t.planTitle}">
-                                <div class="cal-task-time">
-                                    ⏰ <fmt:parseDate value="${t.plannedStartAt}" pattern="yyyy-MM-dd'T'HH:mm" var="parsedStart"/>
-                                    <fmt:formatDate value="${parsedStart}" pattern="HH:mm"/> -
-                                    <fmt:parseDate value="${t.plannedEndAt}" pattern="yyyy-MM-dd'T'HH:mm" var="parsedEnd"/>
-                                    <fmt:formatDate value="${parsedEnd}" pattern="HH:mm"/>
-                                </div>
-                                <div class="cal-task-title">
-                                    ${t.title}
-                                </div>
-                                <c:if test="${not empty t.courseTitle}">
-                                    <div style="font-size: 0.73rem; color: #2563eb; font-weight: 600;">
-                                        📚 ${t.courseTitle}
-                                    </div>
-                                </c:if>
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                                    <span class="badge badge--${t.status.toLowerCase()}" style="font-size: 0.68rem; padding: 1px 5px;">
-                                        ${t.status}
-                                    </span>
-                                </div>
-                            </a>
-                        </c:forEach>
-                    </c:otherwise>
-                </c:choose>
+<div class="pl-cal-week">
+    <c:forEach items="${week}" var="day">
+        <div class="pl-cal-day ${day.today ? 'pl-cal-day--today' : ''}">
+            <div class="pl-cal-day-head">
+                <div class="pl-cal-day-name"><c:out value="${day.dayOfWeekName}"/></div>
+                <div class="pl-cal-day-num"><c:out value="${day.date}"/></div>
             </div>
-        </c:forEach>
-    </div>
+            <c:choose>
+                <c:when test="${empty day.tasks}">
+                    <div class="pl-cal-empty">Không có lịch</div>
+                </c:when>
+                <c:otherwise>
+                    <c:forEach items="${day.tasks}" var="t">
+                        <a class="pl-cal-task ${t.status == 'DONE' ? 'pl-cal-task--done' : ''}"
+                           href="${pageContext.request.contextPath}/study/plans/${t.planId}">
+                            <div class="pl-cal-task-time">
+                                ⏰ <fmt:parseDate value="${t.plannedStartAt}" pattern="yyyy-MM-dd'T'HH:mm" var="ps"/>
+                                <fmt:formatDate value="${ps}" pattern="HH:mm"/>
+                            </div>
+                            <div class="pl-cal-task-title"><c:out value="${t.title}"/></div>
+                            <c:if test="${not empty t.courseTitle}">
+                                <div style="font-size:.7rem;color:#009bf2;font-weight:600;margin-top:3px;">📚 <c:out value="${t.courseTitle}"/></div>
+                            </c:if>
+                            <span class="pl-badge pl-badge--${t.status.toLowerCase()}" style="font-size:.65rem;margin-top:4px;"><c:out value="${t.status}"/></span>
+                        </a>
+                    </c:forEach>
+                </c:otherwise>
+            </c:choose>
+        </div>
+    </c:forEach>
+</div>
 
-</main>
-
-<script>
-function toggleUserMenu(e) {
-    e.stopPropagation();
-    const menu = e.currentTarget.closest('.hn-user-menu');
-    menu.classList.toggle('open');
-}
-document.addEventListener('click', function() {
-    document.querySelectorAll('.hn-user-menu.open').forEach(m => m.classList.remove('open'));
-});
-</script>
-</body>
-</html>
-
+</div>
+<jsp:include page="/WEB-INF/views/planning/planning-footer.jsp"/>
+</body></html>

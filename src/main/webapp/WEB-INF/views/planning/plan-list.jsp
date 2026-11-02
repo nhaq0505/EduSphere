@@ -1,184 +1,129 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Kế hoạch học tập — EduSphere</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning-new.css">
 </head>
 <body>
+<jsp:include page="/WEB-INF/views/planning/planning-navbar.jsp"/>
 
-<!-- ══════ NAVBAR ══════ -->
-<header class="hn-header">
-    <div class="hn-header__inner">
-        <a class="hn-logo" href="${pageContext.request.contextPath}/">
-            <div class="hn-logo__icon">🎓</div>
-            <span>EduSphere</span>
-        </a>
-        <nav class="hn-nav">
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/">Trang chủ</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/courses">Khóa học</a>
-            <a class="hn-nav__link" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a>
-            <a class="hn-nav__link hn-nav__link--active" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
-        </nav>
-        <div class="hn-header__right">
-            <sec:authorize access="isAuthenticated()">
-                <div class="hn-user-menu">
-                    <button class="hn-user-btn" onclick="toggleUserMenu(event)">
-                        <div class="hn-user-btn__avatar">
-                            <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
-                                <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/>
-                                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                            </svg>
-                        </div>
-                        <span class="hn-user-btn__name"><sec:authentication property="principal.fullName"/></span>
-                        <svg class="hn-user-btn__arrow" viewBox="0 0 12 8" fill="none" width="10" height="10">
-                            <path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    <div class="hn-user-dropdown" id="userDropdown">
-                        <div class="hn-user-dropdown__head">
-                            <div class="hn-user-dropdown__avatar-icon">
-                                <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                                    <circle cx="12" cy="8" r="4" stroke="white" stroke-width="1.8"/>
-                                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
-                                </svg>
-                            </div>
-                            <span><sec:authentication property="principal.fullName"/></span>
-                        </div>
-                        <div class="hn-user-dropdown__body">
-                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/profile">Thông tin cá nhân</a>
-                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a>
-                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/study/plans">Kế hoạch học tập</a>
-                            <a class="hn-user-dropdown__item" href="${pageContext.request.contextPath}/change-password">Đổi mật khẩu</a>
-                            <div class="hn-user-dropdown__divider"></div>
-                            <form method="post" action="${pageContext.request.contextPath}/logout" style="margin:0">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <button class="hn-user-dropdown__item hn-user-dropdown__item--danger" type="submit">Đăng xuất</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </sec:authorize>
-        </div>
-    </div>
-</header>
+<div class="pl-shell">
 
-<main style="max-width: 1200px; margin: 32px auto; padding: 0 24px; min-height: 70vh;">
-
-    <!-- Planning Subnav Tabs (UC34, UC36, UC37, UC38) -->
-    <nav class="plan-tabs">
-        <a class="plan-tab plan-tab--active" href="${pageContext.request.contextPath}/study/plans">
-            📋 Kế hoạch (${plans.size()})
+    <!-- Tabs -->
+    <nav class="pl-tabs">
+        <a class="pl-tab active" href="${pageContext.request.contextPath}/study/plans">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Kế hoạch học tập
         </a>
-        <a class="plan-tab" href="${pageContext.request.contextPath}/study/calendar">
-            📅 Lịch học (Calendar)
+        <a class="pl-tab" href="${pageContext.request.contextPath}/study/calendar">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Lịch học cá nhân
         </a>
-        <a class="plan-tab" href="${pageContext.request.contextPath}/study/progress">
-            📈 Tiến độ khóa học
+        <a class="pl-tab" href="${pageContext.request.contextPath}/study/progress">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Theo dõi tiến độ
         </a>
-        <a class="plan-tab" href="${pageContext.request.contextPath}/study/history">
-            ⏱️ Lịch sử hoạt động
+        <a class="pl-tab" href="${pageContext.request.contextPath}/study/history">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Lịch sử hoạt động
         </a>
     </nav>
 
     <c:if test="${not empty success}">
-        <div class="alert alert-success">${success}</div>
+        <div class="pl-alert pl-alert--success">✅ <c:out value="${success}"/></div>
     </c:if>
 
-    <!-- Header & Action -->
-    <div class="plan-header">
+    <!-- Page header -->
+    <div class="pl-page-head">
         <div>
-            <h1 class="plan-header__title">Kế hoạch học tập cá nhân</h1>
-            <p class="plan-header__subtitle">Đặt mục tiêu và quản lý lịch trình học tập cho từng khoảng thời gian (UC34)</p>
+            <h1>Kế hoạch học tập cá nhân</h1>
+            <p>Đặt mục tiêu, sắp xếp thời gian và theo dõi tiến độ học tập sát sao (UC34)</p>
         </div>
-        <a class="btn-primary" href="${pageContext.request.contextPath}/study/plans/new">
-            + Tạo kế hoạch mới
+        <a class="pl-btn pl-btn--primary" href="${pageContext.request.contextPath}/study/plans/new">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Tạo kế hoạch mới
         </a>
     </div>
 
-    <!-- Stats summary -->
-    <div class="plan-stats-grid">
-        <div class="plan-stat-card">
-            <div class="plan-stat-icon plan-stat-icon--blue">📋</div>
-            <div class="plan-stat-info">
-                <h4>${plans.size()}</h4>
-                <p>Tổng kế hoạch</p>
+    <!-- Stats -->
+    <div class="pl-stats">
+        <div class="pl-stat-card">
+            <div class="pl-stat-icon pl-stat-icon--blue">📋</div>
+            <div>
+                <div class="pl-stat-num">${plans.size()}</div>
+                <div class="pl-stat-label">Tổng kế hoạch</div>
             </div>
         </div>
-        <div class="plan-stat-card">
-            <div class="plan-stat-icon plan-stat-icon--green">🎯</div>
-            <div class="plan-stat-info">
-                <h4>${activeCount}</h4>
-                <p>Đang thực hiện</p>
+        <div class="pl-stat-card">
+            <div class="pl-stat-icon pl-stat-icon--green">🎯</div>
+            <div>
+                <div class="pl-stat-num">${activeCount}</div>
+                <div class="pl-stat-label">Đang thực hiện</div>
             </div>
         </div>
-        <div class="plan-stat-card">
-            <div class="plan-stat-icon plan-stat-icon--amber">📅</div>
-            <div class="plan-stat-info">
-                <h4>Xem Lịch</h4>
-                <p><a href="${pageContext.request.contextPath}/study/calendar" style="color:#2563eb;text-decoration:none;font-weight:600;">Xem theo tuần &rarr;</a></p>
+        <div class="pl-stat-card" onclick="window.location='${pageContext.request.contextPath}/study/calendar'" style="cursor:pointer;">
+            <div class="pl-stat-icon pl-stat-icon--amber">📅</div>
+            <div>
+                <div class="pl-stat-num" style="font-size:1rem;color:#009bf2;">Xem lịch →</div>
+                <div class="pl-stat-label">Lịch học theo tuần</div>
             </div>
         </div>
     </div>
 
-    <!-- Plan List -->
+    <!-- Plans -->
     <c:choose>
         <c:when test="${empty plans}">
-            <div style="text-align: center; padding: 60px 20px; background: #fff; border: 1px dashed #cbd5e1; border-radius: 14px;">
-                <div style="font-size: 3rem; margin-bottom: 16px;">📝</div>
-                <h3 style="color: #1e293b; margin: 0 0 8px;">Bạn chưa có kế hoạch học tập nào</h3>
-                <p style="color: #64748b; margin-bottom: 24px;">Hãy tạo kế hoạch đầu tiên để sắp xếp thời gian và hoàn thành mục tiêu học tập!</p>
-                <a class="btn-primary" href="${pageContext.request.contextPath}/study/plans/new">
-                    + Tạo kế hoạch ngay
-                </a>
+            <div class="pl-empty">
+                <div class="pl-empty__icon">📝</div>
+                <h3>Chưa có kế hoạch học tập nào</h3>
+                <p>Tạo kế hoạch đầu tiên để học tập có kỷ luật và hiệu quả hơn!</p>
+                <a class="pl-btn pl-btn--primary" href="${pageContext.request.contextPath}/study/plans/new">➕ Tạo kế hoạch ngay</a>
             </div>
         </c:when>
         <c:otherwise>
-            <div class="plan-grid">
+            <div class="pl-plan-grid">
                 <c:forEach items="${plans}" var="plan">
-                    <article class="plan-card">
+                    <article class="pl-plan-card">
                         <div>
-                            <div class="plan-card__head">
-                                <a class="plan-card__title" href="${pageContext.request.contextPath}/study/plans/${plan.planId}">
-                                    ${plan.title}
+                            <div class="pl-plan-card__head">
+                                <a class="pl-plan-card__title" href="${pageContext.request.contextPath}/study/plans/${plan.planId}">
+                                    <c:out value="${plan.title}"/>
                                 </a>
-                                <span class="badge badge--${plan.status.toLowerCase()}">${plan.status}</span>
+                                <span class="pl-badge pl-badge--${plan.status.toLowerCase()}"><c:out value="${plan.status}"/></span>
                             </div>
                             <c:if test="${not empty plan.description}">
-                                <div class="plan-card__desc">${plan.description}</div>
+                                <div class="pl-plan-card__desc"><c:out value="${plan.description}"/></div>
                             </c:if>
-                            <div class="plan-card__meta">
-                                <span>📅 ${plan.startDate} &rarr; ${plan.endDate}</span>
+                            <div class="pl-plan-card__meta">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                <c:out value="${plan.startDate}"/> → <c:out value="${plan.endDate}"/>
                             </div>
-
-                            <div class="progress-bar-container">
-                                <div class="progress-bar-labels">
-                                    <span>Nhiệm vụ: ${plan.doneTasks}/${plan.totalTasks}</span>
-                                    <span>${plan.progressPercent}%</span>
+                            <div class="pl-prog-wrap">
+                                <div class="pl-prog-labels">
+                                    <span>${plan.doneTasks}/${plan.totalTasks} nhiệm vụ</span>
+                                    <span style="color:#009bf2;font-weight:700;">${plan.progressPercent}%</span>
                                 </div>
-                                <div class="progress-bar-track">
-                                    <div class="progress-bar-fill ${plan.progressPercent == 100 ? 'progress-bar-fill--green' : ''}"
-                                         style="width: ${plan.progressPercent}%;"></div>
+                                <div class="pl-prog-track">
+                                    <div class="pl-prog-fill ${plan.progressPercent >= 100 ? 'pl-prog-fill--done' : ''}" style="width:${plan.progressPercent}%;"></div>
                                 </div>
                             </div>
                         </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; pt-3; border-top: 1px solid #f1f5f9;">
-                            <a class="btn-secondary btn-sm" href="${pageContext.request.contextPath}/study/plans/${plan.planId}">
-                                Chi tiết & Nhiệm vụ &rarr;
-                            </a>
-                            <a class="btn-secondary btn-sm" href="${pageContext.request.contextPath}/study/plans/${plan.planId}/edit">
-                                Sửa
-                            </a>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9;">
+                            <a class="pl-btn pl-btn--primary pl-btn--sm" href="${pageContext.request.contextPath}/study/plans/${plan.planId}">Chi tiết →</a>
+                            <div style="display:flex;gap:6px;">
+                                <a class="pl-btn pl-btn--outline pl-btn--sm pl-btn--icon" href="${pageContext.request.contextPath}/study/plans/${plan.planId}/edit" title="Sửa">✏️</a>
+                                <form method="post" action="${pageContext.request.contextPath}/study/plans/${plan.planId}/delete" onsubmit="return confirm('Xóa kế hoạch này?');" style="margin:0;">
+                                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                    <button class="pl-btn pl-btn--danger pl-btn--sm pl-btn--icon" type="submit" title="Xóa">🗑️</button>
+                                </form>
+                            </div>
                         </div>
                     </article>
                 </c:forEach>
@@ -186,18 +131,18 @@
         </c:otherwise>
     </c:choose>
 
-</main>
+    <!-- UC35 Callout -->
+    <div class="pl-callout" style="margin-top:28px;">
+        <div class="pl-callout__icon">⏰</div>
+        <div style="flex:1;">
+            <div class="pl-callout__title">Đặt thời điểm học cá nhân (UC35)</div>
+            <div class="pl-callout__desc">Sắp xếp giờ riêng để tự học bài tập hoặc làm quiz. <strong>Tuyệt đối không làm thay đổi Due Date chính thức của giảng viên.</strong></div>
+        </div>
+        <a class="pl-btn pl-btn--outline" href="${pageContext.request.contextPath}/study/plans/new" style="white-space:nowrap;">
+            + Tạo nhiệm vụ cá nhân
+        </a>
+    </div>
+</div>
 
-<script>
-function toggleUserMenu(e) {
-    e.stopPropagation();
-    const menu = e.currentTarget.closest('.hn-user-menu');
-    menu.classList.toggle('open');
-}
-document.addEventListener('click', function() {
-    document.querySelectorAll('.hn-user-menu.open').forEach(m => m.classList.remove('open'));
-});
-</script>
-</body>
-</html>
-
+<jsp:include page="/WEB-INF/views/planning/planning-footer.jsp"/>
+</body></html>
