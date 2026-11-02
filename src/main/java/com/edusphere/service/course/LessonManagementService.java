@@ -2,16 +2,24 @@ package com.edusphere.service.course;
 
 import com.edusphere.dto.course.LessonForm;
 import com.edusphere.dto.course.MaterialForm;
+import com.edusphere.entity.course.Assignment;
 import com.edusphere.entity.course.Course;
 import com.edusphere.entity.course.CourseSection;
 import com.edusphere.entity.course.Lesson;
 import com.edusphere.entity.course.Material;
+import com.edusphere.entity.course.PersonalTask;
+import com.edusphere.entity.course.Quiz;
 import com.edusphere.repository.account.UserRepository;
+import com.edusphere.repository.course.AssignmentRepository;
 import com.edusphere.repository.course.CourseRepository;
 import com.edusphere.repository.course.CourseSectionRepository;
 import com.edusphere.repository.course.EnrollmentRepository;
+import com.edusphere.repository.course.LearningHistoryRepository;
+import com.edusphere.repository.course.LessonCompletionRepository;
 import com.edusphere.repository.course.LessonRepository;
 import com.edusphere.repository.course.MaterialRepository;
+import com.edusphere.repository.course.PersonalTaskRepository;
+import com.edusphere.repository.course.QuizRepository;
 import jakarta.persistence.EntityManager;
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -36,12 +44,25 @@ public class LessonManagementService {
     private final UserRepository users;
     private final EntityManager entityManager;
     private final CourseSectionRepository sections;
+    private final QuizRepository quizzes;
+    private final AssignmentRepository assignments;
+    private final LessonCompletionRepository lessonCompletions;
+    private final LearningHistoryRepository learningHistories;
+    private final PersonalTaskRepository personalTasks;
 
     public LessonManagementService(CourseRepository courses, LessonRepository lessons,
                                    MaterialRepository materials, EnrollmentRepository enrollments,
                                    UserRepository users,
                                    EntityManager entityManager) {
-        this(courses, lessons, materials, enrollments, users, entityManager, null);
+        this(courses, lessons, materials, enrollments, users, entityManager, null, null, null, null, null, null);
+    }
+
+    public LessonManagementService(CourseRepository courses, LessonRepository lessons,
+                                   MaterialRepository materials, EnrollmentRepository enrollments,
+                                   UserRepository users,
+                                   EntityManager entityManager,
+                                   CourseSectionRepository sections) {
+        this(courses, lessons, materials, enrollments, users, entityManager, sections, null, null, null, null, null);
     }
 
     @Autowired
@@ -49,7 +70,12 @@ public class LessonManagementService {
                                    MaterialRepository materials, EnrollmentRepository enrollments,
                                    UserRepository users,
                                    EntityManager entityManager,
-                                   CourseSectionRepository sections) {
+                                   CourseSectionRepository sections,
+                                   QuizRepository quizzes,
+                                   AssignmentRepository assignments,
+                                   LessonCompletionRepository lessonCompletions,
+                                   LearningHistoryRepository learningHistories,
+                                   PersonalTaskRepository personalTasks) {
         this.courses = courses;
         this.lessons = lessons;
         this.materials = materials;
@@ -57,6 +83,11 @@ public class LessonManagementService {
         this.users = users;
         this.entityManager = entityManager;
         this.sections = sections;
+        this.quizzes = quizzes;
+        this.assignments = assignments;
+        this.lessonCompletions = lessonCompletions;
+        this.learningHistories = learningHistories;
+        this.personalTasks = personalTasks;
     }
 
     @Transactional(readOnly = true)
@@ -128,7 +159,9 @@ public class LessonManagementService {
 
         applyLessonForm(lesson, form, courseId);
         bumpCourseToDraftIfPublishedOrApproved(course);
-        lesson.setStatus("DRAFT");
+        if (!"PUBLISHED".equals(lesson.getStatus())) {
+            lesson.setStatus("DRAFT");
+        }
         lesson.setUpdatedAt(LocalDateTime.now());
         lessons.save(lesson);
     }
@@ -138,6 +171,64 @@ public class LessonManagementService {
         Course course = editableCourse(courseId, instructorId);
         Lesson lesson = lessons.findByLessonIdAndCourse_CourseId(lessonId, courseId)
                 .orElseThrow(() -> notFound("Không tìm thấy bài học."));
+
+        // Unlink prerequisiteLesson references
+        List<Lesson> prereqDeps = lessons.findByPrerequisiteLesson_LessonId(lessonId);
+        if (prereqDeps != null) {
+            for (Lesson dep : prereqDeps) {
+                dep.setPrerequisiteLesson(null);
+                lessons.save(dep);
+            }
+        }
+        List<Lesson> courseLessons = lessons.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
+        if (courseLessons != null) {
+            for (Lesson dep : courseLessons) {
+                if (dep.getPrerequisiteLesson() != null
+                        && Objects.equals(dep.getPrerequisiteLesson().getLessonId(), lessonId)) {
+                    dep.setPrerequisiteLesson(null);
+                    lessons.save(dep);
+                }
+            }
+        }
+
+        // Unlink Quiz references
+        if (quizzes != null) {
+            List<Quiz> linkedQuizzes = quizzes.findByLesson_LessonId(lessonId);
+            if (linkedQuizzes != null) {
+                for (Quiz q : linkedQuizzes) {
+                    q.setLesson(null);
+                    quizzes.save(q);
+                }
+            }
+        }
+
+        // Unlink Assignment references
+        if (assignments != null) {
+            List<Assignment> linkedAssignments = assignments.findByLesson_LessonId(lessonId);
+            if (linkedAssignments != null) {
+                for (Assignment a : linkedAssignments) {
+                    a.setLesson(null);
+                    assignments.save(a);
+                }
+            }
+        }
+
+        // Delete LessonCompletion, LearningHistory, and unlink PersonalTask references
+        if (lessonCompletions != null) {
+            lessonCompletions.deleteByLesson_LessonId(lessonId);
+        }
+        if (learningHistories != null) {
+            learningHistories.deleteByLesson_LessonId(lessonId);
+        }
+        if (personalTasks != null) {
+            List<PersonalTask> linkedTasks = personalTasks.findByRelatedLesson_LessonId(lessonId);
+            if (linkedTasks != null) {
+                for (PersonalTask t : linkedTasks) {
+                    t.setRelatedLesson(null);
+                    personalTasks.save(t);
+                }
+            }
+        }
 
         // Delete associated materials
         materials.deleteByLesson_LessonId(lessonId);
@@ -182,6 +273,14 @@ public class LessonManagementService {
     @Transactional
     public void deleteMaterial(Integer courseId, Integer lessonId, Integer materialId, Integer instructorId) {
         lesson(courseId, lessonId, instructorId);
+        Material material = materials.findById(materialId)
+                .orElseThrow(() -> notFound("Không tìm thấy tài liệu."));
+        if (material.getLesson() == null
+                || !material.getLesson().getLessonId().equals(lessonId)
+                || material.getLesson().getCourse() == null
+                || !material.getLesson().getCourse().getCourseId().equals(courseId)) {
+            throw notFound("Không tìm thấy tài liệu.");
+        }
         // Xóa tài liệu đính kèm — không cần bump course status
         materials.deleteById(materialId);
     }

@@ -18,4 +18,6 @@ public interface QuizRepository extends JpaRepository<Quiz, Integer> {
     /** Lấy quiz PUBLISHED gắn với lesson cụ thể */
     List<Quiz> findByCourse_CourseIdAndLesson_LessonIdAndStatus(
             Integer courseId, Integer lessonId, String status);
+
+    List<Quiz> findByLesson_LessonId(Integer lessonId);
 }

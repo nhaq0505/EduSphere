@@ -30,4 +30,7 @@ public interface CourseRepository extends JpaRepository<Course, Integer>, JpaSpe
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select course from Course course where course.courseId = :id")
     Optional<Course> findLockedById(@Param("id") Integer id);
+
+    @Query("select c from Course c where c.courseId = :courseId and (c.status in ('PUBLISHED', 'UPDATING') or (c.status = 'SUBMITTED' and c.publishedAt is not null))")
+    Optional<Course> findPublicCourseById(@Param("courseId") Integer courseId);
 }

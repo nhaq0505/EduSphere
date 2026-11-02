@@ -18,4 +18,6 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Integer>
     /** Lấy tất cả assignment PUBLISHED gắn với một lesson cụ thể */
     List<Assignment> findByCourse_CourseIdAndLesson_LessonIdAndStatusOrderByDueDateAsc(
             Integer courseId, Integer lessonId, String status);
+
+    List<Assignment> findByLesson_LessonId(Integer lessonId);
 }

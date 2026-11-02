@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -51,8 +52,12 @@
                     <div class="ins-course-grid">
                         <c:forEach var="course" items="${courses}">
                             <article class="ins-course-card">
-                                <div class="ins-course-card__thumb" style="<c:if test='${not empty course.thumbnailUrl}'>background-image:url('${course.thumbnailUrl}'); background-size:cover; background-position:center;</c:if>">
-                                    <c:if test="${empty course.thumbnailUrl}">📖</c:if>
+                                <c:set var="insThumbSrc" value="${course.thumbnailUrl}"/>
+                                <c:if test="${not empty insThumbSrc and not fn:startsWith(insThumbSrc, 'http://') and not fn:startsWith(insThumbSrc, 'https://') and not fn:startsWith(insThumbSrc, pageContext.request.contextPath)}">
+                                    <c:set var="insThumbSrc" value="${pageContext.request.contextPath}${course.thumbnailUrl}"/>
+                                </c:if>
+                                <div class="ins-course-card__thumb" style="<c:if test='${not empty insThumbSrc}'>background-image:url('${insThumbSrc}'); background-size:cover; background-position:center;</c:if>">
+                                    <c:if test="${empty insThumbSrc}">📖</c:if>
                                     <div class="ins-course-card__status-badge">
                                         <c:choose>
                                             <c:when test="${course.hidden}">

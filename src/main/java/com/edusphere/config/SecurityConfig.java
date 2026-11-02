@@ -81,13 +81,12 @@ public class SecurityConfig {
                     "/reset-password",
                     "/assets/**", "/favicon.ico", "/error",
                     "/WEB-INF/**",
-                    "/uploads/**",
-                    "/courses/*/enroll",
-                    "/courses/{courseId}/enroll"
+                    "/uploads/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/courses", "/courses/{courseId}").permitAll()
                 .requestMatchers(HttpMethod.POST, "/payments/payos/webhook").permitAll()
                 // Ghi danh & Vào học: hỗ trợ Học viên, Giảng viên (trải nghiệm khóa học) & Quản trị viên
+                .requestMatchers(HttpMethod.POST, "/courses/{courseId}/enroll").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers(HttpMethod.POST, "/courses/{courseId}/checkout").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers(HttpMethod.GET, "/payments/result").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/courses/{courseId}/learn", "/courses/{courseId}/lessons/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
@@ -123,7 +122,7 @@ public class SecurityConfig {
                 .failureUrl("/login?oauth2Error=true")
             )
             .authenticationProvider(authenticationProvider())
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/payments/payos/webhook", "/courses/*/enroll"))
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/payments/payos/webhook"))
             .addFilterAfter(accountStateFilter, SecurityContextHolderFilter.class);
 
         return http.build();

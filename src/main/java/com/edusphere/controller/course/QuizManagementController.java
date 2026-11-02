@@ -40,16 +40,20 @@ public class QuizManagementController {
 
     @GetMapping
     public String list(@PathVariable Integer courseId,
+                       @RequestParam(required = false) Integer lessonId,
                        @AuthenticationPrincipal CustomUserDetails user, Model model) {
         model.addAttribute("quizzes", service.listForCourse(courseId, user.getUserId()));
         model.addAttribute("courseId", courseId);
+        model.addAttribute("selectedLessonId", lessonId);
         return "quizzes/instructor-list";
     }
 
     @GetMapping("/new")
     public String newForm(@PathVariable Integer courseId,
                           @RequestParam(required = false) Integer lessonId,
+                          @AuthenticationPrincipal CustomUserDetails user,
                           Model model) {
+        service.listForCourse(courseId, user.getUserId());
         QuizForm form = new QuizForm();
         if (lessonId != null) form.setLessonId(lessonId);
         model.addAttribute("quizForm", form);
@@ -78,6 +82,7 @@ public class QuizManagementController {
                          @AuthenticationPrincipal CustomUserDetails user, Model model) {
         model.addAttribute("quiz", service.getQuizWithQuestions(courseId, quizId, user.getUserId()));
         model.addAttribute("questions", service.getQuestionsWithOptions(courseId, quizId, user.getUserId()));
+        model.addAttribute("lessons", lessonRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId));
         model.addAttribute("courseId", courseId);
         model.addAttribute("quizId", quizId);
         return "quizzes/quiz-builder";

@@ -141,11 +141,11 @@ class CourseWorkflowTest {
 
         service.edit(100, 10, form);
 
-        assertEquals("DRAFT", course.getStatus());
+        assertEquals("UPDATING", course.getStatus());
         assertEquals(2, course.getVersionNo());
         assertEquals("Java Nâng Cao v2", course.getTitle());
-        assertNull(course.getApprovedAt());
-        assertNull(course.getPublishedAt());
+        assertNotNull(course.getApprovedAt());
+        assertNotNull(course.getPublishedAt());
         assertNull(course.getSubmittedAt());
     }
 
@@ -163,7 +163,7 @@ class CourseWorkflowTest {
 
         service.edit(100, 10, form);
 
-        assertEquals("DRAFT", course.getStatus());
+        assertEquals("UPDATING", course.getStatus());
         assertEquals(2, course.getVersionNo());
         assertEquals("Java Cơ Bản Sửa Đổi", course.getTitle());
     }

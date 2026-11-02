@@ -58,18 +58,10 @@ public class CourseManagementController {
         return "redirect:/courses/" + courseId + "/learn";
     }
 
-    // Nếu ai đó truy cập URL GET /courses/{courseId}/enroll → chuyển thẳng vào học hoặc ghi danh
+    // Nếu ai đó truy cập URL GET /courses/{courseId}/enroll → chuyển hướng về trang chi tiết khóa học
     @GetMapping("/courses/{courseId}/enroll")
     public String enrollRedirect(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails user) {
-        if (user == null) {
-            return "redirect:/login?courseId=" + courseId;
-        }
-        try {
-            service.enroll(courseId, user.getUserId());
-        } catch (Exception ex) {
-            // Đã ghi danh hoặc miễn phí -> vào học
-        }
-        return "redirect:/courses/" + courseId + "/learn";
+        return "redirect:/courses/" + courseId;
     }
 
     @GetMapping("/instructor/courses")

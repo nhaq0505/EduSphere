@@ -88,9 +88,14 @@
                                             <div class="cd-hero__art" aria-hidden="true">
                                                 <c:choose>
                                                     <c:when test="${not empty course.thumbnailUrl}">
-                                                        <img src="<c:out value='${course.thumbnailUrl}'/>"
-                                                            alt="Thumbnail"
-                                                            style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />
+                                                        <c:choose>
+                                                            <c:when test="${fn:startsWith(course.thumbnailUrl, 'http://') or fn:startsWith(course.thumbnailUrl, 'https://') or fn:startsWith(course.thumbnailUrl, pageContext.request.contextPath)}">
+                                                                <img src="<c:out value='${course.thumbnailUrl}'/>" alt="Thumbnail" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <img src="${pageContext.request.contextPath}<c:out value='${course.thumbnailUrl}'/>" alt="Thumbnail" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />
+                                                            </c:otherwise>
+                                                        </c:choose>
                                                     </c:when>
                                                     <c:otherwise>📚</c:otherwise>
                                                 </c:choose>

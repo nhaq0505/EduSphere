@@ -11,10 +11,11 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/instructor.css">
 </head>
 <body>
-<jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
-<div class="ins-shell">
-    <jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
-    <main class="ins-content">
+<div class="ins-layout">
+    <jsp:include page="../courses/ins-sidebar.jsp"/>
+    <div class="ins-main-wrapper">
+        <jsp:include page="../courses/ins-header.jsp"/>
+        <main class="ins-page">
         <a class="ins-back-link" href="${pageContext.request.contextPath}/instructor/courses/${courseId}/assignments">
             ← Danh sách bài tập
         </a>
@@ -96,10 +97,17 @@
                 </div>
             </form>
         </div>
-    </main>
+        </main>
+    </div>
 </div>
 <script>
-function toggleUserMenu(e){e.stopPropagation();e.currentTarget.closest('.hn-user-menu').classList.toggle('open');}
-document.addEventListener('click',()=>document.querySelectorAll('.hn-user-menu.open').forEach(m=>m.classList.remove('open')));
+function insToggleMenu(e) {
+    e.stopPropagation();
+    document.getElementById('insUserMenu').classList.toggle('open');
+}
+document.addEventListener('click', function() {
+    var m = document.getElementById('insUserMenu');
+    if (m) m.classList.remove('open');
+});
 </script>
 </body></html>

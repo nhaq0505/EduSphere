@@ -13,18 +13,19 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/instructor.css">
 </head>
 <body>
-<jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
-<div class="ins-shell">
-    <jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
-    <main class="ins-content">
-        <div class="ins-page-head">
-            <div>
-                <span class="ins-page-head__eyebrow">❓ Quiz</span>
-                <h1 class="ins-page-head__title">Quản lý quiz</h1>
+<div class="ins-layout">
+    <jsp:include page="../courses/ins-sidebar.jsp"/>
+    <div class="ins-main-wrapper">
+        <jsp:include page="../courses/ins-header.jsp"/>
+        <main class="ins-page">
+            <div class="ins-page-head">
+                <div>
+                    <span class="ins-page-head__eyebrow">❓ Quiz</span>
+                    <h1 class="ins-page-head__title">Quản lý quiz</h1>
+                </div>
+                <a class="ins-btn-primary" style="width:auto;padding:10px 22px"
+                   href="${pageContext.request.contextPath}/instructor/courses/${courseId}/quizzes/new<c:if test="${selectedLessonId != null}">?lessonId=${selectedLessonId}</c:if>">+ Tạo Quiz mới</a>
             </div>
-            <a class="ins-btn-primary" style="width:auto;padding:10px 22px"
-               href="${pageContext.request.contextPath}/instructor/courses/${courseId}/quizzes/new">+ Thêm quiz</a>
-        </div>
 
         <c:if test="${not empty success}"><div class="ins-alert ins-alert--success">✅ <c:out value="${success}"/></div></c:if>
 
@@ -79,10 +80,17 @@
                 </div>
             </c:otherwise>
         </c:choose>
-    </main>
+        </main>
+    </div>
 </div>
 <script>
-function toggleUserMenu(e){e.stopPropagation();e.currentTarget.closest('.hn-user-menu').classList.toggle('open');}
-document.addEventListener('click',()=>document.querySelectorAll('.hn-user-menu.open').forEach(m=>m.classList.remove('open')));
+function insToggleMenu(e) {
+    e.stopPropagation();
+    document.getElementById('insUserMenu').classList.toggle('open');
+}
+document.addEventListener('click', function() {
+    var m = document.getElementById('insUserMenu');
+    if (m) m.classList.remove('open');
+});
 </script>
 </body></html>

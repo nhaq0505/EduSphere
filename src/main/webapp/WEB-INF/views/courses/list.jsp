@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -214,8 +215,14 @@
                             <div class="cl-card__thumb">
                                 <c:choose>
                                     <c:when test="${not empty course.thumbnailUrl}">
-                                        <img src="${pageContext.request.contextPath}${course.thumbnailUrl}"
-                                             alt="${course.title}" class="cl-card__img">
+                                        <c:choose>
+                                            <c:when test="${fn:startsWith(course.thumbnailUrl, 'http://') or fn:startsWith(course.thumbnailUrl, 'https://') or fn:startsWith(course.thumbnailUrl, pageContext.request.contextPath)}">
+                                                <img src="<c:out value='${course.thumbnailUrl}'/>" alt="<c:out value='${course.title}'/>" class="cl-card__img">
+                                            </c:when>
+                                            <c:otherwise>
+                                                <img src="${pageContext.request.contextPath}<c:out value='${course.thumbnailUrl}'/>" alt="<c:out value='${course.title}'/>" class="cl-card__img">
+                                            </c:otherwise>
+                                        </c:choose>
                                     </c:when>
                                     <c:otherwise>
                                         <div class="cl-card__thumb-placeholder">

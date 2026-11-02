@@ -23,5 +23,9 @@ public interface PersonalTaskRepository extends JpaRepository<PersonalTask, Inte
     long countByPlan_PlanId(Integer planId);
 
     void deleteByPlan_PlanId(Integer planId);
+
+    List<PersonalTask> findByRelatedLesson_LessonId(Integer lessonId);
+
+    void deleteByRelatedLesson_LessonId(Integer lessonId);
 }
 

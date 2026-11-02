@@ -89,7 +89,18 @@ public class QuizService {
     public List<QuizView> listForCourse(Integer courseId, Integer instructorId) {
         ownedCourse(courseId, instructorId);
         return quizzes.findByCourse_CourseIdOrderByCreatedAtDesc(courseId).stream()
+                .peek(q -> {
+                    if (q.getLesson() != null) {
+                        q.getLesson().getLessonId();
+                        q.getLesson().getTitle();
+                    }
+                })
                 .map(this::toView).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuizView> listForInstructor(Integer courseId, Integer instructorId) {
+        return listForCourse(courseId, instructorId);
     }
 
     @Transactional
@@ -105,8 +116,18 @@ public class QuizService {
     @Transactional(readOnly = true)
     public Quiz getQuizForInstructor(Integer courseId, Integer quizId, Integer instructorId) {
         ownedCourse(courseId, instructorId);
-        return quizzes.findByQuizIdAndCourse_CourseId(quizId, courseId)
+        Quiz q = quizzes.findByQuizIdAndCourse_CourseId(quizId, courseId)
                 .orElseThrow(() -> notFound("Không tìm thấy bài quiz."));
+        if (q.getLesson() != null) {
+            q.getLesson().getLessonId();
+            q.getLesson().getTitle();
+        }
+        return q;
+    }
+
+    @Transactional(readOnly = true)
+    public Quiz getForInstructor(Integer courseId, Integer quizId, Integer instructorId) {
+        return getQuizForInstructor(courseId, quizId, instructorId);
     }
 
     @Transactional(readOnly = true)
@@ -188,9 +209,19 @@ public class QuizService {
         q.setExplanation(form.getExplanation());
 
         // Rebuild options (delete old, add new)
+        List<Integer> oldOptionIds = q.getOptions().stream()
+                .map(AnswerOption::getOptionId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (!oldOptionIds.isEmpty()) {
+            answerOptionLinks.deleteByOption_OptionIdIn(oldOptionIds);
+            answerOptionLinks.flush();
+        }
+        answerOptions.deleteAll(q.getOptions());
+        q.getOptions().clear();
+        answerOptions.flush();
+
         if (Set.of("SINGLE_CHOICE", "MULTIPLE_CHOICE").contains(form.getType())) {
-            answerOptions.deleteAll(q.getOptions());
-            q.getOptions().clear();
             List<String> contents = form.getOptionContents();
             List<Boolean> corrects = form.getOptionCorrects();
             int idx = 1;
@@ -204,9 +235,6 @@ public class QuizService {
                 opt.setOrderIndex(idx++);
                 answerOptions.save(opt);
             }
-        } else {
-            answerOptions.deleteAll(q.getOptions());
-            q.getOptions().clear();
         }
         questions.save(q);
     }
@@ -218,7 +246,33 @@ public class QuizService {
                 .orElseThrow(() -> notFound("Không tìm thấy câu hỏi."));
         if (!q.getQuiz().getQuizId().equals(quizId))
             throw notFound("Câu hỏi không thuộc quiz này.");
-        int deletedOrder = q.getOrderIndex();
+
+        List<Integer> optionIds = q.getOptions().stream()
+                .map(AnswerOption::getOptionId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (!optionIds.isEmpty()) {
+            answerOptionLinks.deleteByOption_OptionIdIn(optionIds);
+        }
+        List<QuizAnswer> qAnswers = answers.findByQuestion_QuestionId(questionId);
+        if (qAnswers != null && !qAnswers.isEmpty()) {
+            for (QuizAnswer qa : qAnswers) {
+                if (qa.getSelectedOptions() != null && !qa.getSelectedOptions().isEmpty()) {
+                    answerOptionLinks.deleteAll(qa.getSelectedOptions());
+                    qa.getSelectedOptions().clear();
+                }
+            }
+            answerOptionLinks.flush();
+            answers.deleteByQuestion_QuestionId(questionId);
+            answers.flush();
+        } else if (!optionIds.isEmpty()) {
+            answerOptionLinks.flush();
+        }
+        if (!q.getOptions().isEmpty()) {
+            answerOptions.deleteAll(q.getOptions());
+            q.getOptions().clear();
+            answerOptions.flush();
+        }
         questions.delete(q);
         // Re-index remaining questions
         List<Question> remaining = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
@@ -289,6 +343,10 @@ public class QuizService {
         getQuizForInstructor(courseId, quizId, instructorId);
         QuizAttempt attempt = attempts.findById(attemptId)
                 .orElseThrow(() -> notFound("Không tìm thấy lần làm quiz."));
+        if (attempt.getQuiz() == null || !attempt.getQuiz().getQuizId().equals(quizId)
+                || attempt.getCourse() == null || !attempt.getCourse().getCourseId().equals(courseId)) {
+            throw notFound("Không tìm thấy lần làm quiz.");
+        }
         initAttempt(attempt);
         return attempt;
     }
@@ -407,10 +465,34 @@ public class QuizService {
 
     @Transactional(readOnly = true)
     public List<Question> getQuestionsForAttempt(Integer courseId, Integer quizId, Integer studentId) {
-        getQuizForStudent(courseId, quizId, studentId);
-        List<Question> qList = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
-        qList.forEach(q -> org.hibernate.Hibernate.initialize(q.getOptions()));
-        return qList;
+        Quiz quiz = getQuizForStudent(courseId, quizId, studentId);
+        Integer attemptId = attempts.findFirstByQuiz_QuizIdAndStudent_UserIdAndStatus(quizId, studentId, "IN_PROGRESS")
+                .map(QuizAttempt::getAttemptId)
+                .orElse(0);
+        return shuffleQuestionsAndOptions(quiz, attemptId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Question> getQuestionsForAttempt(Integer attemptId, Integer studentId) {
+        QuizAttempt attempt = getAttemptForStudent(attemptId, studentId);
+        Quiz quiz = attempt.getQuiz();
+        return shuffleQuestionsAndOptions(quiz, attemptId);
+    }
+
+    private List<Question> shuffleQuestionsAndOptions(Quiz quiz, Integer attemptId) {
+        long seed = attemptId != null ? attemptId.longValue() : 0L;
+        List<Question> qs = new java.util.ArrayList<>(questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quiz.getQuizId()));
+        if (Boolean.TRUE.equals(quiz.isShuffleQuestions())) {
+            java.util.Collections.shuffle(qs, new java.util.Random(seed));
+        }
+        for (Question q : qs) {
+            q.getOptions().size();
+            if (Boolean.TRUE.equals(quiz.isShuffleOptions()) && q.getOptions().size() > 1) {
+                long optSeed = seed * 31L + (q.getQuestionId() != null ? q.getQuestionId() : 0);
+                java.util.Collections.shuffle(q.getOptions(), new java.util.Random(optSeed));
+            }
+        }
+        return qs;
     }
 
     @Transactional
@@ -567,6 +649,12 @@ public class QuizService {
         quiz.setShuffleOptions(form.isShuffleOptions());
         if (form.getLessonId() != null && form.getLessonId() > 0) {
             Lesson lesson = lessons.findById(form.getLessonId()).orElse(null);
+            if (lesson != null) {
+                Integer courseId = quiz.getCourse() != null ? quiz.getCourse().getCourseId() : null;
+                if (courseId != null && (lesson.getCourse() == null || !lesson.getCourse().getCourseId().equals(courseId))) {
+                    throw new CourseActionException(HttpStatus.BAD_REQUEST, "Bài học không thuộc khóa học này.");
+                }
+            }
             quiz.setLesson(lesson); // null-safe: nếu không tìm thấy thì không gắn
         } else {
             quiz.setLesson(null);

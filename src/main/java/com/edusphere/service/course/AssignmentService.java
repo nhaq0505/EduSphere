@@ -48,7 +48,15 @@ public class AssignmentService {
                              GradeRepository grades, CourseRepository courses,
                              LessonRepository lessons, EnrollmentRepository enrollments,
                              UserRepository users) {
-        this(assignments, submissions, grades, courses, lessons, enrollments, users, null);
+        this(assignments, submissions, grades, courses, lessons, enrollments, users, null, null);
+    }
+
+    public AssignmentService(AssignmentRepository assignments, SubmissionRepository submissions,
+                             GradeRepository grades, CourseRepository courses,
+                             LessonRepository lessons, EnrollmentRepository enrollments,
+                             UserRepository users,
+                             LearningProgressService learningProgressService) {
+        this(assignments, submissions, grades, courses, lessons, enrollments, users, learningProgressService, null);
     }
 
     @Autowired
@@ -56,7 +64,8 @@ public class AssignmentService {
                              GradeRepository grades, CourseRepository courses,
                              LessonRepository lessons, EnrollmentRepository enrollments,
                              UserRepository users,
-                             LearningProgressService learningProgressService) {
+                             LearningProgressService learningProgressService,
+                             LessonCompletionRepository lessonCompletions) {
         this.assignments = assignments;
         this.submissions = submissions;
         this.grades = grades;
@@ -65,7 +74,7 @@ public class AssignmentService {
         this.enrollments = enrollments;
         this.users = users;
         this.learningProgressService = learningProgressService;
-        this.lessonCompletions = null;
+        this.lessonCompletions = lessonCompletions;
     }
 
     // ===================== INSTRUCTOR OPERATIONS =====================
@@ -114,7 +123,9 @@ public class AssignmentService {
     @Transactional(readOnly = true)
     public List<Submission> listSubmissions(Integer courseId, Integer assignmentId, Integer instructorId) {
         ownedAssignment(courseId, assignmentId, instructorId);
-        return submissions.findByAssignment_AssignmentIdOrderBySubmittedAtDesc(assignmentId);
+        List<Submission> list = submissions.findByAssignment_AssignmentIdOrderBySubmittedAtDesc(assignmentId);
+        list.forEach(this::initSubmission);
+        return list;
     }
 
     @Transactional(readOnly = true)
@@ -124,6 +135,7 @@ public class AssignmentService {
                 .orElseThrow(() -> notFound("Không tìm thấy bài nộp."));
         if (!sub.getAssignment().getAssignmentId().equals(assignmentId))
             throw notFound("Không tìm thấy bài nộp.");
+        initSubmission(sub);
         return sub;
     }
 
@@ -269,9 +281,23 @@ public class AssignmentService {
         if (form.getLessonId() != null) {
             Lesson lesson = lessons.findById(form.getLessonId())
                     .orElseThrow(() -> conflict("Bài học không tồn tại."));
+            Integer courseId = a.getCourse() != null ? a.getCourse().getCourseId() : null;
+            if (courseId != null && (lesson.getCourse() == null || !lesson.getCourse().getCourseId().equals(courseId))) {
+                throw new CourseActionException(HttpStatus.BAD_REQUEST, "Bài học không thuộc khóa học này.");
+            }
             a.setLesson(lesson);
         } else {
             a.setLesson(null);
+        }
+    }
+
+    private void initSubmission(Submission sub) {
+        if (sub.getStudent() != null) {
+            sub.getStudent().getFullName();
+            sub.getStudent().getEmail();
+        }
+        if (sub.getAssignment() != null) {
+            sub.getAssignment().getTitle();
         }
     }
 

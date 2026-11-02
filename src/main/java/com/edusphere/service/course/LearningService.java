@@ -10,6 +10,7 @@ import com.edusphere.entity.course.Course;
 import com.edusphere.entity.course.Enrollment;
 import com.edusphere.entity.course.Lesson;
 import com.edusphere.entity.course.LessonCompletion;
+import com.edusphere.entity.course.Question;
 import com.edusphere.entity.course.Quiz;
 import com.edusphere.entity.account.Users;
 import com.edusphere.repository.course.AssignmentRepository;
@@ -18,6 +19,7 @@ import com.edusphere.repository.course.EnrollmentRepository;
 import com.edusphere.repository.course.LessonCompletionRepository;
 import com.edusphere.repository.course.LessonRepository;
 import com.edusphere.repository.course.MaterialRepository;
+import com.edusphere.repository.course.QuestionRepository;
 import com.edusphere.repository.course.QuizAttemptRepository;
 import com.edusphere.repository.course.QuizRepository;
 import com.edusphere.repository.course.SubmissionRepository;
@@ -27,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.net.URI;
 import java.util.ArrayList;
@@ -52,6 +55,7 @@ public class LearningService {
     private final SubmissionRepository submissionRepository;
     private final QuizRepository quizRepository;
     private final QuizAttemptRepository quizAttemptRepository;
+    private final QuestionRepository questionRepository;
 
     public LearningService(LessonRepository lessonRepository,
                            EnrollmentRepository enrollmentRepository,
@@ -79,7 +83,23 @@ public class LearningService {
                            LearningProgressService learningProgressService,
                            CourseRepository courseRepository) {
         this(lessonRepository, enrollmentRepository, lessonCompletionRepository, materialRepository,
-                userRepository, learningProgressService, courseRepository, null, null, null, null);
+                userRepository, learningProgressService, courseRepository, null, null, null, null, null);
+    }
+
+    public LearningService(LessonRepository lessonRepository,
+                           EnrollmentRepository enrollmentRepository,
+                           LessonCompletionRepository lessonCompletionRepository,
+                           MaterialRepository materialRepository,
+                           UserRepository userRepository,
+                           LearningProgressService learningProgressService,
+                           CourseRepository courseRepository,
+                           AssignmentRepository assignmentRepository,
+                           SubmissionRepository submissionRepository,
+                           QuizRepository quizRepository,
+                           QuizAttemptRepository quizAttemptRepository) {
+        this(lessonRepository, enrollmentRepository, lessonCompletionRepository, materialRepository,
+                userRepository, learningProgressService, courseRepository, assignmentRepository,
+                submissionRepository, quizRepository, quizAttemptRepository, null);
     }
 
     // Constructor chính — Spring dùng cái này để autowire
@@ -94,7 +114,8 @@ public class LearningService {
                            AssignmentRepository assignmentRepository,
                            SubmissionRepository submissionRepository,
                            QuizRepository quizRepository,
-                           QuizAttemptRepository quizAttemptRepository) {
+                           QuizAttemptRepository quizAttemptRepository,
+                           QuestionRepository questionRepository) {
         this.lessonRepository = lessonRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.lessonCompletionRepository = lessonCompletionRepository;
@@ -106,6 +127,7 @@ public class LearningService {
         this.submissionRepository = submissionRepository;
         this.quizRepository = quizRepository;
         this.quizAttemptRepository = quizAttemptRepository;
+        this.questionRepository = questionRepository;
     }
 
     @Transactional
@@ -297,6 +319,23 @@ public class LearningService {
         Lesson lesson = lessonRepository.findByLessonIdAndCourse_CourseIdAndStatus(lessonId, courseId, PUBLISHED)
                 .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy bài học để hoàn thành."));
 
+        if (lesson.getPrerequisiteLesson() != null) {
+            boolean prereqDone = lessonCompletionRepository.existsByStudent_UserIdAndLesson_LessonId(
+                    studentId, lesson.getPrerequisiteLesson().getLessonId());
+            if (!prereqDone) {
+                throw new CourseActionException(HttpStatus.BAD_REQUEST,
+                        "Bạn cần hoàn thành bài học tiên quyết trước: " + lesson.getPrerequisiteLesson().getTitle());
+            }
+        }
+
+        if (lesson.getUnlockDaysAfterEnroll() != null && lesson.getUnlockDaysAfterEnroll() > 0
+                && enrollment.getEnrolledAt() != null) {
+            if (LocalDateTime.now().isBefore(enrollment.getEnrolledAt().plusDays(lesson.getUnlockDaysAfterEnroll()))) {
+                throw new CourseActionException(HttpStatus.BAD_REQUEST,
+                        "Bài học này sẽ mở khóa sau " + lesson.getUnlockDaysAfterEnroll() + " ngày kể từ khi ghi danh.");
+            }
+        }
+
         if (!lessonCompletionRepository.existsByStudent_UserIdAndLesson_LessonId(studentId, lessonId)) {
             Users student = userRepository.findById(studentId)
                     .orElseThrow(() -> new CourseActionException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập lại."));
@@ -349,30 +388,39 @@ public class LearningService {
             return enrollment;
         }
 
-        // Tự động cấp quyền truy cập học nếu là khóa học miễn phí hoặc Giảng viên sở hữu khóa học
+        // Tự động cấp quyền truy cập học nếu là khóa học miễn phí hoặc Giảng viên sở hữu khóa học / Admin
         if (courseRepository != null) {
             Course c = courseRepository.findById(courseId).orElse(null);
             if (c != null) {
-                boolean isInstructor = c.getInstructor() != null && Objects.equals(c.getInstructor().getUserId(), studentId);
-                boolean isFree = c.getPrice() == null || c.getPrice().signum() == 0;
-                boolean isAccessible = "PUBLISHED".equalsIgnoreCase(c.getStatus())
-                        || "APPROVED".equalsIgnoreCase(c.getStatus())
-                        || "UPDATING".equalsIgnoreCase(c.getStatus())
-                        || isInstructor;
+                Users u = userRepository != null ? userRepository.findById(studentId).orElse(null) : null;
+                boolean isOwner = c.getInstructor() != null && Objects.equals(c.getInstructor().getUserId(), studentId);
+                boolean isAdmin = u != null && u.getUserRolesCollection() != null
+                        && u.getUserRolesCollection().stream()
+                        .anyMatch(ur -> ur.getRoles() != null && "ADMINISTRATOR".equalsIgnoreCase(ur.getRoles().getRoleName()));
 
-                if (isAccessible && (isFree || isInstructor)) {
-                    Users u = userRepository.findById(studentId).orElse(null);
-                    if (u != null) {
-                        try {
-                            Enrollment autoEnroll = new Enrollment();
-                            autoEnroll.setCourse(c);
-                            autoEnroll.setStudent(u);
-                            autoEnroll.setStatus("ACTIVE");
-                            autoEnroll.setEnrolledAt(LocalDateTime.now());
-                            return enrollmentRepository.save(autoEnroll);
-                        } catch (Exception ex) {
-                            return enrollmentRepository.findByStudent_UserIdAndCourse_CourseId(studentId, courseId).orElse(null);
-                        }
+                if (isOwner || isAdmin) {
+                    Enrollment autoEnroll = new Enrollment();
+                    autoEnroll.setCourse(c);
+                    autoEnroll.setStudent(u != null ? u : c.getInstructor());
+                    autoEnroll.setStatus("ACTIVE");
+                    autoEnroll.setEnrolledAt(LocalDateTime.now());
+                    return autoEnroll;
+                }
+
+                boolean isFree = c.getPrice() == null || c.getPrice().signum() == 0;
+                boolean isAccessible = "PUBLISHED".equals(c.getStatus())
+                        || "UPDATING".equals(c.getStatus());
+
+                if (isAccessible && isFree && u != null) {
+                    try {
+                        Enrollment autoEnroll = new Enrollment();
+                        autoEnroll.setCourse(c);
+                        autoEnroll.setStudent(u);
+                        autoEnroll.setStatus("ACTIVE");
+                        autoEnroll.setEnrolledAt(LocalDateTime.now());
+                        return enrollmentRepository.save(autoEnroll);
+                    } catch (Exception ex) {
+                        return enrollmentRepository.findByStudent_UserIdAndCourse_CourseId(studentId, courseId).orElse(null);
                     }
                 }
             }
@@ -415,14 +463,24 @@ public class LearningService {
                     .findFirstByQuiz_QuizIdAndStudent_UserIdAndStatus(q.getQuizId(), studentId, "IN_PROGRESS")
                     .map(a -> a.getAttemptId()).orElse(null);
         }
-        // count questions
-        long qCount = 0; // will be populated if needed
+        // count questions and total maxScore
+        long qCount = 0;
+        BigDecimal maxScore = null;
+        if (questionRepository != null) {
+            List<Question> qList = questionRepository.findByQuiz_QuizIdOrderByOrderIndexAsc(q.getQuizId());
+            long counted = questionRepository.countByQuiz_QuizId(q.getQuizId());
+            qCount = counted > 0 ? counted : (qList != null ? qList.size() : 0);
+            maxScore = (qList != null ? qList : Collections.<Question>emptyList()).stream()
+                    .map(Question::getScore)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
         QuizView v = new QuizView();
         v.setQuizId(q.getQuizId());
         v.setTitle(q.getTitle());
         v.setStatus(q.getStatus());
         v.setQuestionCount(qCount);
-        v.setMaxScore(null);
+        v.setMaxScore(maxScore);
         v.setDueDate(q.getDueDate());
         v.setTimeLimitMinutes(q.getTimeLimitMinutes());
         v.setMaxAttempts(q.getMaxAttempts());

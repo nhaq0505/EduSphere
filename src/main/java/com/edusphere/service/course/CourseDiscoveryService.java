@@ -48,7 +48,12 @@ public class CourseDiscoveryService {
 
         Specification<Course> filters = (root, query, criteria) -> {
             List<Predicate> conditions = new ArrayList<>();
-            conditions.add(criteria.equal(root.get("status"), PUBLISHED));
+            Predicate isPublishedOrUpdating = root.get("status").in(PUBLISHED, "UPDATING");
+            Predicate isSubmittedWithPriorPublish = criteria.and(
+                    criteria.equal(root.get("status"), "SUBMITTED"),
+                    criteria.isNotNull(root.get("publishedAt"))
+            );
+            conditions.add(criteria.or(isPublishedOrUpdating, isSubmittedWithPriorPublish));
             if (!text.isEmpty()) {
                 String escaped = text.toLowerCase(Locale.ROOT)
                         .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
@@ -75,7 +80,12 @@ public class CourseDiscoveryService {
 
     @Transactional(readOnly = true)
     public Optional<CourseView> findPublishedCourse(Integer courseId) {
-        return courseRepository.findByCourseIdAndStatus(courseId, PUBLISHED).map(this::toView);
+        return courseRepository.findById(courseId)
+                .or(() -> courseRepository.findByCourseIdAndStatus(courseId, PUBLISHED))
+                .filter(c -> PUBLISHED.equals(c.getStatus())
+                        || "UPDATING".equals(c.getStatus())
+                        || ("SUBMITTED".equals(c.getStatus()) && c.getPublishedAt() != null))
+                .map(this::toView);
     }
 
     @Transactional(readOnly = true)

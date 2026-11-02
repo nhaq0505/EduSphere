@@ -44,7 +44,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Controller
-@PreAuthorize("hasRole('STUDENT')")
+@PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMINISTRATOR')")
 @RequestMapping("/study")
 public class StudyPlanController {
 
@@ -386,7 +386,10 @@ public class StudyPlanController {
         List<EnrolledCourseView> enrolledCourses = courseManagementService.enrolledCourses(studentId);
         model.addAttribute("enrolledCourses", enrolledCourses);
 
-        if (courseId != null) {
+        boolean isEnrolled = courseId != null && enrolledCourses.stream()
+                .anyMatch(c -> courseId.equals(c.getCourseId()));
+
+        if (isEnrolled) {
             List<Lesson> lessons = lessonRepository.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(courseId, "PUBLISHED");
             List<Assignment> assignments = assignmentRepository.findByCourse_CourseIdAndStatusOrderByDueDateAsc(courseId, "PUBLISHED");
             List<Quiz> quizzes = quizRepository.findByCourse_CourseIdAndStatus(courseId, "PUBLISHED");

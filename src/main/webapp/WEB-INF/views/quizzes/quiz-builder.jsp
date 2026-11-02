@@ -162,10 +162,11 @@
     </style>
 </head>
 <body>
-<jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
-<div class="ins-shell">
-    <jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
-    <main class="ins-content">
+<div class="ins-layout">
+    <jsp:include page="../courses/ins-sidebar.jsp"/>
+    <div class="ins-main-wrapper">
+        <jsp:include page="../courses/ins-header.jsp"/>
+        <main class="ins-page">
 
         <!-- Breadcrumb -->
         <a class="ins-back-link" href="${pageContext.request.contextPath}/instructor/courses/${courseId}/quizzes">
@@ -439,7 +440,7 @@
                             <%-- TRUE_FALSE box --%>
                             <div id="qbTfBox" style="display:none;" class="qb-field">
                                 <label>Đáp án đúng</label>
-                                <select class="qb-input" name="correctAnswer" style="max-width:200px;">
+                                <select class="qb-input" name="correctAnswer" style="max-width:200px;" disabled>
                                     <option value="true">✅ Đúng (True)</option>
                                     <option value="false">❌ Sai (False)</option>
                                 </select>
@@ -448,7 +449,7 @@
                             <%-- SHORT_ANSWER box --%>
                             <div id="qbShortBox" style="display:none;" class="qb-field">
                                 <label>Đáp án tham khảo (hệ thống không tự chấm)</label>
-                                <input class="qb-input" type="text" name="correctAnswer"
+                                <input class="qb-input" type="text" name="correctAnswer" disabled
                                        placeholder="Đáp án mẫu để giảng viên tham khảo khi chấm tay...">
                             </div>
 
@@ -483,6 +484,17 @@
                                 <label>Quy định làm bài</label>
                                 <textarea class="qb-input" name="rules" rows="3" style="resize:vertical"
                                           placeholder="VD: Không được dùng tài liệu, không được tra Google..."><c:out value="${quiz.rules}"/></textarea>
+                            </div>
+                            <div class="qb-field">
+                                <label>Gắn với bài học (tùy chọn)</label>
+                                <select name="lessonId" class="qb-input ins-input">
+                                    <option value="">-- Không gắn với bài học cụ thể --</option>
+                                    <c:forEach var="l" items="${lessons}">
+                                        <option value="${l.lessonId}" ${quiz.lesson != null && quiz.lesson.lessonId == l.lessonId ? 'selected' : ''}>
+                                            Bài ${l.orderIndex}: <c:out value="${l.title}"/>
+                                        </option>
+                                    </c:forEach>
+                                </select>
                             </div>
                         </div>
 
@@ -645,7 +657,8 @@
             </aside>
         </div>
 
-    </main>
+        </main>
+    </div>
 </div>
 
 <script>
@@ -679,6 +692,9 @@ function qbSelectType(type, card) {
     document.getElementById('qbOptionsBox').style.display = choice ? '' : 'none';
     document.getElementById('qbTfBox').style.display = type === 'TRUE_FALSE' ? '' : 'none';
     document.getElementById('qbShortBox').style.display = type === 'SHORT_ANSWER' ? '' : 'none';
+
+    document.querySelector('#qbTfBox select[name="correctAnswer"]').disabled = (type !== 'TRUE_FALSE');
+    document.querySelector('#qbShortBox input[name="correctAnswer"]').disabled = (type !== 'SHORT_ANSWER');
 }
 
 // ── Correct toggle ──
@@ -716,8 +732,14 @@ function qbRemoveOption(btn) {
 }
 
 // User menu
-function toggleUserMenu(e){e.stopPropagation();e.currentTarget.closest('.hn-user-menu').classList.toggle('open');}
-document.addEventListener('click',()=>document.querySelectorAll('.hn-user-menu.open').forEach(m=>m.classList.remove('open')));
+function insToggleMenu(e) {
+    e.stopPropagation();
+    document.getElementById('insUserMenu').classList.toggle('open');
+}
+document.addEventListener('click', function() {
+    var m = document.getElementById('insUserMenu');
+    if (m) m.classList.remove('open');
+});
 </script>
 </body>
 </html>

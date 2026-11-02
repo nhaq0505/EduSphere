@@ -68,11 +68,11 @@ class LessonManagementServiceTest {
         assertEquals("DRAFT", captor.getValue().getStatus());
         assertEquals(1, captor.getValue().getOrderIndex());
 
-        // Verify course bumped to DRAFT v2
-        assertEquals("DRAFT", course.getStatus());
+        // Verify course bumped to UPDATING v2
+        assertEquals("UPDATING", course.getStatus());
         assertEquals(2, course.getVersionNo());
-        assertNull(course.getApprovedAt());
-        assertNull(course.getPublishedAt());
+        assertNotNull(course.getApprovedAt());
+        assertNotNull(course.getPublishedAt());
     }
 
     @Test
@@ -101,12 +101,12 @@ class LessonManagementServiceTest {
 
         assertEquals("Tiêu đề mới", lesson.getTitle());
         assertEquals("Nội dung mới", lesson.getContent());
-        assertEquals("DRAFT", lesson.getStatus());
+        assertEquals("PUBLISHED", lesson.getStatus());
 
-        assertEquals("DRAFT", course.getStatus());
+        assertEquals("UPDATING", course.getStatus());
         assertEquals(2, course.getVersionNo());
-        assertNull(course.getApprovedAt());
-        assertNull(course.getPublishedAt());
+        assertNotNull(course.getApprovedAt());
+        assertNotNull(course.getPublishedAt());
     }
 
     @Test

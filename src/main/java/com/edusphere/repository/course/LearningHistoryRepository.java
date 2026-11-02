@@ -16,5 +16,7 @@ public interface LearningHistoryRepository extends JpaRepository<LearningHistory
     List<LearningHistory> findByStudent_UserIdAndCourse_CourseIdOrderByOccurredAtDesc(Integer studentId, Integer courseId);
 
     Page<LearningHistory> findByStudent_UserIdOrderByOccurredAtDesc(Integer studentId, Pageable pageable);
+
+    void deleteByLesson_LessonId(Integer lessonId);
 }
 

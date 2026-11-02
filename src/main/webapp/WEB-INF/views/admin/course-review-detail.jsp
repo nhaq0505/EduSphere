@@ -308,10 +308,39 @@
                             <p style="font-size:.78rem;font-weight:700;color:#64748B;margin:0 0 6px;">Video giới thiệu</p>
                             <c:choose>
                                 <c:when test="${not empty course.promoVideoUrl}">
+                                    <c:set var="promoUrlLower" value="${fn:toLowerCase(course.promoVideoUrl)}"/>
                                     <div style="position:relative;padding-bottom:56.25%;height:0;border-radius:8px;overflow:hidden;background:#000;">
-                                        <iframe src="<c:out value='${course.promoVideoUrl}'/>"
-                                                style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
-                                                allowfullscreen></iframe>
+                                        <c:choose>
+                                            <c:when test="${fn:startsWith(course.promoVideoUrl, '/uploads/') or fn:endsWith(promoUrlLower, '.mp4') or fn:endsWith(promoUrlLower, '.webm') or fn:endsWith(promoUrlLower, '.ogg')}">
+                                                <video controls style="position:absolute;top:0;left:0;width:100%;height:100%;background:#000;"><source src="<c:out value='${course.promoVideoUrl}'/>"></video>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <iframe id="promoVideoIframe"
+                                                        data-src="<c:out value='${course.promoVideoUrl}'/>"
+                                                        style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+                                                        allowfullscreen></iframe>
+                                                <script>
+                                                (function() {
+                                                    var iframe = document.getElementById('promoVideoIframe');
+                                                    if (!iframe) return;
+                                                    var url = (iframe.getAttribute('data-src') || '').trim();
+                                                    if (!url) return;
+                                                    if (url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1) {
+                                                        var videoId = '';
+                                                        if (url.indexOf('watch?v=') !== -1) {
+                                                            videoId = url.split('watch?v=')[1].split('&')[0];
+                                                        } else if (url.indexOf('youtu.be/') !== -1) {
+                                                            videoId = url.split('youtu.be/')[1].split('?')[0];
+                                                        } else {
+                                                            videoId = url;
+                                                        }
+                                                        url = videoId.indexOf('http') === 0 ? videoId : 'https://www.youtube.com/embed/' + videoId;
+                                                    }
+                                                    iframe.src = url;
+                                                })();
+                                                </script>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </div>
                                 </c:when>
                                 <c:otherwise>
@@ -532,7 +561,8 @@
                         <!-- APPROVE -->
                         <form method="post"
                               action="${pageContext.request.contextPath}/admin/courses/${course.courseId}/review"
-                              onsubmit="return confirm('Xác nhận PHÊ DUYỆT khóa học «${course.title}»?')">
+                              data-title="<c:out value='${course.title}'/>"
+                              onsubmit="return confirm('Xác nhận PHÊ DUYỆT khóa học «' + this.getAttribute('data-title') + '»?')">
                             <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
                             <input type="hidden" name="decision" value="APPROVED">
                             <button class="rev-btn-approve" type="submit">✅ Phê duyệt khóa học</button>

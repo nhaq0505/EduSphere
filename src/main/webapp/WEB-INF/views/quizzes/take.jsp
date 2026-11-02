@@ -224,13 +224,43 @@
 var totalQuestions = ${fn:length(questions)};
 var answeredSet = new Set();
 
+function checkQuestionAnswered(qid, card) {
+    if (!card) card = document.getElementById('qcard-' + qid);
+    if (!card) return;
+    var isAnswered = false;
+    var choiceInputs = card.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+    if (choiceInputs.length > 0) {
+        choiceInputs.forEach(function(inp) {
+            if (inp.checked) isAnswered = true;
+        });
+    } else {
+        var textInputs = card.querySelectorAll('input[type="text"], textarea');
+        textInputs.forEach(function(inp) {
+            if (inp.value && inp.value.trim().length > 0) isAnswered = true;
+        });
+    }
+    var navBtn = document.getElementById('navbtn-' + qid);
+    var qnavBtn = document.getElementById('qnav-' + qid);
+    if (isAnswered) {
+        answeredSet.add(qid);
+        card.classList.add('answered');
+        if (navBtn) navBtn.classList.add('answered');
+        if (qnavBtn) qnavBtn.classList.add('answered');
+    } else {
+        answeredSet.delete(qid);
+        card.classList.remove('answered');
+        if (navBtn) navBtn.classList.remove('answered');
+        if (qnavBtn) qnavBtn.classList.remove('answered');
+    }
+    updateProgress();
+}
+
 // Mark a question as answered
 function markAnswered(qid, card) {
-    answeredSet.add(qid);
-    card.classList.add('answered');
-    var navBtn = document.getElementById('navbtn-' + qid);
-    if (navBtn) navBtn.classList.add('answered');
-    updateProgress();
+    checkQuestionAnswered(qid, card);
+    setTimeout(function() {
+        checkQuestionAnswered(qid, card);
+    }, 0);
 }
 
 function updateProgress() {
@@ -249,17 +279,16 @@ function scrollToQuestion(qid) {
 // Submit with confirmation
 function confirmSubmit() {
     var unanswered = [];
-    var cards = document.querySelectorAll('.qt-question[data-qid]');
-    cards.forEach(function(card) {
-        var qid = parseInt(card.getAttribute('data-qid'));
-        if (!answeredSet.has(qid)) unanswered.push(qid);
+    var navBtns = document.querySelectorAll('.qt-nav-btn:not(.answered)');
+    navBtns.forEach(function(d) {
+        unanswered.push(d.textContent.trim());
     });
 
     if (unanswered.length > 0) {
         var warn = document.getElementById('unansweredWarning');
         warn.style.display = '';
-        warn.textContent = '⚠️ Bạn còn ' + unanswered.length + ' câu chưa trả lời (câu: ' + unanswered.join(', ') + '). Nộp bài sẽ tính 0 điểm cho các câu đó.';
-        if (!confirm('Bạn còn ' + unanswered.length + ' câu chưa trả lời. Vẫn nộp bài?')) return;
+        warn.textContent = '⚠️ Bạn còn ' + unanswered.length + ' câu chưa trả lời (Câu ' + unanswered.join(', ') + '). Nộp bài sẽ tính 0 điểm cho các câu đó.';
+        if (!confirm('Bạn còn ' + unanswered.length + ' câu chưa trả lời (Câu ' + unanswered.join(', ') + '). Vẫn nộp bài?')) return;
     } else {
         if (!confirm('Bạn đã trả lời tất cả ' + totalQuestions + ' câu. Nộp bài ngay?')) return;
     }
@@ -277,6 +306,10 @@ document.querySelectorAll('.qt-option input').forEach(function(inp) {
             inp.closest('.qt-option').classList.add('selected');
         } else {
             inp.closest('.qt-option').classList.toggle('selected', inp.checked);
+        }
+        var card = inp.closest('.qt-question');
+        if (card && card.getAttribute('data-qid')) {
+            checkQuestionAnswered(parseInt(card.getAttribute('data-qid')), card);
         }
     });
 });

@@ -83,7 +83,7 @@ public class CourseManagementService {
     public InstructorDashboardStats instructorDashboard(Integer instructorId) {
         List<ManagedCourseView> all = instructorCourses(instructorId);
         int totalCourses    = all.size();
-        int publishedCount  = (int) all.stream().filter(c -> "PUBLISHED".equals(c.getStatus()) || "UPDATING".equals(c.getStatus())).count();
+        int publishedCount  = (int) all.stream().filter(c -> "PUBLISHED".equals(c.getStatus())).count();
         int draftCount      = (int) all.stream().filter(c -> "DRAFT".equals(c.getStatus()) || "UPDATING".equals(c.getStatus())).count();
         int totalLessons    = all.stream().mapToInt(ManagedCourseView::getLessonCount).sum();
 
@@ -142,10 +142,16 @@ public class CourseManagementService {
         if (!canEdit(course)) throw conflict("Khóa học đang chờ duyệt hoặc đã lưu trữ, không thể chỉnh sửa.");
         applyForm(course, form);
         course.setVersionNo(course.getVersionNo() + 1);
-        course.setStatus("DRAFT");
-        course.setSubmittedAt(null);
-        course.setApprovedAt(null);
-        course.setPublishedAt(null);
+        if ("PUBLISHED".equals(course.getStatus()) || "APPROVED".equals(course.getStatus())
+                || "UPDATING".equals(course.getStatus())) {
+            course.setStatus("UPDATING");
+            course.setSubmittedAt(null);
+        } else {
+            course.setStatus("DRAFT");
+            course.setSubmittedAt(null);
+            course.setApprovedAt(null);
+            course.setPublishedAt(null);
+        }
         course.setUpdatedAt(LocalDateTime.now());
     }
 
@@ -159,10 +165,7 @@ public class CourseManagementService {
         if (courseLessons.isEmpty())
             throw conflict("Khóa học phải có ít nhất một bài học trước khi gửi duyệt.");
         boolean hasIncompleteLesson = courseLessons.stream()
-                .anyMatch(l -> l.getTitle() == null || l.getTitle().isBlank()
-                            || ("VIDEO".equalsIgnoreCase(l.getLessonType())
-                                    ? (l.getVideoUrl() == null || l.getVideoUrl().isBlank())
-                                    : (l.getContent() == null || l.getContent().isBlank())));
+                .anyMatch(l -> !isLessonComplete(l));
         if (hasIncompleteLesson)
             throw conflict("Tất cả các bài học phải có tiêu đề và nội dung hoàn chỉnh trước khi gửi duyệt.");
         course.setStatus("SUBMITTED");
@@ -180,10 +183,7 @@ public class CourseManagementService {
         if (courseLessons.isEmpty())
             throw conflict("Khóa học phải có ít nhất một bài học trước khi gửi duyệt.");
         boolean hasIncompleteLesson = courseLessons.stream()
-                .anyMatch(l -> l.getTitle() == null || l.getTitle().isBlank()
-                            || ("VIDEO".equalsIgnoreCase(l.getLessonType())
-                                    ? (l.getVideoUrl() == null || l.getVideoUrl().isBlank())
-                                    : (l.getContent() == null || l.getContent().isBlank())));
+                .anyMatch(l -> !isLessonComplete(l));
         if (hasIncompleteLesson)
             throw conflict("Tất cả các bài học phải có tiêu đề và nội dung hoàn chỉnh trước khi gửi duyệt.");
         String note = changeNote == null ? null : changeNote.trim();
@@ -272,6 +272,13 @@ public class CourseManagementService {
                     lesson.setStatus("PUBLISHED");
                     lesson.setUpdatedAt(LocalDateTime.now());
                 });
+        List<Enrollment> completed = enrollments.findByCourse_CourseIdAndStatus(id, "COMPLETED");
+        if (completed != null) {
+            completed.forEach(enrollment -> {
+                enrollment.setStatus("ACTIVE");
+                enrollment.setCompletedAt(null);
+            });
+        }
     }
 
     @Transactional
@@ -295,7 +302,10 @@ public class CourseManagementService {
     @Transactional
     public void enroll(Integer courseId, Integer studentId) {
         Course course = lockedCourse(courseId);
-        if (!"PUBLISHED".equals(course.getStatus()))
+        boolean isPubliclyAvailable = "PUBLISHED".equals(course.getStatus())
+                || "UPDATING".equals(course.getStatus())
+                || ("SUBMITTED".equals(course.getStatus()) && course.getPublishedAt() != null);
+        if (!isPubliclyAvailable)
             throw new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy khóa học công khai.");
         if (course.getPrice().signum() > 0)
             throw conflict("Khóa học có phí cần thanh toán trước khi ghi danh.");
@@ -397,10 +407,7 @@ public class CourseManagementService {
         int lessonCount = courseLessons.size();
         boolean readyForSubmit = !courseLessons.isEmpty()
                 && course.getDescription() != null && !course.getDescription().isBlank()
-                && courseLessons.stream().noneMatch(l -> l.getTitle() == null || l.getTitle().isBlank()
-                                                      || ("VIDEO".equalsIgnoreCase(l.getLessonType())
-                                                              ? (l.getVideoUrl() == null || l.getVideoUrl().isBlank())
-                                                              : (l.getContent() == null || l.getContent().isBlank())));
+                && courseLessons.stream().allMatch(this::isLessonComplete);
         boolean hidden = "APPROVED".equals(course.getStatus()) && course.getPublishedAt() != null;
         ManagedCourseView view = new ManagedCourseView(course.getCourseId(), course.getTitle(), course.getDescription(),
                 course.getCategory() == null ? "Chưa phân loại" : course.getCategory().getName(),
@@ -427,6 +434,19 @@ public class CourseManagementService {
         }
         view.setChangeNote(course.getChangeNote());
         return view;
+    }
+
+    private boolean isLessonComplete(Lesson l) {
+        if (l.getTitle() == null || l.getTitle().isBlank()) {
+            return false;
+        }
+        if ("QUIZ".equalsIgnoreCase(l.getLessonType())) {
+            return true;
+        }
+        if ("VIDEO".equalsIgnoreCase(l.getLessonType())) {
+            return l.getVideoUrl() != null && !l.getVideoUrl().isBlank();
+        }
+        return l.getContent() != null && !l.getContent().isBlank();
     }
 
     private String trimmed(String value) {

@@ -229,8 +229,11 @@
                                         </form>
 
                                         <!-- Edit section modal trigger -->
-                                        <button class="ins-link-btn" style="padding:4px 8px; font-size:.8rem;"
-                                                onclick="openEditSectionModal(${sec.sectionId}, '<c:out value="${fn:escapeXml(sec.title)}"/>', '<c:out value="${fn:escapeXml(sec.description)}"/>')">
+                                        <button type="button" class="ins-link-btn" style="padding:4px 8px; font-size:.8rem;"
+                                                data-section-id="${sec.sectionId}"
+                                                data-section-title="<c:out value='${sec.title}'/>"
+                                                data-section-desc="<c:out value='${sec.description}'/>"
+                                                onclick="openEditSectionModalFromBtn(this)">
                                             ✏️ Sửa
                                         </button>
 
@@ -359,8 +362,12 @@
 
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-bottom:20px;">
                     <c:if test="${not empty course.thumbnailUrl}">
+                        <c:set var="detailThumbSrc" value="${course.thumbnailUrl}"/>
+                        <c:if test="${not fn:startsWith(detailThumbSrc, 'http://') and not fn:startsWith(detailThumbSrc, 'https://') and not fn:startsWith(detailThumbSrc, pageContext.request.contextPath)}">
+                            <c:set var="detailThumbSrc" value="${pageContext.request.contextPath}${course.thumbnailUrl}"/>
+                        </c:if>
                         <div style="border-radius:var(--r8); overflow:hidden; border:1px solid #E2E8F0;">
-                            <img src="<c:out value='${course.thumbnailUrl}'/>" alt="Thumbnail" style="width:100%; height:180px; object-fit:cover; display:block;"/>
+                            <img src="<c:out value='${detailThumbSrc}'/>" alt="Thumbnail" style="width:100%; height:180px; object-fit:cover; display:block;"/>
                             <div style="padding:8px 12px; font-size:.8rem; color:#64748B; background:#F8FAFC; text-align:center;">Ảnh bìa (Thumbnail)</div>
                         </div>
                     </c:if>
@@ -596,7 +603,22 @@ function openSectionModal() {
     document.getElementById('sectionModal').classList.add('open');
 }
 
+function openEditSectionModalFromBtn(btn) {
+    if (!btn) return;
+    openEditSectionModal(
+        btn.getAttribute('data-section-id'),
+        btn.getAttribute('data-section-title') || '',
+        btn.getAttribute('data-section-desc') || ''
+    );
+}
+
 function openEditSectionModal(secId, title, desc) {
+    if (secId && typeof secId === 'object' && secId.getAttribute) {
+        var btn = secId;
+        secId = btn.getAttribute('data-section-id');
+        title = btn.getAttribute('data-section-title') || '';
+        desc = btn.getAttribute('data-section-desc') || '';
+    }
     document.getElementById('modalTitle').textContent = 'Chỉnh sửa chương mục';
     document.getElementById('secTitle').value = title;
     document.getElementById('secDesc').value = desc || '';
