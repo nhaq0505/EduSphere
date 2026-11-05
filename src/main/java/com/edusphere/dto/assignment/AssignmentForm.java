@@ -1,5 +1,6 @@
 package com.edusphere.dto.assignment;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -24,6 +25,7 @@ public class AssignmentForm {
     private String description;
 
     /** ISO datetime string: yyyy-MM-dd'T'HH:mm */
+    @NotBlank(message = "Hạn nộp không được để trống")
     private String dueDate;
 
     private String unlockAt;
@@ -31,7 +33,7 @@ public class AssignmentForm {
     private String lockAt;
 
     @NotNull(message = "Điểm tối đa không được để trống")
-    @DecimalMin(value = "0", message = "Điểm tối đa phải >= 0")
+    @DecimalMin(value = "0.01", message = "Điểm tối đa phải lớn hơn 0")
     private BigDecimal maxScore = BigDecimal.valueOf(100);
 
     private boolean allowResubmit = false;
@@ -41,4 +43,12 @@ public class AssignmentForm {
 
     /** Nullable — optional link to lesson */
     private Integer lessonId;
+
+    @AssertTrue(message = "Khi cho phép nộp lại, số lần nộp tối đa phải từ 2 trở lên")
+    public boolean isAttemptsValid() {
+        if (allowResubmit) {
+            return maxAttempts != null && maxAttempts >= 2;
+        }
+        return maxAttempts == null || maxAttempts == 1;
+    }
 }

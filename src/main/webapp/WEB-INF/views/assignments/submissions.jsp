@@ -14,9 +14,9 @@
 </head>
 <body>
 <div class="ins-layout">
-    <jsp:include page="../courses/ins-sidebar.jsp"/>
+    <jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
     <div class="ins-main-wrapper">
-        <jsp:include page="../courses/ins-header.jsp"/>
+        <jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
         <main class="ins-page">
         <a class="ins-back-link" href="${pageContext.request.contextPath}/instructor/courses/${courseId}/assignments">
             ← Bài tập: <c:out value="${assignment.title}"/>

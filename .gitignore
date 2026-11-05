@@ -1,5 +1,20 @@
 # Application configuration (sensitive data)
 .env
+.env*
+application-*.properties
+application-local.properties
+application-secrets.properties
+
+# Credentials & secrets
+*.pem
+*.key
+*.pkcs12
+*.pfx
+*.jks
+
+# Logs
+*.log
+logs/
 
 # Build output
 target/

@@ -37,8 +37,10 @@ ALTER TABLE dbo.personal_tasks ADD CONSTRAINT CK_personal_tasks_status
     CHECK ([status] IN (N'PENDING', N'DONE', N'SKIPPED', N'TODO', N'IN_PROGRESS', N'CANCELLED'));
 GO
 
-IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_personal_tasks_enrollment')
-    ALTER TABLE dbo.personal_tasks DROP CONSTRAINT FK_personal_tasks_enrollment;
+-- Preserve FK_personal_tasks_enrollment
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_personal_tasks_enrollment')
+    ALTER TABLE dbo.personal_tasks ADD CONSTRAINT FK_personal_tasks_enrollment
+        FOREIGN KEY (student_id, course_id) REFERENCES dbo.enrollments(student_id, course_id);
 GO
 
 BEGIN TRY

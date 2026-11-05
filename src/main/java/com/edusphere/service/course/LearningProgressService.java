@@ -91,15 +91,16 @@ public class LearningProgressService {
 
             if (optProgress.isPresent()) {
                 LearningProgress p = optProgress.get();
-                percent = p.getPercentComplete();
-                completed = p.getCompletedLessons();
-                total = p.getTotalLessons();
+                total = Math.max(0, p.getTotalLessons());
+                completed = Math.max(0, Math.min(p.getCompletedLessons(), total));
+                double raw = p.getPercentComplete() != null ? p.getPercentComplete().doubleValue() : 0.0;
+                percent = BigDecimal.valueOf(Math.min(100.0, Math.max(0.0, raw))).setScale(2, RoundingMode.HALF_UP);
                 lastAccess = p.getLastAccessedAt();
             } else {
-                total = (int) lessonRepository.countByCourse_CourseIdAndStatus(courseId, PUBLISHED);
-                completed = (int) completionRepository.countByStudent_UserIdAndCourse_CourseId(studentId, courseId);
+                total = Math.max(0, (int) lessonRepository.countByCourse_CourseIdAndStatus(courseId, PUBLISHED));
+                completed = Math.max(0, Math.min((int) completionRepository.countByStudent_UserIdAndCourse_CourseId(studentId, courseId), total));
                 percent = total > 0
-                        ? BigDecimal.valueOf((double) completed * 100.0 / total).setScale(2, RoundingMode.HALF_UP)
+                        ? BigDecimal.valueOf(Math.min(100.0, Math.max(0.0, (double) completed * 100.0 / total))).setScale(2, RoundingMode.HALF_UP)
                         : BigDecimal.ZERO;
                 lastAccess = null;
             }
@@ -137,15 +138,16 @@ public class LearningProgressService {
 
         if (optProgress.isPresent()) {
             LearningProgress p = optProgress.get();
-            percent = p.getPercentComplete();
-            completed = p.getCompletedLessons();
-            total = p.getTotalLessons();
+            total = Math.max(0, p.getTotalLessons());
+            completed = Math.max(0, Math.min(p.getCompletedLessons(), total));
+            double raw = p.getPercentComplete() != null ? p.getPercentComplete().doubleValue() : 0.0;
+            percent = BigDecimal.valueOf(Math.min(100.0, Math.max(0.0, raw))).setScale(2, RoundingMode.HALF_UP);
             lastAccess = p.getLastAccessedAt();
         } else {
-            total = (int) lessonRepository.countByCourse_CourseIdAndStatus(courseId, PUBLISHED);
-            completed = (int) completionRepository.countByStudent_UserIdAndCourse_CourseId(studentId, courseId);
+            total = Math.max(0, (int) lessonRepository.countByCourse_CourseIdAndStatus(courseId, PUBLISHED));
+            completed = Math.max(0, Math.min((int) completionRepository.countByStudent_UserIdAndCourse_CourseId(studentId, courseId), total));
             percent = total > 0
-                    ? BigDecimal.valueOf((double) completed * 100.0 / total).setScale(2, RoundingMode.HALF_UP)
+                    ? BigDecimal.valueOf(Math.min(100.0, Math.max(0.0, (double) completed * 100.0 / total))).setScale(2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
             lastAccess = null;
         }
@@ -176,10 +178,10 @@ public class LearningProgressService {
                 .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Khóa học không tồn tại."));
         Lesson lesson = lessonRepository.findById(lessonId).orElse(null);
 
-        int total = (int) lessonRepository.countByCourse_CourseIdAndStatus(courseId, PUBLISHED);
-        int completed = (int) completionRepository.countByStudent_UserIdAndCourse_CourseId(studentId, courseId);
+        int total = Math.max(0, (int) lessonRepository.countByCourse_CourseIdAndStatus(courseId, PUBLISHED));
+        int completed = Math.max(0, Math.min((int) completionRepository.countByStudent_UserIdAndCourse_CourseId(studentId, courseId), total));
         BigDecimal percent = total > 0
-                ? BigDecimal.valueOf((double) completed * 100.0 / total).setScale(2, RoundingMode.HALF_UP)
+                ? BigDecimal.valueOf(Math.min(100.0, Math.max(0.0, (double) completed * 100.0 / total))).setScale(2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
         LearningProgress progress = progressRepository.findByStudent_UserIdAndCourse_CourseId(studentId, courseId)
@@ -274,14 +276,16 @@ public class LearningProgressService {
             LocalDateTime lastAccess;
 
             if (p != null) {
-                percent = p.getPercentComplete();
-                completed = p.getCompletedLessons();
-                total = p.getTotalLessons();
+                total = Math.max(0, p.getTotalLessons());
+                completed = Math.max(0, Math.min(p.getCompletedLessons(), total));
+                double raw = p.getPercentComplete() != null ? p.getPercentComplete().doubleValue() : 0.0;
+                percent = BigDecimal.valueOf(Math.min(100.0, Math.max(0.0, raw))).setScale(2, RoundingMode.HALF_UP);
                 lastAccess = p.getLastAccessedAt();
             } else {
-                completed = (int) completionRepository.countByStudent_UserIdAndCourse_CourseId(student.getUserId(), courseId);
+                total = Math.max(0, totalPublishedLessons);
+                completed = Math.max(0, Math.min((int) completionRepository.countByStudent_UserIdAndCourse_CourseId(student.getUserId(), courseId), total));
                 percent = total > 0
-                        ? BigDecimal.valueOf((double) completed * 100.0 / total).setScale(2, RoundingMode.HALF_UP)
+                        ? BigDecimal.valueOf(Math.min(100.0, Math.max(0.0, (double) completed * 100.0 / total))).setScale(2, RoundingMode.HALF_UP)
                         : BigDecimal.ZERO;
                 lastAccess = null;
             }

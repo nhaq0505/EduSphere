@@ -21,7 +21,7 @@ import lombok.Setter;
 /**
  * Nhiệm vụ học tập cá nhân của học viên trong một kế hoạch (UC35).
  * Không ảnh hưởng đến due_date / unlock_at / lock_at chính thức.
- * status: PENDING | DONE | SKIPPED
+ * status: TODO | IN_PROGRESS | DONE | CANCELLED | PENDING | SKIPPED
  */
 @Getter
 @Setter
@@ -29,6 +29,13 @@ import lombok.Setter;
 @Entity
 @Table(name = "personal_tasks")
 public class PersonalTask {
+
+    public static final String STATUS_TODO = "TODO";
+    public static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+    public static final String STATUS_DONE = "DONE";
+    public static final String STATUS_CANCELLED = "CANCELLED";
+    public static final String STATUS_PENDING = "PENDING";
+    public static final String STATUS_SKIPPED = "SKIPPED";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -79,9 +86,9 @@ public class PersonalTask {
     @Column(name = "planned_end_at", nullable = false)
     private LocalDateTime plannedEndAt;
 
-    /** PENDING / DONE / SKIPPED */
+    /** TODO / IN_PROGRESS / DONE / CANCELLED / PENDING / SKIPPED */
     @Column(name = "status", nullable = false, length = 20)
-    private String status = "PENDING";
+    private String status = STATUS_TODO;
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;

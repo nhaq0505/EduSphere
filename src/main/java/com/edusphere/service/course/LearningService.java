@@ -132,36 +132,85 @@ public class LearningService {
 
     @Transactional
     public StudyCourseView getStudyContext(Integer courseId, Integer lessonId, Integer studentId) {
-        Enrollment enrollment = verifyEnrollment(studentId, courseId);
-        Course course = enrollment.getCourse();
+        List<Lesson> publishedLessons = lessonRepository.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(courseId, PUBLISHED);
+
+        // Check if specific lesson was requested
+        Lesson targetLesson = null;
+        if (lessonId != null && !publishedLessons.isEmpty()) {
+            targetLesson = publishedLessons.stream()
+                    .filter(l -> Objects.equals(l.getLessonId(), lessonId))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        Enrollment enrollment = null;
+        try {
+            enrollment = verifyEnrollment(studentId, courseId);
+        } catch (CourseActionException ex) {
+            // If student is not enrolled, check if target lesson (or first preview lesson) allows preview
+            if (targetLesson != null && Boolean.TRUE.equals(targetLesson.getIsPreview())) {
+                enrollment = null; // Preview allowed
+            } else if (targetLesson == null && !publishedLessons.isEmpty()) {
+                targetLesson = publishedLessons.stream()
+                        .filter(l -> Boolean.TRUE.equals(l.getIsPreview()))
+                        .findFirst()
+                        .orElseThrow(() -> ex);
+            } else {
+                throw ex;
+            }
+        }
+
+        Course course = enrollment != null ? enrollment.getCourse()
+                : (courseRepository != null ? courseRepository.findById(courseId).orElse(null) : null);
+        if (course == null && targetLesson != null) {
+            course = targetLesson.getCourse();
+        }
 
         // Ghi nhận thời điểm truy cập khóa học gần nhất
-        if (learningProgressService != null) {
+        if (learningProgressService != null && enrollment != null && studentId != null) {
             learningProgressService.recordAccess(studentId, courseId);
         }
 
-        List<Lesson> publishedLessons = lessonRepository.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(courseId, PUBLISHED);
         if (publishedLessons.isEmpty()) {
-            return new StudyCourseView(courseId, course.getTitle(), course.getInstructor().getFullName(),
+            String title = course != null ? course.getTitle() : "Khóa học";
+            String insName = course != null && course.getInstructor() != null ? course.getInstructor().getFullName() : "";
+            return new StudyCourseView(courseId, title, insName,
                     Collections.emptyList(), null, null, Collections.emptyList(), null, null, 0, 0, 0,
                     "ARTICLE", null, null, true, false);
         }
 
-        Set<Integer> completedLessonIds = lessonCompletionRepository.findByStudent_UserIdAndCourse_CourseId(studentId, courseId)
-                .stream().map(c -> c.getLesson().getLessonId()).collect(Collectors.toSet());
+        Set<Integer> completedLessonIds = (studentId != null)
+                ? lessonCompletionRepository.findByStudent_UserIdAndCourse_CourseId(studentId, courseId)
+                        .stream().map(c -> c.getLesson().getLessonId()).collect(Collectors.toSet())
+                : Collections.emptySet();
 
         Lesson current;
-        if (lessonId != null) {
-            current = publishedLessons.stream()
-                    .filter(l -> Objects.equals(l.getLessonId(), lessonId))
-                    .findFirst()
-                    .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy bài học trong khóa học này."));
+        if (targetLesson != null) {
+            current = targetLesson;
+            // Check prerequisite & unlock days if lesson is NOT a preview lesson
+            if (!Boolean.TRUE.equals(current.getIsPreview())) {
+                if (current.getPrerequisiteLesson() != null && !completedLessonIds.contains(current.getPrerequisiteLesson().getLessonId())) {
+                    throw new CourseActionException(HttpStatus.BAD_REQUEST,
+                            "Bạn cần hoàn thành bài học tiên quyết trước: " + current.getPrerequisiteLesson().getTitle());
+                }
+                if (current.getUnlockDaysAfterEnroll() != null && current.getUnlockDaysAfterEnroll() > 0
+                        && enrollment != null && enrollment.getEnrolledAt() != null) {
+                    if (LocalDateTime.now().isBefore(enrollment.getEnrolledAt().plusDays(current.getUnlockDaysAfterEnroll()))) {
+                        throw new CourseActionException(HttpStatus.BAD_REQUEST,
+                                "Bài học này sẽ mở khóa sau " + current.getUnlockDaysAfterEnroll() + " ngày kể từ khi ghi danh.");
+                    }
+                }
+            }
         } else {
-            // Mặc định bài chưa hoàn thành đầu tiên, nếu đã hoàn thành hết thì mở bài đầu tiên
+            // Mặc định bài chưa hoàn thành đầu tiên được mở khóa, nếu không có thì bài đầu tiên được mở khóa, hoặc bài đầu tiên
+            final Enrollment fEnrollment = enrollment;
             current = publishedLessons.stream()
-                    .filter(l -> !completedLessonIds.contains(l.getLessonId()))
+                    .filter(l -> !completedLessonIds.contains(l.getLessonId()) && isLessonUnlocked(l, completedLessonIds, fEnrollment))
                     .findFirst()
-                    .orElse(publishedLessons.get(0));
+                    .orElseGet(() -> publishedLessons.stream()
+                            .filter(l -> isLessonUnlocked(l, completedLessonIds, fEnrollment))
+                            .findFirst()
+                            .orElse(publishedLessons.get(0)));
         }
 
         int currentIndex = publishedLessons.indexOf(current);
@@ -196,7 +245,7 @@ public class LearningService {
 
         // Load bài tập gắn với lesson hiện tại
         List<AssignmentView> lessonAssignments = Collections.emptyList();
-        if (assignmentRepository != null) {
+        if (assignmentRepository != null && studentId != null) {
             lessonAssignments = assignmentRepository
                     .findByCourse_CourseIdAndLesson_LessonIdAndStatusOrderByDueDateAsc(
                             courseId, current.getLessonId(), "PUBLISHED")
@@ -207,7 +256,7 @@ public class LearningService {
 
         // Load quiz gắn với lesson hiện tại
         List<QuizView> lessonQuizzes = Collections.emptyList();
-        if (quizRepository != null) {
+        if (quizRepository != null && studentId != null) {
             lessonQuizzes = quizRepository
                     .findByCourse_CourseIdAndLesson_LessonIdAndStatus(
                             courseId, current.getLessonId(), "PUBLISHED")
@@ -217,11 +266,12 @@ public class LearningService {
         }
 
         boolean lessonCompleted = completedLessonIds.contains(current.getLessonId());
+        boolean isPreviewMode = (enrollment == null) || Boolean.TRUE.equals(current.getIsPreview());
 
         return new StudyCourseView(
-                course.getCourseId(),
-                course.getTitle(),
-                course.getInstructor().getFullName(),
+                course != null ? course.getCourseId() : courseId,
+                course != null ? course.getTitle() : "Khóa học",
+                course != null && course.getInstructor() != null ? course.getInstructor().getFullName() : "",
                 lessonItemViews,
                 currentLessonView,
                 current.getContent(),
@@ -235,11 +285,27 @@ public class LearningService {
                 current.getVideoUrl(),
                 current.getVideoDuration(),
                 current.getAllowSeek() != null ? current.getAllowSeek() : true,
-                false,
+                isPreviewMode,
                 lessonAssignments,
                 lessonCompleted,
                 lessonQuizzes
         );
+    }
+
+    private boolean isLessonUnlocked(Lesson l, Set<Integer> completedLessonIds, Enrollment enrollment) {
+        if (Boolean.TRUE.equals(l.getIsPreview())) {
+            return true;
+        }
+        if (l.getPrerequisiteLesson() != null && !completedLessonIds.contains(l.getPrerequisiteLesson().getLessonId())) {
+            return false;
+        }
+        if (l.getUnlockDaysAfterEnroll() != null && l.getUnlockDaysAfterEnroll() > 0
+                && enrollment != null && enrollment.getEnrolledAt() != null) {
+            if (LocalDateTime.now().isBefore(enrollment.getEnrolledAt().plusDays(l.getUnlockDaysAfterEnroll()))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Transactional(readOnly = true)
@@ -336,20 +402,22 @@ public class LearningService {
             }
         }
 
-        if (!lessonCompletionRepository.existsByStudent_UserIdAndLesson_LessonId(studentId, lessonId)) {
-            Users student = userRepository.findById(studentId)
-                    .orElseThrow(() -> new CourseActionException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập lại."));
-            LessonCompletion completion = new LessonCompletion();
-            completion.setStudent(student);
-            completion.setCourse(lesson.getCourse());
-            completion.setLesson(lesson);
-            completion.setCompletedAt(LocalDateTime.now());
-            lessonCompletionRepository.save(completion);
-        }
+        if (enrollment.getEnrollmentId() != null) {
+            if (!lessonCompletionRepository.existsByStudent_UserIdAndLesson_LessonId(studentId, lessonId)) {
+                Users student = userRepository.findById(studentId)
+                        .orElseThrow(() -> new CourseActionException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập lại."));
+                LessonCompletion completion = new LessonCompletion();
+                completion.setStudent(student);
+                completion.setCourse(lesson.getCourse());
+                completion.setLesson(lesson);
+                completion.setCompletedAt(LocalDateTime.now());
+                lessonCompletionRepository.save(completion);
+            }
 
-        // Cập nhật tiến độ học tập và ghi lịch sử hoạt động (UC37 & UC38)
-        if (learningProgressService != null) {
-            learningProgressService.updateProgressOnLessonCompleted(studentId, courseId, lessonId);
+            // Cập nhật tiến độ học tập và ghi lịch sử hoạt động (UC37 & UC38)
+            if (learningProgressService != null) {
+                learningProgressService.updateProgressOnLessonCompleted(studentId, courseId, lessonId);
+            }
         }
 
         List<Lesson> publishedLessons = lessonRepository.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(courseId, PUBLISHED);
@@ -392,36 +460,54 @@ public class LearningService {
         if (courseRepository != null) {
             Course c = courseRepository.findById(courseId).orElse(null);
             if (c != null) {
-                Users u = userRepository != null ? userRepository.findById(studentId).orElse(null) : null;
+                Users u = userRepository != null && studentId != null ? userRepository.findById(studentId).orElse(null) : null;
                 boolean isOwner = c.getInstructor() != null && Objects.equals(c.getInstructor().getUserId(), studentId);
                 boolean isAdmin = u != null && u.getUserRolesCollection() != null
                         && u.getUserRolesCollection().stream()
                         .anyMatch(ur -> ur.getRoles() != null && "ADMINISTRATOR".equalsIgnoreCase(ur.getRoles().getRoleName()));
 
                 if (isOwner || isAdmin) {
-                    Enrollment autoEnroll = new Enrollment();
-                    autoEnroll.setCourse(c);
-                    autoEnroll.setStudent(u != null ? u : c.getInstructor());
-                    autoEnroll.setStatus("ACTIVE");
-                    autoEnroll.setEnrolledAt(LocalDateTime.now());
-                    return autoEnroll;
+                    Users targetUser = u != null ? u : c.getInstructor();
+                    if (targetUser != null) {
+                        Enrollment existing = enrollmentRepository
+                                .findByStudent_UserIdAndCourse_CourseId(targetUser.getUserId(), courseId)
+                                .orElse(null);
+                        if (existing != null) {
+                            if ("DROPPED".equalsIgnoreCase(existing.getStatus())) {
+                                existing.setStatus("ACTIVE");
+                                return enrollmentRepository.save(existing);
+                            }
+                            return existing;
+                        }
+                        Enrollment autoEnroll = new Enrollment();
+                        autoEnroll.setCourse(c);
+                        autoEnroll.setStudent(targetUser);
+                        autoEnroll.setStatus("ACTIVE");
+                        autoEnroll.setEnrolledAt(LocalDateTime.now());
+                        return enrollmentRepository.save(autoEnroll);
+                    }
                 }
 
                 boolean isFree = c.getPrice() == null || c.getPrice().signum() == 0;
                 boolean isAccessible = "PUBLISHED".equals(c.getStatus())
-                        || "UPDATING".equals(c.getStatus());
+                        || "UPDATING".equals(c.getStatus())
+                        || ("SUBMITTED".equals(c.getStatus()) && c.getPublishedAt() != null);
 
                 if (isAccessible && isFree && u != null) {
-                    try {
-                        Enrollment autoEnroll = new Enrollment();
-                        autoEnroll.setCourse(c);
-                        autoEnroll.setStudent(u);
-                        autoEnroll.setStatus("ACTIVE");
-                        autoEnroll.setEnrolledAt(LocalDateTime.now());
-                        return enrollmentRepository.save(autoEnroll);
-                    } catch (Exception ex) {
-                        return enrollmentRepository.findByStudent_UserIdAndCourse_CourseId(studentId, courseId).orElse(null);
+                    Enrollment existing = enrollmentRepository.findByStudent_UserIdAndCourse_CourseId(studentId, courseId).orElse(null);
+                    if (existing != null) {
+                        if ("DROPPED".equalsIgnoreCase(existing.getStatus())) {
+                            existing.setStatus("ACTIVE");
+                            return enrollmentRepository.save(existing);
+                        }
+                        return existing;
                     }
+                    Enrollment autoEnroll = new Enrollment();
+                    autoEnroll.setCourse(c);
+                    autoEnroll.setStudent(u);
+                    autoEnroll.setStatus("ACTIVE");
+                    autoEnroll.setEnrolledAt(LocalDateTime.now());
+                    return enrollmentRepository.save(autoEnroll);
                 }
             }
         }

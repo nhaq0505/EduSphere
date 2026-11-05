@@ -188,11 +188,19 @@ public class AuthService {
     }
 
     /**
-     * Sinh mã OTP 6 số ngẫu nhiên bảo mật.
-     * Dùng SecureRandom — KHÔNG dùng Math.random().
+     * Sinh mã OTP 6 số ngẫu nhiên bảo mật và duy nhất.
+     * Kiểm tra tránh va chạm ràng buộc UNIQUE (token) trong email_verification_tokens.
      */
     private String generateOtp() {
-        int otp = 100000 + SECURE_RANDOM.nextInt(900000); // 100000 ~ 999999
-        return String.valueOf(otp);
+        String otp;
+        int attempts = 0;
+        do {
+            otp = String.valueOf(100000 + SECURE_RANDOM.nextInt(900000)); // 100000 ~ 999999
+            attempts++;
+            if (attempts > 50) {
+                throw new IllegalStateException("Không thể tạo mã OTP duy nhất, vui lòng thử lại sau.");
+            }
+        } while (emailVerificationTokenRepository.findByToken(otp).isPresent());
+        return otp;
     }
 }

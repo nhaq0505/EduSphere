@@ -14,9 +14,9 @@
 </head>
 <body>
 <div class="ins-layout">
-    <jsp:include page="../courses/ins-sidebar.jsp"/>
+    <jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
     <div class="ins-main-wrapper">
-        <jsp:include page="../courses/ins-header.jsp"/>
+        <jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
         <main class="ins-page">
 
         <div class="ins-page-head">
@@ -58,9 +58,9 @@
                                         <c:otherwise><span class="ins-pill-draft">📝 Bản nháp</span></c:otherwise>
                                     </c:choose>
                                     &nbsp;|&nbsp; Điểm tối đa: <strong><fmt:formatNumber value="${a.maxScore}" maxFractionDigits="1"/></strong>
-                                    &nbsp;|&nbsp; Bài nộp: <strong>${a.submissionCount}</strong>
+                                    &nbsp;|&nbsp; Bài nộp: <strong><c:out value="${a.submissionCount}"/></strong>
                                     <c:if test="${a.dueDate != null}">
-                                        &nbsp;|&nbsp; Hạn: ${fn:replace(fn:substring(a.dueDate, 0, 16), 'T', ' ')}
+                                        &nbsp;|&nbsp; Hạn: <c:out value="${fn:replace(fn:substring(a.dueDate, 0, 16), 'T', ' ')}"/>
                                     </c:if>
                                 </div>
                             </div>

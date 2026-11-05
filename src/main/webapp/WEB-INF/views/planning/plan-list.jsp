@@ -1,4 +1,4 @@
-﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <!DOCTYPE html>
@@ -138,7 +138,7 @@
             <div class="pl-callout__title">Đặt thời điểm học cá nhân (UC35)</div>
             <div class="pl-callout__desc">Sắp xếp giờ riêng để tự học bài tập hoặc làm quiz. <strong>Tuyệt đối không làm thay đổi Due Date chính thức của giảng viên.</strong></div>
         </div>
-        <a class="pl-btn pl-btn--outline" href="${pageContext.request.contextPath}/study/plans/new" style="white-space:nowrap;">
+        <a class="pl-btn pl-btn--outline" href="${pageContext.request.contextPath}/study/tasks/new" style="white-space:nowrap;">
             + Tạo nhiệm vụ cá nhân
         </a>
     </div>

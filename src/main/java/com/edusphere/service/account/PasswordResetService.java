@@ -56,8 +56,8 @@ public class PasswordResetService {
         // Xóa OTP cũ nếu có
         passwordResetTokenRepository.deleteByUserId(user);
 
-        // Tạo OTP 6 số
-        String otp = String.valueOf(100000 + SECURE_RANDOM.nextInt(900000));
+        // Tạo OTP 6 số ngẫu nhiên duy nhất (tránh va chạm ràng buộc UNIQUE(token))
+        String otp = generateUniqueOtp();
         Date expiresAt = new Date(System.currentTimeMillis() + OTP_EXPIRY_MS);
 
         PasswordResetTokens token = new PasswordResetTokens(otp, expiresAt, user);
@@ -107,10 +107,14 @@ public class PasswordResetService {
     /**
      * BƯỚC 3 — Đặt mật khẩu mới sau khi OTP đã xác thực.
      *
-     * @throws IllegalArgumentException nếu password không khớp
+     * @throws IllegalArgumentException nếu password không hợp lệ hoặc không khớp
      */
     @Transactional
     public void resetPassword(String email, String newPassword, String confirmPassword) {
+        if (newPassword == null || newPassword.isBlank() || newPassword.length() < 8 || newPassword.length() > 100) {
+            throw new IllegalArgumentException("Mật khẩu phải có độ dài từ 8 đến 100 ký tự.");
+        }
+
         if (!newPassword.equals(confirmPassword)) {
             throw new IllegalArgumentException("Mật khẩu xác nhận không khớp.");
         }
@@ -142,5 +146,21 @@ public class PasswordResetService {
     @Transactional
     public void resendResetOtp(String email) {
         processForgotPassword(email);
+    }
+
+    /**
+     * Sinh mã OTP 6 số duy nhất không trùng lặp với các token đang có trong database.
+     */
+    private String generateUniqueOtp() {
+        String otp;
+        int attempts = 0;
+        do {
+            otp = String.valueOf(100000 + SECURE_RANDOM.nextInt(900000));
+            attempts++;
+            if (attempts > 50) {
+                throw new IllegalStateException("Không thể tạo mã OTP duy nhất, vui lòng thử lại sau.");
+            }
+        } while (passwordResetTokenRepository.findByToken(otp).isPresent());
+        return otp;
     }
 }

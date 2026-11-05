@@ -141,7 +141,9 @@ public class LessonManagementService {
         Lesson lesson = new Lesson();
         lesson.setCourse(course);
         applyLessonForm(lesson, form, courseId);
-        lesson.setOrderIndex(Math.toIntExact(lessons.countByCourse_CourseId(courseId) + 1));
+        List<Lesson> existing = lessons.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
+        int maxOrder = existing.stream().mapToInt(Lesson::getOrderIndex).max().orElse(0);
+        lesson.setOrderIndex(maxOrder + 1);
         lesson.setStatus("DRAFT");
         lesson.setCreatedAt(LocalDateTime.now());
         return lessons.save(lesson).getLessonId();
@@ -235,13 +237,18 @@ public class LessonManagementService {
 
         // Delete lesson
         lessons.delete(lesson);
+        lessons.flush();
 
         // Re-index remaining lessons
         List<Lesson> remaining = lessons.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
         for (int i = 0; i < remaining.size(); i++) {
-            remaining.get(i).setOrderIndex(i + 1);
-            lessons.save(remaining.get(i));
+            remaining.get(i).setOrderIndex(10000 + (i + 1));
         }
+        lessons.saveAllAndFlush(remaining);
+        for (int i = 0; i < remaining.size(); i++) {
+            remaining.get(i).setOrderIndex(i + 1);
+        }
+        lessons.saveAllAndFlush(remaining);
 
         bumpCourseToDraftIfPublishedOrApproved(course);
     }
@@ -265,7 +272,9 @@ public class LessonManagementService {
         material.setTitle(requiredTitle(form.getTitle()));
         material.setType(type);
         material.setFileUrl(url);
-        material.setOrderIndex(materials.findByLesson_LessonIdOrderByOrderIndexAsc(lessonId).size() + 1);
+        List<Material> existing = materials.findByLesson_LessonIdOrderByOrderIndexAsc(lessonId);
+        int maxOrder = existing.stream().mapToInt(Material::getOrderIndex).max().orElse(0);
+        material.setOrderIndex(maxOrder + 1);
         material.setUploadedBy(users.getReferenceById(instructorId));
         materials.save(material);
     }
@@ -282,7 +291,19 @@ public class LessonManagementService {
             throw notFound("Không tìm thấy tài liệu.");
         }
         // Xóa tài liệu đính kèm — không cần bump course status
-        materials.deleteById(materialId);
+        materials.delete(material);
+        materials.flush();
+
+        // Re-index remaining materials
+        List<Material> remaining = materials.findByLesson_LessonIdOrderByOrderIndexAsc(lessonId);
+        for (int i = 0; i < remaining.size(); i++) {
+            remaining.get(i).setOrderIndex(10000 + (i + 1));
+        }
+        materials.saveAllAndFlush(remaining);
+        for (int i = 0; i < remaining.size(); i++) {
+            remaining.get(i).setOrderIndex(i + 1);
+        }
+        materials.saveAllAndFlush(remaining);
     }
 
     private void applyLessonForm(Lesson lesson, LessonForm form, Integer courseId) {

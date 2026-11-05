@@ -50,7 +50,7 @@ public class Assignment {
     @Column(name = "unlock_at")
     private LocalDateTime unlockAt;
 
-    @Column(name = "due_date")
+    @Column(name = "due_date", nullable = false)
     private LocalDateTime dueDate;
 
     @Column(name = "lock_at")

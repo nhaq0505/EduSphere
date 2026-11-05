@@ -12,9 +12,9 @@
 </head>
 <body>
 <div class="ins-layout">
-    <jsp:include page="../courses/ins-sidebar.jsp"/>
+    <jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
     <div class="ins-main-wrapper">
-        <jsp:include page="../courses/ins-header.jsp"/>
+        <jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
         <main class="ins-page">
         <a class="ins-back-link" href="${pageContext.request.contextPath}/instructor/courses/${courseId}/assignments">
             ← Danh sách bài tập
@@ -22,9 +22,11 @@
         <div class="ins-page-head">
             <div>
                 <span class="ins-page-head__eyebrow">📝 Bài tập</span>
-                <h1 class="ins-page-head__title">${pageTitle}</h1>
+                <h1 class="ins-page-head__title"><c:out value="${pageTitle}"/></h1>
             </div>
         </div>
+
+        <c:if test="${not empty error}"><div class="ins-alert ins-alert--danger" style="margin-bottom:16px">❌ <c:out value="${error}"/></div></c:if>
 
         <div class="ins-form-card" style="max-width:640px">
             <form method="post" action="${pageContext.request.contextPath}${formAction}">
@@ -46,9 +48,9 @@
                 </div>
 
                 <div class="ins-field">
-                    <label class="ins-label" for="dueDate">Hạn nộp bài</label>
+                    <label class="ins-label" for="dueDate">Hạn nộp bài <span style="color:red">*</span></label>
                     <input class="ins-input" type="datetime-local" id="dueDate" name="dueDate"
-                           value="<c:out value="${assignmentForm.dueDate}"/>">
+                           value="<c:out value="${assignmentForm.dueDate}"/>" required>
                 </div>
 
                 <div class="ins-field">
@@ -67,7 +69,7 @@
                     <label class="ins-label" for="maxScore">Điểm tối đa <span style="color:red">*</span></label>
                     <input class="ins-input" type="number" id="maxScore" name="maxScore"
                            value="${assignmentForm.maxScore != null ? assignmentForm.maxScore : 100}"
-                           min="0" step="0.5" required>
+                           min="0.01" step="0.5" required>
                 </div>
 
                 <div class="ins-field">

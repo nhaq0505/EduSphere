@@ -154,6 +154,10 @@ CREATE TABLE dbo.courses (
     price DECIMAL(18,2) NOT NULL CONSTRAINT DF_courses_price DEFAULT 0,
     currency CHAR(3) NOT NULL CONSTRAINT DF_courses_currency DEFAULT 'VND',
     thumbnail_url NVARCHAR(2048) NULL,
+    promo_video_url NVARCHAR(2048) NULL,
+    objectives NVARCHAR(MAX) NULL,
+    requirements NVARCHAR(MAX) NULL,
+    change_note NVARCHAR(2000) NULL,
     status NVARCHAR(20) NOT NULL CONSTRAINT DF_courses_status DEFAULT N'DRAFT',
     version_no INT NOT NULL CONSTRAINT DF_courses_version DEFAULT 1,
     created_at DATETIME2 NOT NULL CONSTRAINT DF_courses_created DEFAULT SYSDATETIME(),
@@ -162,7 +166,7 @@ CREATE TABLE dbo.courses (
     approved_at DATETIME2 NULL,
     published_at DATETIME2 NULL,
     archived_at DATETIME2 NULL,
-    CONSTRAINT CK_courses_status CHECK (status IN (N'DRAFT', N'SUBMITTED', N'APPROVED', N'REJECTED', N'PUBLISHED', N'ARCHIVED')),
+    CONSTRAINT CK_courses_status CHECK (status IN (N'DRAFT', N'SUBMITTED', N'APPROVED', N'REJECTED', N'PUBLISHED', N'ARCHIVED', N'UPDATING')),
     CONSTRAINT CK_courses_level CHECK (level IN (N'BEGINNER', N'INTERMEDIATE', N'ADVANCED', N'ALL_LEVELS')),
     CONSTRAINT CK_courses_price CHECK (price >= 0),
     CONSTRAINT CK_courses_version CHECK (version_no >= 1),
@@ -172,6 +176,23 @@ CREATE TABLE dbo.courses (
     CONSTRAINT FK_courses_category FOREIGN KEY (category_id) REFERENCES dbo.categories(category_id),
     CONSTRAINT FK_courses_instructor FOREIGN KEY (instructor_id) REFERENCES dbo.users(user_id)
 );
+END;
+IF COL_LENGTH(N'dbo.courses', N'promo_video_url') IS NULL
+    ALTER TABLE dbo.courses ADD promo_video_url NVARCHAR(2048) NULL;
+IF COL_LENGTH(N'dbo.courses', N'objectives') IS NULL
+    ALTER TABLE dbo.courses ADD objectives NVARCHAR(MAX) NULL;
+IF COL_LENGTH(N'dbo.courses', N'requirements') IS NULL
+    ALTER TABLE dbo.courses ADD requirements NVARCHAR(MAX) NULL;
+IF COL_LENGTH(N'dbo.courses', N'change_note') IS NULL
+    ALTER TABLE dbo.courses ADD change_note NVARCHAR(2000) NULL;
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_courses_status' AND parent_object_id = OBJECT_ID('dbo.courses'))
+BEGIN
+    IF OBJECT_DEFINITION(OBJECT_ID('dbo.CK_courses_status')) NOT LIKE '%UPDATING%'
+    BEGIN
+        ALTER TABLE dbo.courses DROP CONSTRAINT CK_courses_status;
+        ALTER TABLE dbo.courses ADD CONSTRAINT CK_courses_status
+            CHECK (status IN (N'DRAFT', N'SUBMITTED', N'APPROVED', N'REJECTED', N'PUBLISHED', N'ARCHIVED', N'UPDATING'));
+    END
 END;
 IF OBJECT_ID(N'dbo.course_reviews', N'U') IS NULL
 BEGIN
@@ -190,6 +211,24 @@ CREATE TABLE dbo.course_reviews (
     CONSTRAINT FK_course_reviews_admin FOREIGN KEY (admin_id) REFERENCES dbo.users(user_id)
 );
 END;
+
+IF OBJECT_ID(N'dbo.course_sections', N'U') IS NULL
+BEGIN
+CREATE TABLE dbo.course_sections (
+    section_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_course_sections PRIMARY KEY,
+    course_id INT NOT NULL,
+    title NVARCHAR(255) NOT NULL,
+    description NVARCHAR(MAX) NULL,
+    order_index INT NOT NULL,
+    created_at DATETIME2 NOT NULL CONSTRAINT DF_course_sections_created DEFAULT SYSDATETIME(),
+    updated_at DATETIME2 NULL,
+    CONSTRAINT CK_course_sections_order CHECK (order_index >= 1),
+    CONSTRAINT FK_course_sections_course FOREIGN KEY (course_id) REFERENCES dbo.courses(course_id)
+);
+END;
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_course_sections_order' AND parent_object_id = OBJECT_ID('dbo.course_sections'))
+    ALTER TABLE dbo.course_sections ADD CONSTRAINT CK_course_sections_order CHECK (order_index >= 1);
+
 
 -- UC45 extension: Created here because enrollments may reference a payment.
 IF OBJECT_ID(N'dbo.payments', N'U') IS NULL
@@ -277,19 +316,53 @@ BEGIN
 CREATE TABLE dbo.lessons (
     lesson_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_lessons PRIMARY KEY,
     course_id INT NOT NULL,
+    section_id INT NULL,
     title NVARCHAR(255) NOT NULL,
     content NVARCHAR(MAX) NULL,
     order_index INT NOT NULL,
     status NVARCHAR(20) NOT NULL CONSTRAINT DF_lessons_status DEFAULT N'DRAFT',
+    lesson_type NVARCHAR(20) NOT NULL CONSTRAINT DF_lessons_type DEFAULT N'ARTICLE',
+    video_url NVARCHAR(2048) NULL,
+    video_duration INT NULL,
+    allow_seek BIT NOT NULL CONSTRAINT DF_lessons_seek DEFAULT 1,
+    is_preview BIT NOT NULL CONSTRAINT DF_lessons_preview DEFAULT 0,
+    unlock_days_after_enroll INT NULL,
+    prerequisite_lesson_id INT NULL,
+    instructor_notes NVARCHAR(MAX) NULL,
     created_at DATETIME2 NOT NULL CONSTRAINT DF_lessons_created DEFAULT SYSDATETIME(),
     updated_at DATETIME2 NULL,
     CONSTRAINT UQ_lessons_order UNIQUE (course_id, order_index),
     CONSTRAINT UQ_lessons_course UNIQUE (course_id, lesson_id),
     CONSTRAINT CK_lessons_order CHECK (order_index >= 1),
     CONSTRAINT CK_lessons_status CHECK (status IN (N'DRAFT', N'PUBLISHED', N'ARCHIVED')),
-    CONSTRAINT FK_lessons_course FOREIGN KEY (course_id) REFERENCES dbo.courses(course_id)
+    CONSTRAINT FK_lessons_course FOREIGN KEY (course_id) REFERENCES dbo.courses(course_id),
+    CONSTRAINT FK_lessons_section FOREIGN KEY (section_id) REFERENCES dbo.course_sections(section_id),
+    CONSTRAINT FK_lessons_prerequisite FOREIGN KEY (prerequisite_lesson_id) REFERENCES dbo.lessons(lesson_id)
 );
 END;
+IF COL_LENGTH(N'dbo.lessons', N'section_id') IS NULL
+    ALTER TABLE dbo.lessons ADD section_id INT NULL CONSTRAINT FK_lessons_section FOREIGN KEY REFERENCES dbo.course_sections(section_id);
+IF COL_LENGTH(N'dbo.lessons', N'lesson_type') IS NULL
+    ALTER TABLE dbo.lessons ADD lesson_type NVARCHAR(20) NOT NULL CONSTRAINT DF_lessons_type DEFAULT N'ARTICLE';
+IF COL_LENGTH(N'dbo.lessons', N'video_url') IS NULL
+    ALTER TABLE dbo.lessons ADD video_url NVARCHAR(2048) NULL;
+IF COL_LENGTH(N'dbo.lessons', N'video_duration') IS NULL
+    ALTER TABLE dbo.lessons ADD video_duration INT NULL;
+IF COL_LENGTH(N'dbo.lessons', N'allow_seek') IS NULL
+    ALTER TABLE dbo.lessons ADD allow_seek BIT NOT NULL CONSTRAINT DF_lessons_seek DEFAULT 1;
+IF COL_LENGTH(N'dbo.lessons', N'is_preview') IS NULL
+    ALTER TABLE dbo.lessons ADD is_preview BIT NOT NULL CONSTRAINT DF_lessons_preview DEFAULT 0;
+IF COL_LENGTH(N'dbo.lessons', N'unlock_days_after_enroll') IS NULL
+    ALTER TABLE dbo.lessons ADD unlock_days_after_enroll INT NULL;
+IF COL_LENGTH(N'dbo.lessons', N'prerequisite_lesson_id') IS NULL
+    ALTER TABLE dbo.lessons ADD prerequisite_lesson_id INT NULL CONSTRAINT FK_lessons_prerequisite FOREIGN KEY REFERENCES dbo.lessons(lesson_id);
+IF COL_LENGTH(N'dbo.lessons', N'instructor_notes') IS NULL
+    ALTER TABLE dbo.lessons ADD instructor_notes NVARCHAR(MAX) NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_lessons_section')
+    ALTER TABLE dbo.lessons ADD CONSTRAINT FK_lessons_section FOREIGN KEY (section_id) REFERENCES dbo.course_sections(section_id);
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_lessons_prerequisite')
+    ALTER TABLE dbo.lessons ADD CONSTRAINT FK_lessons_prerequisite FOREIGN KEY (prerequisite_lesson_id) REFERENCES dbo.lessons(lesson_id);
+
 IF OBJECT_ID(N'dbo.materials', N'U') IS NULL
 BEGIN
 CREATE TABLE dbo.materials (
@@ -436,6 +509,9 @@ CREATE TABLE dbo.quizzes (
     due_date DATETIME2 NULL,
     end_time DATETIME2 NULL,
     rules NVARCHAR(MAX) NULL,
+    passing_score DECIMAL(5,2) NULL,
+    shuffle_questions BIT NOT NULL CONSTRAINT DF_quizzes_shuffle_q DEFAULT 0,
+    shuffle_options BIT NOT NULL CONSTRAINT DF_quizzes_shuffle_o DEFAULT 0,
     status NVARCHAR(20) NOT NULL CONSTRAINT DF_quizzes_status DEFAULT N'DRAFT',
     created_by INT NOT NULL,
     created_at DATETIME2 NOT NULL CONSTRAINT DF_quizzes_created DEFAULT SYSDATETIME(),
@@ -449,6 +525,13 @@ CREATE TABLE dbo.quizzes (
     CONSTRAINT FK_quizzes_author FOREIGN KEY (created_by) REFERENCES dbo.users(user_id)
 );
 END;
+IF COL_LENGTH(N'dbo.quizzes', N'passing_score') IS NULL
+    ALTER TABLE dbo.quizzes ADD passing_score DECIMAL(5,2) NULL;
+IF COL_LENGTH(N'dbo.quizzes', N'shuffle_questions') IS NULL
+    ALTER TABLE dbo.quizzes ADD shuffle_questions BIT NOT NULL CONSTRAINT DF_quizzes_shuffle_q DEFAULT 0;
+IF COL_LENGTH(N'dbo.quizzes', N'shuffle_options') IS NULL
+    ALTER TABLE dbo.quizzes ADD shuffle_options BIT NOT NULL CONSTRAINT DF_quizzes_shuffle_o DEFAULT 0;
+
 IF OBJECT_ID(N'dbo.questions', N'U') IS NULL
 BEGIN
 CREATE TABLE dbo.questions (
@@ -564,10 +647,20 @@ CREATE TABLE dbo.study_plans (
     created_at DATETIME2 NOT NULL CONSTRAINT DF_study_plans_created DEFAULT SYSDATETIME(),
     CONSTRAINT UQ_study_plans_owner UNIQUE (plan_id, student_id),
     CONSTRAINT CK_study_plans_dates CHECK (end_date >= start_date),
-    CONSTRAINT CK_study_plans_status CHECK (status IN (N'ACTIVE', N'ARCHIVED')),
+    CONSTRAINT CK_study_plans_status CHECK (status IN (N'ACTIVE', N'COMPLETED', N'CANCELLED', N'ARCHIVED')),
     CONSTRAINT FK_study_plans_student FOREIGN KEY (student_id) REFERENCES dbo.users(user_id)
 );
 END;
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_study_plans_status' AND parent_object_id = OBJECT_ID('dbo.study_plans'))
+BEGIN
+    IF OBJECT_DEFINITION(OBJECT_ID('dbo.CK_study_plans_status')) NOT LIKE '%COMPLETED%'
+    BEGIN
+        ALTER TABLE dbo.study_plans DROP CONSTRAINT CK_study_plans_status;
+        ALTER TABLE dbo.study_plans ADD CONSTRAINT CK_study_plans_status
+            CHECK (status IN (N'ACTIVE', N'COMPLETED', N'CANCELLED', N'ARCHIVED'));
+    END
+END;
+
 IF OBJECT_ID(N'dbo.personal_tasks', N'U') IS NULL
 BEGIN
 CREATE TABLE dbo.personal_tasks (
@@ -585,7 +678,7 @@ CREATE TABLE dbo.personal_tasks (
     status NVARCHAR(20) NOT NULL CONSTRAINT DF_personal_tasks_status DEFAULT N'TODO',
     completed_at DATETIME2 NULL,
     CONSTRAINT CK_personal_tasks_dates CHECK (planned_end_at >= planned_start_at),
-    CONSTRAINT CK_personal_tasks_status CHECK (status IN (N'TODO', N'IN_PROGRESS', N'DONE', N'CANCELLED')),
+    CONSTRAINT CK_personal_tasks_status CHECK (status IN (N'TODO', N'IN_PROGRESS', N'DONE', N'CANCELLED', N'PENDING', N'SKIPPED')),
     CONSTRAINT CK_personal_tasks_done CHECK (status <> N'DONE' OR completed_at IS NOT NULL),
     CONSTRAINT CK_personal_tasks_reference CHECK ((CASE WHEN related_lesson_id IS NULL THEN 0 ELSE 1 END + CASE WHEN related_assignment_id IS NULL THEN 0 ELSE 1 END + CASE WHEN related_quiz_id IS NULL THEN 0 ELSE 1 END) <= 1 AND ((related_lesson_id IS NULL AND related_assignment_id IS NULL AND related_quiz_id IS NULL) OR course_id IS NOT NULL)),
     CONSTRAINT FK_personal_tasks_plan FOREIGN KEY (plan_id, student_id) REFERENCES dbo.study_plans(plan_id, student_id),
@@ -595,6 +688,19 @@ CREATE TABLE dbo.personal_tasks (
     CONSTRAINT FK_personal_tasks_quiz FOREIGN KEY (course_id, related_quiz_id) REFERENCES dbo.quizzes(course_id, quiz_id)
 );
 END;
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_personal_tasks_status' AND parent_object_id = OBJECT_ID('dbo.personal_tasks'))
+BEGIN
+    IF OBJECT_DEFINITION(OBJECT_ID('dbo.CK_personal_tasks_status')) NOT LIKE '%PENDING%'
+    BEGIN
+        ALTER TABLE dbo.personal_tasks DROP CONSTRAINT CK_personal_tasks_status;
+        ALTER TABLE dbo.personal_tasks ADD CONSTRAINT CK_personal_tasks_status
+            CHECK (status IN (N'TODO', N'IN_PROGRESS', N'DONE', N'CANCELLED', N'PENDING', N'SKIPPED'));
+    END
+END;
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_personal_tasks_enrollment')
+    ALTER TABLE dbo.personal_tasks ADD CONSTRAINT FK_personal_tasks_enrollment
+        FOREIGN KEY (student_id, course_id) REFERENCES dbo.enrollments(student_id, course_id);
+
 IF OBJECT_ID(N'dbo.learning_progress', N'U') IS NULL
 BEGIN
 CREATE TABLE dbo.learning_progress (
@@ -624,12 +730,25 @@ CREATE TABLE dbo.learning_history (
     quiz_id INT NULL,
     details NVARCHAR(2000) NULL,
     occurred_at DATETIME2 NOT NULL CONSTRAINT DF_learning_history_occurred DEFAULT SYSDATETIME(),
-    CONSTRAINT CK_learning_history_type CHECK ((activity_type = N'LESSON' AND lesson_id IS NOT NULL AND assignment_id IS NULL AND quiz_id IS NULL) OR (activity_type = N'ASSIGNMENT' AND assignment_id IS NOT NULL AND lesson_id IS NULL AND quiz_id IS NULL) OR (activity_type = N'QUIZ' AND quiz_id IS NOT NULL AND lesson_id IS NULL AND assignment_id IS NULL)),
+    CONSTRAINT CK_learning_history_type CHECK (
+        activity_type IN (N'LESSON', N'LESSON_COMPLETED', N'ASSIGNMENT', N'ASSIGNMENT_SUBMITTED',
+                          N'QUIZ', N'QUIZ_SUBMITTED', N'COURSE_ENROLLED', N'COURSE_COMPLETED', N'COURSE_ACCESSED')
+    ),
     CONSTRAINT FK_learning_history_enrollment FOREIGN KEY (student_id, course_id) REFERENCES dbo.enrollments(student_id, course_id),
     CONSTRAINT FK_learning_history_lesson FOREIGN KEY (course_id, lesson_id) REFERENCES dbo.lessons(course_id, lesson_id),
     CONSTRAINT FK_learning_history_assignment FOREIGN KEY (course_id, assignment_id) REFERENCES dbo.assignments(course_id, assignment_id),
     CONSTRAINT FK_learning_history_quiz FOREIGN KEY (course_id, quiz_id) REFERENCES dbo.quizzes(course_id, quiz_id)
 );
+END;
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_learning_history_type' AND parent_object_id = OBJECT_ID('dbo.learning_history'))
+BEGIN
+    IF OBJECT_DEFINITION(OBJECT_ID('dbo.CK_learning_history_type')) NOT LIKE '%COURSE_ACCESSED%'
+    BEGIN
+        ALTER TABLE dbo.learning_history DROP CONSTRAINT CK_learning_history_type;
+        ALTER TABLE dbo.learning_history ADD CONSTRAINT CK_learning_history_type
+            CHECK (activity_type IN (N'LESSON', N'LESSON_COMPLETED', N'ASSIGNMENT', N'ASSIGNMENT_SUBMITTED',
+                                     N'QUIZ', N'QUIZ_SUBMITTED', N'COURSE_ENROLLED', N'COURSE_COMPLETED', N'COURSE_ACCESSED'));
+    END
 END;
 
 -- UC40-UC44: Q&A is separate from discussions; recipient state tracks announcements.
@@ -913,6 +1032,10 @@ INSERT INTO #EduSphereExpectedColumns VALUES
     (N'courses', N'price', N'decimal', 9, 0, 0, 18, 2),
     (N'courses', N'currency', N'char', 3, 0, 0, 0, 0),
     (N'courses', N'thumbnail_url', N'nvarchar', 4096, 1, 0, 0, 0),
+    (N'courses', N'promo_video_url', N'nvarchar', 4096, 1, 0, 0, 0),
+    (N'courses', N'objectives', N'nvarchar', -1, 1, 0, 0, 0),
+    (N'courses', N'requirements', N'nvarchar', -1, 1, 0, 0, 0),
+    (N'courses', N'change_note', N'nvarchar', 4000, 1, 0, 0, 0),
     (N'courses', N'status', N'nvarchar', 40, 0, 0, 0, 0),
     (N'courses', N'version_no', N'int', 4, 0, 0, 0, 0),
     (N'courses', N'created_at', N'datetime2', 8, 0, 0, 0, 7),
@@ -928,12 +1051,20 @@ INSERT INTO #EduSphereExpectedColumns VALUES
     (N'course_reviews', N'decision', N'nvarchar', 40, 0, 0, 0, 0),
     (N'course_reviews', N'comment', N'nvarchar', 4000, 1, 0, 0, 0),
     (N'course_reviews', N'reviewed_at', N'datetime2', 8, 0, 0, 0, 7),
+    (N'course_sections', N'section_id', N'int', 4, 0, 1, 0, 0),
+    (N'course_sections', N'course_id', N'int', 4, 0, 0, 0, 0),
+    (N'course_sections', N'title', N'nvarchar', 510, 0, 0, 0, 0),
+    (N'course_sections', N'description', N'nvarchar', -1, 1, 0, 0, 0),
+    (N'course_sections', N'order_index', N'int', 4, 0, 0, 0, 0),
+    (N'course_sections', N'created_at', N'datetime2', 8, 0, 0, 0, 7),
+    (N'course_sections', N'updated_at', N'datetime2', 8, 1, 0, 0, 7),
     (N'payments', N'payment_id', N'int', 4, 0, 1, 0, 0),
     (N'payments', N'student_id', N'int', 4, 0, 0, 0, 0),
     (N'payments', N'course_id', N'int', 4, 0, 0, 0, 0),
     (N'payments', N'provider', N'nvarchar', 100, 0, 0, 0, 0),
     (N'payments', N'provider_transaction_id', N'nvarchar', 510, 1, 0, 0, 0),
     (N'payments', N'request_key', N'nvarchar', 200, 0, 0, 0, 0),
+    (N'payments', N'checkout_url', N'nvarchar', 4096, 1, 0, 0, 0),
     (N'payments', N'amount', N'decimal', 9, 0, 0, 18, 2),
     (N'payments', N'currency', N'char', 3, 0, 0, 0, 0),
     (N'payments', N'status', N'nvarchar', 40, 0, 0, 0, 0),
@@ -966,10 +1097,19 @@ INSERT INTO #EduSphereExpectedColumns VALUES
     (N'enrollments', N'dropped_at', N'datetime2', 8, 1, 0, 0, 7),
     (N'lessons', N'lesson_id', N'int', 4, 0, 1, 0, 0),
     (N'lessons', N'course_id', N'int', 4, 0, 0, 0, 0),
+    (N'lessons', N'section_id', N'int', 4, 1, 0, 0, 0),
     (N'lessons', N'title', N'nvarchar', 510, 0, 0, 0, 0),
     (N'lessons', N'content', N'nvarchar', -1, 1, 0, 0, 0),
     (N'lessons', N'order_index', N'int', 4, 0, 0, 0, 0),
     (N'lessons', N'status', N'nvarchar', 40, 0, 0, 0, 0),
+    (N'lessons', N'lesson_type', N'nvarchar', 40, 0, 0, 0, 0),
+    (N'lessons', N'video_url', N'nvarchar', 4096, 1, 0, 0, 0),
+    (N'lessons', N'video_duration', N'int', 4, 1, 0, 0, 0),
+    (N'lessons', N'allow_seek', N'bit', 1, 0, 0, 0, 0),
+    (N'lessons', N'is_preview', N'bit', 1, 0, 0, 0, 0),
+    (N'lessons', N'unlock_days_after_enroll', N'int', 4, 1, 0, 0, 0),
+    (N'lessons', N'prerequisite_lesson_id', N'int', 4, 1, 0, 0, 0),
+    (N'lessons', N'instructor_notes', N'nvarchar', -1, 1, 0, 0, 0),
     (N'lessons', N'created_at', N'datetime2', 8, 0, 0, 0, 7),
     (N'lessons', N'updated_at', N'datetime2', 8, 1, 0, 0, 7),
     (N'materials', N'material_id', N'int', 4, 0, 1, 0, 0),
@@ -1047,6 +1187,9 @@ INSERT INTO #EduSphereExpectedColumns VALUES
     (N'quizzes', N'due_date', N'datetime2', 8, 1, 0, 0, 7),
     (N'quizzes', N'end_time', N'datetime2', 8, 1, 0, 0, 7),
     (N'quizzes', N'rules', N'nvarchar', -1, 1, 0, 0, 0),
+    (N'quizzes', N'passing_score', N'decimal', 5, 1, 0, 5, 2),
+    (N'quizzes', N'shuffle_questions', N'bit', 1, 0, 0, 0, 0),
+    (N'quizzes', N'shuffle_options', N'bit', 1, 0, 0, 0, 0),
     (N'quizzes', N'status', N'nvarchar', 40, 0, 0, 0, 0),
     (N'quizzes', N'created_by', N'int', 4, 0, 0, 0, 0),
     (N'quizzes', N'created_at', N'datetime2', 8, 0, 0, 0, 7),
@@ -1261,6 +1404,7 @@ INSERT INTO #EduSphereExpectedKeys VALUES
     (N'categories', N'UQ', N'parent_category_id,name'),
     (N'courses', N'PK', N'course_id'),
     (N'course_reviews', N'PK', N'review_id'),
+    (N'course_sections', N'PK', N'section_id'),
     (N'payments', N'PK', N'payment_id'),
     (N'payments', N'UQ', N'request_key'),
     (N'payments', N'UQ', N'student_id,course_id,payment_id'),
@@ -1360,6 +1504,7 @@ INSERT INTO #EduSphereExpectedFks VALUES
     (N'courses', N'instructor_id', N'users', N'user_id', N'NO_ACTION'),
     (N'course_reviews', N'course_id', N'courses', N'course_id', N'NO_ACTION'),
     (N'course_reviews', N'admin_id', N'users', N'user_id', N'NO_ACTION'),
+    (N'course_sections', N'course_id', N'courses', N'course_id', N'NO_ACTION'),
     (N'payments', N'student_id', N'users', N'user_id', N'NO_ACTION'),
     (N'payments', N'course_id', N'courses', N'course_id', N'NO_ACTION'),
     (N'payment_events', N'payment_id', N'payments', N'payment_id', N'NO_ACTION'),
@@ -1369,6 +1514,8 @@ INSERT INTO #EduSphereExpectedFks VALUES
     (N'enrollments', N'course_id', N'courses', N'course_id', N'NO_ACTION'),
     (N'enrollments', N'student_id,course_id,payment_id', N'payments', N'student_id,course_id,payment_id', N'NO_ACTION'),
     (N'lessons', N'course_id', N'courses', N'course_id', N'NO_ACTION'),
+    (N'lessons', N'section_id', N'course_sections', N'section_id', N'NO_ACTION'),
+    (N'lessons', N'prerequisite_lesson_id', N'lessons', N'lesson_id', N'NO_ACTION'),
     (N'materials', N'lesson_id', N'lessons', N'lesson_id', N'NO_ACTION'),
     (N'materials', N'uploaded_by', N'users', N'user_id', N'NO_ACTION'),
     (N'videos', N'material_id', N'materials', N'material_id', N'NO_ACTION'),
@@ -1477,6 +1624,7 @@ INSERT INTO #EduSphereExpectedChecks VALUES
     (N'course_reviews', N'CK_course_reviews_decision'),
     (N'course_reviews', N'CK_course_reviews_version'),
     (N'course_reviews', N'CK_course_reviews_rejection'),
+    (N'course_sections', N'CK_course_sections_order'),
     (N'payments', N'CK_payments_amount'),
     (N'payments', N'CK_payments_status'),
     (N'payments', N'CK_payments_completed'),
@@ -1571,6 +1719,7 @@ INSERT INTO #EduSphereExpectedDefaults VALUES
     (N'courses', N'version_no'),
     (N'courses', N'created_at'),
     (N'course_reviews', N'reviewed_at'),
+    (N'course_sections', N'created_at'),
     (N'payments', N'currency'),
     (N'payments', N'status'),
     (N'payments', N'created_at'),
@@ -1581,6 +1730,9 @@ INSERT INTO #EduSphereExpectedDefaults VALUES
     (N'enrollments', N'enrolled_at'),
     (N'enrollments', N'status'),
     (N'lessons', N'status'),
+    (N'lessons', N'lesson_type'),
+    (N'lessons', N'allow_seek'),
+    (N'lessons', N'is_preview'),
     (N'lessons', N'created_at'),
     (N'materials', N'uploaded_at'),
     (N'videos', N'status'),
@@ -1596,6 +1748,8 @@ INSERT INTO #EduSphereExpectedDefaults VALUES
     (N'grades', N'graded_at'),
     (N'grades', N'result_status'),
     (N'quizzes', N'max_attempts'),
+    (N'quizzes', N'shuffle_questions'),
+    (N'quizzes', N'shuffle_options'),
     (N'quizzes', N'status'),
     (N'quizzes', N'created_at'),
     (N'answer_options', N'is_correct'),
@@ -1665,6 +1819,9 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.cours
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.course_reviews') AND name = N'IX_course_reviews_history')
     CREATE INDEX IX_course_reviews_history ON dbo.course_reviews (course_id, course_version, reviewed_at);
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.course_sections') AND name = N'IX_course_sections_course')
+    CREATE INDEX IX_course_sections_course ON dbo.course_sections (course_id, order_index);
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.payments') AND name = N'IX_payments_student_course')
     CREATE INDEX IX_payments_student_course ON dbo.payments (student_id, course_id, created_at);
@@ -1759,7 +1916,7 @@ DROP TABLE #EduSphereExpectedChecks;
 DROP TABLE #EduSphereExpectedDefaults;
 
     COMMIT TRANSACTION;
-    PRINT N'EduSphere schema ready: 44 application tables; existing data preserved.';
+    PRINT N'EduSphere schema ready: 45 application tables; existing data preserved.';
 END TRY
 BEGIN CATCH
     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;

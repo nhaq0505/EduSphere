@@ -232,8 +232,10 @@ public class AssignmentService {
         if (attemptCount >= a.getMaxAttempts())
             throw conflict("Bạn đã đạt số lần nộp tối đa (" + a.getMaxAttempts() + ").");
 
-        // Check lock/due
+        // Check unlock/lock
         LocalDateTime now = LocalDateTime.now();
+        if (a.getUnlockAt() != null && now.isBefore(a.getUnlockAt()))
+            throw conflict("Bài tập chưa đến thời gian mở khóa.");
         if (a.getLockAt() != null && now.isAfter(a.getLockAt()))
             throw conflict("Bài tập đã bị khóa, không thể nộp.");
 
@@ -273,11 +275,35 @@ public class AssignmentService {
         a.setTitle(form.getTitle().trim());
         a.setDescription(form.getDescription());
         a.setMaxScore(form.getMaxScore());
-        a.setAllowResubmit(form.isAllowResubmit());
-        a.setMaxAttempts(form.getMaxAttempts() != null ? form.getMaxAttempts() : 1);
-        a.setDueDate(parseDateTime(form.getDueDate()));
-        a.setUnlockAt(parseDateTime(form.getUnlockAt()));
-        a.setLockAt(parseDateTime(form.getLockAt()));
+
+        // Enforce CK_assignments_attempts: (allow_resubmit = 0 AND max_attempts = 1) OR (allow_resubmit = 1 AND max_attempts >= 2)
+        if (!form.isAllowResubmit()) {
+            a.setAllowResubmit(false);
+            a.setMaxAttempts(1);
+        } else {
+            a.setAllowResubmit(true);
+            int attempts = (form.getMaxAttempts() != null && form.getMaxAttempts() >= 2) ? form.getMaxAttempts() : 2;
+            a.setMaxAttempts(attempts);
+        }
+
+        LocalDateTime due = parseDateTime(form.getDueDate());
+        if (due == null) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Hạn nộp bài không được để trống.");
+        }
+        LocalDateTime unlock = parseDateTime(form.getUnlockAt());
+        LocalDateTime lock = parseDateTime(form.getLockAt());
+
+        // Enforce CK_assignments_dates: (unlock_at IS NULL OR unlock_at <= due_date) AND (lock_at IS NULL OR lock_at >= due_date)
+        if (unlock != null && unlock.isAfter(due)) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Thời điểm mở khóa (unlockAt) phải trước hoặc cùng hạn nộp (dueDate).");
+        }
+        if (lock != null && lock.isBefore(due)) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Thời điểm khóa (lockAt) phải sau hoặc cùng hạn nộp (dueDate).");
+        }
+
+        a.setDueDate(due);
+        a.setUnlockAt(unlock);
+        a.setLockAt(lock);
         if (form.getLessonId() != null) {
             Lesson lesson = lessons.findById(form.getLessonId())
                     .orElseThrow(() -> conflict("Bài học không tồn tại."));

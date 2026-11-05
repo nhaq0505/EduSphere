@@ -158,6 +158,9 @@ public class QuizService {
     @Transactional
     public void addQuestion(Integer courseId, Integer quizId, Integer instructorId, QuestionForm form) {
         Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
+        if (form.getScore() == null || form.getScore().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Điểm câu hỏi phải lớn hơn 0.");
+        }
         long nextIndex = questions.countByQuiz_QuizId(quizId) + 1;
 
         Question q = new Question();
@@ -202,38 +205,77 @@ public class QuizService {
         if (!q.getQuiz().getQuizId().equals(quizId))
             throw notFound("Câu hỏi không thuộc quiz này.");
 
+        if (form.getScore() == null || form.getScore().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Điểm câu hỏi phải lớn hơn 0.");
+        }
+
         q.setContent(form.getContent().trim());
         q.setType(form.getType());
         q.setScore(form.getScore());
         q.setCorrectAnswer(form.getCorrectAnswer());
         q.setExplanation(form.getExplanation());
 
-        // Rebuild options (delete old, add new)
-        List<Integer> oldOptionIds = q.getOptions().stream()
-                .map(AnswerOption::getOptionId)
-                .filter(java.util.Objects::nonNull)
-                .toList();
-        if (!oldOptionIds.isEmpty()) {
-            answerOptionLinks.deleteByOption_OptionIdIn(oldOptionIds);
-            answerOptionLinks.flush();
-        }
-        answerOptions.deleteAll(q.getOptions());
-        q.getOptions().clear();
-        answerOptions.flush();
-
+        // In-place update of options preserving student quiz_answers history
         if (Set.of("SINGLE_CHOICE", "MULTIPLE_CHOICE").contains(form.getType())) {
             List<String> contents = form.getOptionContents();
             List<Boolean> corrects = form.getOptionCorrects();
-            int idx = 1;
-            for (int i = 0; i < contents.size(); i++) {
-                String c = contents.get(i);
-                if (c == null || c.isBlank()) continue;
-                AnswerOption opt = new AnswerOption();
-                opt.setQuestion(q);
-                opt.setContent(c.trim());
-                opt.setCorrect(corrects != null && i < corrects.size() && Boolean.TRUE.equals(corrects.get(i)));
-                opt.setOrderIndex(idx++);
+            List<String> validContents = new java.util.ArrayList<>();
+            List<Boolean> validCorrects = new java.util.ArrayList<>();
+            if (contents != null) {
+                for (int i = 0; i < contents.size(); i++) {
+                    String c = contents.get(i);
+                    if (c != null && !c.isBlank()) {
+                        validContents.add(c.trim());
+                        validCorrects.add(corrects != null && i < corrects.size() && Boolean.TRUE.equals(corrects.get(i)));
+                    }
+                }
+            }
+
+            List<AnswerOption> existingOpts = answerOptions.findByQuestion_QuestionIdOrderByOrderIndexAsc(questionId);
+            int existingCount = existingOpts.size();
+            int newCount = validContents.size();
+
+            // 1. Update existing options in-place
+            for (int i = 0; i < Math.min(existingCount, newCount); i++) {
+                AnswerOption opt = existingOpts.get(i);
+                opt.setContent(validContents.get(i));
+                opt.setCorrect(validCorrects.get(i));
+                opt.setOrderIndex(i + 1);
                 answerOptions.save(opt);
+            }
+
+            // 2. Add extra new options if any
+            if (newCount > existingCount) {
+                for (int i = existingCount; i < newCount; i++) {
+                    AnswerOption opt = new AnswerOption();
+                    opt.setQuestion(q);
+                    opt.setContent(validContents.get(i));
+                    opt.setCorrect(validCorrects.get(i));
+                    opt.setOrderIndex(i + 1);
+                    answerOptions.save(opt);
+                }
+            }
+
+            // 3. Remove surplus options if fewer options now (only remove links for removed options)
+            if (existingCount > newCount) {
+                List<AnswerOption> toRemove = existingOpts.subList(newCount, existingCount);
+                List<Integer> removeIds = toRemove.stream().map(AnswerOption::getOptionId).toList();
+                if (!removeIds.isEmpty()) {
+                    answerOptionLinks.deleteByOption_OptionIdIn(removeIds);
+                    answerOptionLinks.flush();
+                    answerOptions.deleteAll(toRemove);
+                    answerOptions.flush();
+                }
+            }
+        } else {
+            // Non-choice question: clean up options only if options exist
+            List<AnswerOption> existingOpts = answerOptions.findByQuestion_QuestionIdOrderByOrderIndexAsc(questionId);
+            if (!existingOpts.isEmpty()) {
+                List<Integer> removeIds = existingOpts.stream().map(AnswerOption::getOptionId).toList();
+                answerOptionLinks.deleteByOption_OptionIdIn(removeIds);
+                answerOptionLinks.flush();
+                answerOptions.deleteAll(existingOpts);
+                answerOptions.flush();
             }
         }
         questions.save(q);
@@ -274,13 +316,18 @@ public class QuizService {
             answerOptions.flush();
         }
         questions.delete(q);
-        // Re-index remaining questions
+        questions.flush();
+
+        // Re-index remaining questions with 2-pass buffering to prevent UQ_questions_order clash
         List<Question> remaining = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
-        int idx = 1;
-        for (Question r : remaining) {
-            r.setOrderIndex(idx++);
-            questions.save(r);
+        for (int i = 0; i < remaining.size(); i++) {
+            remaining.get(i).setOrderIndex(10000 + (i + 1));
         }
+        questions.saveAllAndFlush(remaining);
+        for (int i = 0; i < remaining.size(); i++) {
+            remaining.get(i).setOrderIndex(i + 1);
+        }
+        questions.saveAllAndFlush(remaining);
     }
 
     @Transactional
@@ -296,10 +343,20 @@ public class QuizService {
         int swapIdx = "up".equals(direction) ? idx - 1 : idx + 1;
         if (swapIdx < 0 || swapIdx >= qList.size()) return;
         Question a = qList.get(idx), b = qList.get(swapIdx);
-        int tmp = a.getOrderIndex();
-        a.setOrderIndex(b.getOrderIndex());
-        b.setOrderIndex(tmp);
-        questions.save(a); questions.save(b);
+        int orderA = a.getOrderIndex();
+        int orderB = b.getOrderIndex();
+
+        // Step 1: Move a to temporary buffer to avoid UQ_questions_order violation
+        a.setOrderIndex(10000 + orderA);
+        questions.saveAndFlush(a);
+
+        // Step 2: Move b to orderA
+        b.setOrderIndex(orderA);
+        questions.saveAndFlush(b);
+
+        // Step 3: Move a to orderB
+        a.setOrderIndex(orderB);
+        questions.saveAndFlush(a);
     }
 
     @Transactional
@@ -456,9 +513,25 @@ public class QuizService {
     }
 
     @Transactional(readOnly = true)
+    public QuizAttempt getAttemptForStudent(Integer courseId, Integer quizId, Integer attemptId, Integer studentId) {
+        verifyEnrolled(courseId, studentId);
+        QuizAttempt attempt = attempts.findByAttemptIdAndStudent_UserId(attemptId, studentId)
+                .orElseThrow(() -> notFound("Không tìm thấy lần làm quiz."));
+        if (attempt.getQuiz() == null || !attempt.getQuiz().getQuizId().equals(quizId)
+                || attempt.getCourse() == null || !attempt.getCourse().getCourseId().equals(courseId)) {
+            throw notFound("Không tìm thấy lần làm quiz trong bài kiểm tra hoặc khóa học này.");
+        }
+        initAttempt(attempt);
+        return attempt;
+    }
+
+    @Transactional(readOnly = true)
     public QuizAttempt getAttemptForStudent(Integer attemptId, Integer studentId) {
         QuizAttempt attempt = attempts.findByAttemptIdAndStudent_UserId(attemptId, studentId)
                 .orElseThrow(() -> notFound("Không tìm thấy lần làm quiz."));
+        if (attempt.getCourse() != null) {
+            verifyEnrolled(attempt.getCourse().getCourseId(), studentId);
+        }
         initAttempt(attempt);
         return attempt;
     }
@@ -496,16 +569,25 @@ public class QuizService {
     }
 
     @Transactional
+    public void submitAttempt(Integer courseId, Integer quizId, Integer attemptId, Integer studentId,
+                              Map<Integer, List<String>> questionAnswers) {
+        QuizAttempt attempt = getAttemptForStudent(courseId, quizId, attemptId, studentId);
+        doSubmitAttempt(attempt, questionAnswers);
+    }
+
+    @Transactional
     public void submitAttempt(Integer attemptId, Integer studentId,
                               Map<Integer, List<String>> questionAnswers) {
         QuizAttempt attempt = getAttemptForStudent(attemptId, studentId);
+        doSubmitAttempt(attempt, questionAnswers);
+    }
+
+    private void doSubmitAttempt(QuizAttempt attempt, Map<Integer, List<String>> questionAnswers) {
         if (!"IN_PROGRESS".equals(attempt.getStatus()))
             throw conflict("Lần làm quiz này không ở trạng thái đang làm.");
 
-        // Check deadline
         LocalDateTime now = LocalDateTime.now();
-        if (attempt.getDeadlineAt() != null && now.isAfter(attempt.getDeadlineAt()))
-            throw conflict("Đã hết thời gian làm quiz.");
+        // Do not throw rollback exception if overdue/timeout; gracefully finish and score the attempt
 
         List<Question> qList = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(attempt.getQuiz().getQuizId());
 
@@ -585,6 +667,12 @@ public class QuizService {
                 .anyMatch(q -> "SHORT_ANSWER".equals(q.getType()) || "ESSAY".equals(q.getType()));
         if (!hasManual) {
             attempt.setStatus("SCORED");
+            attempt.setResultStatus("PUBLISHED");
+            attempt.setPublishedAt(now);
+            Users publisher = (attempt.getQuiz() != null && attempt.getQuiz().getCreatedBy() != null)
+                    ? attempt.getQuiz().getCreatedBy()
+                    : (attempt.getQuiz() != null && attempt.getQuiz().getCourse() != null ? attempt.getQuiz().getCourse().getInstructor() : attempt.getStudent());
+            attempt.setPublishedBy(publisher);
         }
         attempts.save(attempt);
 
@@ -636,13 +724,37 @@ public class QuizService {
     }
 
     private void applyForm(Quiz quiz, QuizForm form) {
+        LocalDateTime start = parseDateTime(form.getStartTime());
+        LocalDateTime due = parseDateTime(form.getDueDate());
+        LocalDateTime end = parseDateTime(form.getEndTime());
+
+        // Validate CK_quizzes_dates / CK_quizzes_window:
+        // (start IS NULL OR due IS NULL OR start <= due) AND
+        // (due IS NULL OR end IS NULL OR due <= end) AND
+        // (start IS NULL OR end IS NULL OR start < end)
+        if (start != null && end != null && !start.isBefore(end)) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Thời gian bắt đầu phải trước thời gian kết thúc.");
+        }
+        if (start != null && due != null && start.isAfter(due)) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Thời gian bắt đầu phải trước hoặc bằng hạn nộp.");
+        }
+        if (due != null && end != null && due.isAfter(end)) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Hạn nộp phải trước hoặc bằng thời gian kết thúc.");
+        }
+        if (form.getTimeLimitMinutes() != null && form.getTimeLimitMinutes() <= 0) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Thời gian làm bài phải lớn hơn 0 phút.");
+        }
+        if (form.getMaxAttempts() != null && form.getMaxAttempts() < 1) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Số lần làm tối đa phải ít nhất là 1.");
+        }
+
         quiz.setTitle(form.getTitle().trim());
         quiz.setDescription(form.getDescription());
         quiz.setTimeLimitMinutes(form.getTimeLimitMinutes());
         quiz.setMaxAttempts(form.getMaxAttempts() != null ? form.getMaxAttempts() : 1);
-        quiz.setStartTime(parseDateTime(form.getStartTime()));
-        quiz.setDueDate(parseDateTime(form.getDueDate()));
-        quiz.setEndTime(parseDateTime(form.getEndTime()));
+        quiz.setStartTime(start);
+        quiz.setDueDate(due);
+        quiz.setEndTime(end);
         quiz.setRules(form.getRules());
         quiz.setPassingScore(form.getPassingScore());
         quiz.setShuffleQuestions(form.isShuffleQuestions());

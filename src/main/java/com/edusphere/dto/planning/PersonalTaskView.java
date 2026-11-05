@@ -26,5 +26,17 @@ public class PersonalTaskView {
     private final LocalDateTime plannedEndAt;
     private final String status;
     private final LocalDateTime completedAt;
+
+    public String getFormattedStartTime() {
+        return plannedStartAt != null ? plannedStartAt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : "";
+    }
+
+    public String getFormattedEndTime() {
+        return plannedEndAt != null ? plannedEndAt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : "";
+    }
+
+    public String getFormattedStartIso() {
+        return plannedStartAt != null ? plannedStartAt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")) : "";
+    }
 }
 

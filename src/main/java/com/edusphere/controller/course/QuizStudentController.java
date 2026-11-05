@@ -62,7 +62,7 @@ public class QuizStudentController {
     public String takeQuiz(@PathVariable Integer courseId, @PathVariable Integer quizId,
                            @PathVariable Integer attemptId,
                            @AuthenticationPrincipal CustomUserDetails user, Model model) {
-        var attempt = service.getAttemptForStudent(attemptId, user.getUserId());
+        var attempt = service.getAttemptForStudent(courseId, quizId, attemptId, user.getUserId());
         if (!"IN_PROGRESS".equals(attempt.getStatus())) {
             return "redirect:/courses/" + courseId + "/quizzes/" + quizId + "/attempts/" + attemptId + "/result";
         }
@@ -93,7 +93,7 @@ public class QuizStudentController {
                 }
             }
         }
-        service.submitAttempt(attemptId, user.getUserId(), questionAnswers);
+        service.submitAttempt(courseId, quizId, attemptId, user.getUserId(), questionAnswers);
         flash.addFlashAttribute("success", "Đã nộp bài quiz!");
         return "redirect:/courses/" + courseId + "/quizzes/" + quizId + "/attempts/" + attemptId + "/result";
     }
@@ -102,7 +102,7 @@ public class QuizStudentController {
     public String result(@PathVariable Integer courseId, @PathVariable Integer quizId,
                          @PathVariable Integer attemptId,
                          @AuthenticationPrincipal CustomUserDetails user, Model model) {
-        var attempt = service.getAttemptForStudent(attemptId, user.getUserId());
+        var attempt = service.getAttemptForStudent(courseId, quizId, attemptId, user.getUserId());
         model.addAttribute("attempt", attempt);
         model.addAttribute("answers", service.getAnswersForAttempt(attemptId));
         model.addAttribute("courseId", courseId);

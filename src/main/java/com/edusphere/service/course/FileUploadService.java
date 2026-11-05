@@ -21,6 +21,16 @@ public class FileUploadService {
     private static final Set<String> ALLOWED_IMAGE_EXTS = Set.of("jpg", "jpeg", "png", "webp", "gif");
     private static final Set<String> ALLOWED_VIDEO_EXTS = Set.of("mp4", "webm", "mov", "mkv", "avi");
     private static final Set<String> ALLOWED_DOC_EXTS   = Set.of("pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "zip", "rar", "txt");
+    private static final Set<String> ALLOWED_GENERAL_EXTS = Set.of(
+            "jpg", "jpeg", "png", "webp", "gif",
+            "mp4", "webm", "mov", "mkv", "avi",
+            "pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "zip", "rar", "txt"
+    );
+
+    private static final Set<String> DANGEROUS_EXTS = Set.of(
+            "html", "htm", "svg", "js", "jsp", "jspx", "exe", "sh", "bat", "cmd",
+            "vbs", "php", "asp", "aspx", "war", "jar", "xhtml"
+    );
 
     @Value("${app.upload.base-dir:${user.home}/edusphere/uploads}")
     private String baseUploadDir;
@@ -36,6 +46,12 @@ public class FileUploadService {
         }
 
         String ext = originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+
+        // Tuyệt đối từ chối các định dạng file nguy hiểm có nguy cơ thực thi hoặc chứa script
+        if (ext.isBlank() || DANGEROUS_EXTS.contains(ext)) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Định dạng tệp nguy hiểm hoặc không được phép: " + ext);
+        }
+
         String subFolder = "general";
 
         if ("thumbnail".equalsIgnoreCase(category) || "image".equalsIgnoreCase(category)) {
@@ -53,6 +69,12 @@ public class FileUploadService {
                 throw new CourseActionException(HttpStatus.BAD_REQUEST, "Định dạng tài liệu không hỗ trợ. Cho phép: PDF, Word, PPTX, ZIP.");
             }
             subFolder = "materials";
+        } else {
+            // Áp dụng whitelist an toàn bắt buộc cho mọi category khác (bao gồm "general")
+            if (!ALLOWED_GENERAL_EXTS.contains(ext)) {
+                throw new CourseActionException(HttpStatus.BAD_REQUEST, "Định dạng tệp không được hỗ trợ trong danh mục tải lên.");
+            }
+            subFolder = "general";
         }
 
         try {

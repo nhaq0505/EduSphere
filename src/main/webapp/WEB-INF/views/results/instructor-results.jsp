@@ -13,10 +13,11 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/instructor.css">
 </head>
 <body>
-<jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
-<div class="ins-shell">
+<div class="ins-layout">
     <jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
-    <main class="ins-content">
+    <div class="ins-main-wrapper">
+        <jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
+        <main class="ins-page">
         <a class="ins-back-link" href="${pageContext.request.contextPath}/instructor/courses/${courseId}/lessons">← Quản lý bài học</a>
         <div class="ins-page-head">
             <div>
@@ -88,10 +89,17 @@
                 </table>
             </c:otherwise>
         </c:choose>
-    </main>
+        </main>
+    </div>
 </div>
 <script>
-function toggleUserMenu(e){e.stopPropagation();e.currentTarget.closest('.hn-user-menu').classList.toggle('open');}
-document.addEventListener('click',()=>document.querySelectorAll('.hn-user-menu.open').forEach(m=>m.classList.remove('open')));
+function insToggleMenu(e) {
+    e.stopPropagation();
+    document.getElementById('insUserMenu').classList.toggle('open');
+}
+document.addEventListener('click', function() {
+    var m = document.getElementById('insUserMenu');
+    if (m) m.classList.remove('open');
+});
 </script>
 </body></html>

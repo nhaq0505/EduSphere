@@ -31,6 +31,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -152,6 +153,10 @@ public class StudyPlanService {
         return toPersonalTaskView(task);
     }
 
+    public static final Set<String> VALID_TASK_STATUSES = Set.of(
+            "TODO", "IN_PROGRESS", "DONE", "CANCELLED", "PENDING", "SKIPPED"
+    );
+
     @Transactional
     public void createTask(Integer planId, Integer studentId, PersonalTaskForm form) {
         StudyPlan plan = findOwnedPlan(planId, studentId);
@@ -164,6 +169,9 @@ public class StudyPlanService {
             throw new CourseActionException(HttpStatus.BAD_REQUEST, "Thời điểm kết thúc phải sau thời điểm bắt đầu.");
         }
 
+        startAt = startAt.withSecond(0).withNano(0);
+        endAt = endAt.withSecond(0).withNano(0);
+
         PersonalTask task = new PersonalTask();
         task.setPlan(plan);
         task.setStudent(student);
@@ -171,7 +179,15 @@ public class StudyPlanService {
         task.setNotes(form.getNotes() != null ? form.getNotes().trim() : null);
         task.setPlannedStartAt(startAt);
         task.setPlannedEndAt(endAt);
-        task.setStatus("PENDING");
+
+        String status = "TODO";
+        if (form.getStatus() != null && VALID_TASK_STATUSES.contains(form.getStatus().trim().toUpperCase())) {
+            status = form.getStatus().trim().toUpperCase();
+        }
+        task.setStatus(status);
+        if ("DONE".equals(status)) {
+            task.setCompletedAt(LocalDateTime.now());
+        }
 
         // Link optional course/lesson/assignment/quiz
         // LƯU Ý: Tuyệt đối KHÔNG thay đổi dueDate / unlockAt / lockAt chính thức của khóa học/bài học/quiz/bài tập!
@@ -191,16 +207,20 @@ public class StudyPlanService {
             throw new CourseActionException(HttpStatus.BAD_REQUEST, "Thời điểm kết thúc phải sau thời điểm bắt đầu.");
         }
 
+        startAt = startAt.withSecond(0).withNano(0);
+        endAt = endAt.withSecond(0).withNano(0);
+
         task.setTitle(form.getTitle().trim());
         task.setNotes(form.getNotes() != null ? form.getNotes().trim() : null);
         task.setPlannedStartAt(startAt);
         task.setPlannedEndAt(endAt);
 
-        if (form.getStatus() != null && List.of("PENDING", "DONE", "SKIPPED").contains(form.getStatus())) {
-            task.setStatus(form.getStatus());
-            if ("DONE".equals(form.getStatus()) && task.getCompletedAt() == null) {
+        if (form.getStatus() != null && VALID_TASK_STATUSES.contains(form.getStatus().trim().toUpperCase())) {
+            String st = form.getStatus().trim().toUpperCase();
+            task.setStatus(st);
+            if ("DONE".equals(st) && task.getCompletedAt() == null) {
                 task.setCompletedAt(LocalDateTime.now());
-            } else if (!"DONE".equals(form.getStatus())) {
+            } else if (!"DONE".equals(st)) {
                 task.setCompletedAt(null);
             }
         }
@@ -284,8 +304,24 @@ public class StudyPlanService {
 
     private void linkRelatedEntities(PersonalTask task, Integer studentId, Integer courseId,
                                      Integer lessonId, Integer assignmentId, Integer quizId) {
+        // Enforce CK_personal_tasks_reference:
+        // At most ONE of relatedLesson, relatedAssignment, relatedQuiz can be set.
+        // If any related entity is set, course_id MUST NOT be null.
+        int refCount = (lessonId != null ? 1 : 0) + (assignmentId != null ? 1 : 0) + (quizId != null ? 1 : 0);
+        if (refCount > 1) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST,
+                    "Nhiệm vụ chỉ được liên kết với tối đa một bài học, bài tập hoặc bài kiểm tra.");
+        }
+        if (courseId == null && refCount > 0) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST,
+                    "Phải chọn khóa học khi liên kết bài học, bài tập hoặc bài kiểm tra.");
+        }
+
         if (courseId != null) {
-            boolean isEnrolled = enrollmentRepository.findByStudent_UserIdAndCourse_CourseId(studentId, courseId).isPresent();
+            // Enforce FK_personal_tasks_enrollment
+            boolean isEnrolled = enrollmentRepository.findByStudent_UserIdAndCourse_CourseId(studentId, courseId)
+                    .filter(e -> !"DROPPED".equalsIgnoreCase(e.getStatus()))
+                    .isPresent();
             if (!isEnrolled) {
                 throw new CourseActionException(HttpStatus.FORBIDDEN, "Bạn chưa ghi danh khóa học này.");
             }
@@ -295,28 +331,28 @@ public class StudyPlanService {
 
             if (lessonId != null) {
                 Lesson lesson = lessonRepository.findById(lessonId)
-                        .filter(l -> l.getCourse().getCourseId().equals(courseId))
-                        .orElse(null);
+                        .filter(l -> l.getCourse() != null && l.getCourse().getCourseId().equals(courseId))
+                        .orElseThrow(() -> new CourseActionException(HttpStatus.BAD_REQUEST, "Bài học không thuộc khóa học này."));
                 task.setRelatedLesson(lesson);
-            } else {
-                task.setRelatedLesson(null);
-            }
-
-            if (assignmentId != null) {
-                Assignment assignment = assignmentRepository.findById(assignmentId)
-                        .filter(a -> a.getCourse().getCourseId().equals(courseId))
-                        .orElse(null);
-                task.setRelatedAssignment(assignment);
-            } else {
                 task.setRelatedAssignment(null);
-            }
-
-            if (quizId != null) {
+                task.setRelatedQuiz(null);
+            } else if (assignmentId != null) {
+                Assignment assignment = assignmentRepository.findById(assignmentId)
+                        .filter(a -> a.getCourse() != null && a.getCourse().getCourseId().equals(courseId))
+                        .orElseThrow(() -> new CourseActionException(HttpStatus.BAD_REQUEST, "Bài tập không thuộc khóa học này."));
+                task.setRelatedLesson(null);
+                task.setRelatedAssignment(assignment);
+                task.setRelatedQuiz(null);
+            } else if (quizId != null) {
                 Quiz quiz = quizRepository.findById(quizId)
-                        .filter(q -> q.getCourse().getCourseId().equals(courseId))
-                        .orElse(null);
+                        .filter(q -> q.getCourse() != null && q.getCourse().getCourseId().equals(courseId))
+                        .orElseThrow(() -> new CourseActionException(HttpStatus.BAD_REQUEST, "Bài kiểm tra không thuộc khóa học này."));
+                task.setRelatedLesson(null);
+                task.setRelatedAssignment(null);
                 task.setRelatedQuiz(quiz);
             } else {
+                task.setRelatedLesson(null);
+                task.setRelatedAssignment(null);
                 task.setRelatedQuiz(null);
             }
         } else {

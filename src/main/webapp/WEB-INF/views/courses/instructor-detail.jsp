@@ -114,6 +114,22 @@
                    href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/preview" target="_blank">
                     👁️ Xem trước với tư cách học viên
                 </a>
+                <a class="ins-btn-outline" style="display:inline-flex; align-items:center; gap:6px; background:#F8FAFC;"
+                   href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/assignments">
+                    📝 Bài tập
+                </a>
+                <a class="ins-btn-outline" style="display:inline-flex; align-items:center; gap:6px; background:#F8FAFC;"
+                   href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/quizzes">
+                    ❓ Quiz
+                </a>
+                <a class="ins-btn-outline" style="display:inline-flex; align-items:center; gap:6px; background:#F8FAFC;"
+                   href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/results">
+                    📊 Kết quả
+                </a>
+                <a class="ins-btn-outline" style="display:inline-flex; align-items:center; gap:6px; background:#F8FAFC;"
+                   href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/students/progress">
+                    👥 Tiến độ học viên
+                </a>
 
                 <c:choose>
                     <c:when test="${course.status == 'DRAFT' || course.status == 'REJECTED'}">
@@ -142,10 +158,20 @@
                         </form>
                     </c:when>
                     <c:when test="${course.status == 'PUBLISHED'}">
-                        <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/hide" style="margin:0;">
-                            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                            <button class="ins-btn-outline" type="submit" style="color:#DC2626; border-color:#FCA5A5; padding:8px 14px; font-size:.85rem;">👁️ Tạm ẩn</button>
-                        </form>
+                        <c:choose>
+                            <c:when test="${course.hidden}">
+                                <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/republish" style="margin:0;">
+                                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                    <button class="ins-btn-primary" type="submit" style="padding:8px 16px; font-size:.85rem; background:#16a34a;">🚀 Tái công bố khóa học</button>
+                                </form>
+                            </c:when>
+                            <c:otherwise>
+                                <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/hide" style="margin:0;">
+                                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                    <button class="ins-btn-outline" type="submit" style="color:#DC2626; border-color:#FCA5A5; padding:8px 14px; font-size:.85rem;">👁️ Tạm ẩn</button>
+                                </form>
+                            </c:otherwise>
+                        </c:choose>
                     </c:when>
                 </c:choose>
             </div>

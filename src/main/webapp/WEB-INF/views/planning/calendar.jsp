@@ -1,4 +1,4 @@
-﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -29,7 +29,7 @@
             <a href="${pageContext.request.contextPath}/study/calendar?date=${nextWeekDate}" style="color:#64748b;text-decoration:none;font-weight:700;font-size:.9rem;padding:4px 8px;border-radius:8px;transition:background .15s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'">→</a>
         </div>
         <a href="${pageContext.request.contextPath}/study/calendar?date=${todayDate}" class="pl-btn pl-btn--outline pl-btn--sm">Hôm nay</a>
-        <a href="${pageContext.request.contextPath}/study/plans/new" class="pl-btn pl-btn--primary pl-btn--sm">+ Thêm nhiệm vụ</a>
+        <a href="${pageContext.request.contextPath}/study/tasks/new" class="pl-btn pl-btn--primary pl-btn--sm">+ Thêm nhiệm vụ</a>
     </div>
 </div>
 
@@ -49,8 +49,8 @@
                         <a class="pl-cal-task ${t.status == 'DONE' ? 'pl-cal-task--done' : ''}"
                            href="${pageContext.request.contextPath}/study/plans/${t.planId}">
                             <div class="pl-cal-task-time">
-                                ⏰ <fmt:parseDate value="${t.plannedStartAt}" pattern="yyyy-MM-dd'T'HH:mm" var="ps"/>
-                                <fmt:formatDate value="${ps}" pattern="HH:mm"/>
+                                ⏰ <c:out value="${t.formattedStartTime}"/>
+                                <c:if test="${not empty t.formattedEndTime}"> - <c:out value="${t.formattedEndTime}"/></c:if>
                             </div>
                             <div class="pl-cal-task-title"><c:out value="${t.title}"/></div>
                             <c:if test="${not empty t.courseTitle}">

@@ -76,7 +76,33 @@ public class CourseManagementService {
 
     @Transactional(readOnly = true)
     public List<ManagedCourseView> instructorCourses(Integer instructorId) {
-        return courses.findByInstructor_UserIdOrderByCreatedAtDesc(instructorId).stream().map(this::view).toList();
+        return instructorCourses(instructorId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ManagedCourseView> instructorCourses(Integer instructorId, String q) {
+        List<Course> list = courses.findByInstructor_UserIdOrderByCreatedAtDesc(instructorId);
+        if (q != null && !q.isBlank()) {
+            String term = q.trim().toLowerCase();
+            list = list.stream().filter(c ->
+                    (c.getTitle() != null && c.getTitle().toLowerCase().contains(term)) ||
+                    (c.getDescription() != null && c.getDescription().toLowerCase().contains(term))
+            ).toList();
+        }
+        return list.stream().map(this::view).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<ManagedCourseView> searchInstructorCourses(
+            Integer instructorId, String q, org.springframework.data.domain.Pageable pageable) {
+        List<ManagedCourseView> filtered = instructorCourses(instructorId, q);
+        if (pageable == null || pageable.isUnpaged()) {
+            return new org.springframework.data.domain.PageImpl<>(filtered);
+        }
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filtered.size());
+        List<ManagedCourseView> subList = start > filtered.size() ? List.of() : filtered.subList(start, end);
+        return new org.springframework.data.domain.PageImpl<>(subList, pageable, filtered.size());
     }
 
     @Transactional(readOnly = true)
@@ -153,6 +179,11 @@ public class CourseManagementService {
             course.setPublishedAt(null);
         }
         course.setUpdatedAt(LocalDateTime.now());
+    }
+
+    @Transactional
+    public void updateCourse(Integer id, Integer instructorId, CourseForm form) {
+        edit(id, instructorId, form);
     }
 
     @Transactional

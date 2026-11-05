@@ -1,4 +1,4 @@
-﻿<%@ page contentType="text/html;charset=UTF-8" %>
+<%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <header class="hn-header">
@@ -78,10 +78,12 @@
 <script>
 function togglePlanningUserMenu(e) {
     e.stopPropagation();
-    document.getElementById('planningUserDropdown').classList.toggle('open');
+    var menu = e.currentTarget.closest('.hn-user-menu');
+    if (menu) menu.classList.toggle('open');
 }
 document.addEventListener('click', function() {
-    var d = document.getElementById('planningUserDropdown');
-    if (d) d.classList.remove('open');
+    document.querySelectorAll('.hn-user-menu.open').forEach(function(m) {
+        m.classList.remove('open');
+    });
 });
 </script>

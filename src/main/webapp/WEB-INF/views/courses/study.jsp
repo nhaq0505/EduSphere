@@ -128,11 +128,16 @@
         </c:otherwise>
     </c:choose>
 
-    <header class="page-heading">
+    <header class="page-heading" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
         <div>
             <p class="eyebrow"><c:choose><c:when test="${study.previewMode}">Xem trước khóa học</c:when><c:otherwise>Không gian học viên</c:otherwise></c:choose></p>
             <h1><c:out value="${study.courseTitle}"/></h1>
             <p>Giảng viên <c:out value="${study.instructorName}"/></p>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <a class="button button--outline" href="${pageContext.request.contextPath}/courses/${study.courseId}/assignments">📝 Bài tập</a>
+            <a class="button button--outline" href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes">❓ Quiz</a>
+            <a class="button button--outline" href="${pageContext.request.contextPath}/courses/${study.courseId}/results">📊 Kết quả</a>
         </div>
     </header>
 
@@ -501,6 +506,11 @@ function toggleSubmitForm(id) {
     if (!rawUrl || !container) return;
 
     var url = rawUrl.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
+        return;
+    }
+
+    container.innerHTML = '';
     if (url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1) {
         var videoId = '';
         if (url.indexOf('watch?v=') !== -1) {
@@ -510,11 +520,24 @@ function toggleSubmitForm(id) {
         } else {
             videoId = url;
         }
-        var embedUrl = videoId.indexOf('http') === 0 ? videoId : 'https://www.youtube.com/embed/' + videoId;
-        container.innerHTML = '<iframe src="' + embedUrl + '" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>';
+        var embedUrl = videoId.indexOf('http') === 0 ? videoId : 'https://www.youtube.com/embed/' + encodeURIComponent(videoId);
+        var iframe = document.createElement('iframe');
+        iframe.src = embedUrl;
+        iframe.allowFullscreen = true;
+        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+        container.appendChild(iframe);
     } else {
-        var seekAttr = (!allowSeek) ? ' onseeking="this.currentTime=0;"' : '';
-        container.innerHTML = '<video controls preload="metadata"' + seekAttr + '><source src="' + url + '" type="video/mp4">Trình duyệt không hỗ trợ phát video.</video>';
+        var video = document.createElement('video');
+        video.controls = true;
+        video.preload = 'metadata';
+        if (!allowSeek) {
+            video.addEventListener('seeking', function() { video.currentTime = 0; });
+        }
+        var source = document.createElement('source');
+        source.src = url;
+        source.type = 'video/mp4';
+        video.appendChild(source);
+        container.appendChild(video);
     }
 })();
 </script>

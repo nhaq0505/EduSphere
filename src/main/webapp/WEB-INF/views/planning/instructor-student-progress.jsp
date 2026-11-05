@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tiến độ học viên: ${course.title} — EduSphere</title>
+    <title>Tiến độ học viên: <c:out value="${course.title}"/> — EduSphere</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
@@ -15,24 +15,23 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning.css">
 </head>
 <body>
-<jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
-
-<div class="ins-shell">
+<div class="ins-layout">
     <jsp:include page="/WEB-INF/views/courses/ins-sidebar.jsp"/>
+    <div class="ins-main-wrapper">
+        <jsp:include page="/WEB-INF/views/courses/ins-header.jsp"/>
+        <main class="ins-page">
+            <a class="ins-back-link" href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}">
+                &larr; Quay lại chi tiết khóa học
+            </a>
 
-    <main class="ins-content">
-        <a class="ins-back-link" href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}">
-            &larr; Quay lại chi tiết khóa học
-        </a>
-
-        <!-- Header -->
-        <div style="margin-top: 12px; margin-bottom: 24px;">
-            <div style="font-size: 0.85rem; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.04em;">
-                Theo dõi tiến độ học viên (UC39)
-            </div>
-            <h1 style="font-size: 1.7rem; font-weight: 800; color: #0f172a; margin: 4px 0 6px;">
-                ${course.title}
-            </h1>
+            <!-- Header -->
+            <div style="margin-top: 12px; margin-bottom: 24px;">
+                <div style="font-size: 0.85rem; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.04em;">
+                    Theo dõi tiến độ học viên (UC39)
+                </div>
+                <h1 style="font-size: 1.7rem; font-weight: 800; color: #0f172a; margin: 4px 0 6px;">
+                    <c:out value="${course.title}"/>
+                </h1>
             <p style="color: #64748b; font-size: 0.92rem; margin: 0;">
                 Danh sách học viên đã ghi danh và mức độ hoàn thành bài học trong khóa học do bạn phụ trách.
             </p>
@@ -90,18 +89,18 @@
                                     <td>
                                         <div class="student-info-cell">
                                             <div class="student-avatar">
-                                                ${s.fullName.substring(0, 1).toUpperCase()}
+                                                <c:out value="${s.fullName.substring(0, 1).toUpperCase()}"/>
                                             </div>
                                             <div>
-                                                <div class="student-name">${s.fullName}</div>
-                                                <div class="student-email">${s.email}</div>
+                                                <div class="student-name"><c:out value="${s.fullName}"/></div>
+                                                <div class="student-email"><c:out value="${s.email}"/></div>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
                                         <div class="progress-bar-container" style="margin-bottom: 0;">
                                             <div class="progress-bar-labels" style="font-size: 0.78rem;">
-                                                <span>${s.percentComplete}%</span>
+                                                <span><c:out value="${s.percentComplete}"/>%</span>
                                             </div>
                                             <div class="progress-bar-track">
                                                 <div class="progress-bar-fill ${s.percentComplete >= 100 ? 'progress-bar-fill--green' : ''}"
@@ -111,13 +110,13 @@
                                     </td>
                                     <td>
                                         <div style="font-weight: 600; color: #1e293b;">
-                                            ${s.completedLessons} / ${s.totalLessons} bài
+                                            <c:out value="${s.completedLessons}"/> / <c:out value="${s.totalLessons}"/> bài
                                         </div>
                                     </td>
                                     <td>
                                         <div style="font-size: 0.82rem; color: #64748b;">
                                             <c:if test="${not empty s.lastAccessedAt}">
-                                                ${s.lastAccessedAt}
+                                                <c:out value="${s.lastAccessedAt}"/>
                                             </c:if>
                                             <c:if test="${empty s.lastAccessedAt}">
                                                 <span style="font-style: italic; color: #94a3b8;">Chưa học</span>
@@ -126,7 +125,7 @@
                                     </td>
                                     <td style="text-align: center;">
                                         <span class="badge badge--${s.enrollmentStatus.toLowerCase()}">
-                                            ${s.enrollmentStatus}
+                                            <c:out value="${s.enrollmentStatus}"/>
                                         </span>
                                     </td>
                                 </tr>
@@ -137,12 +136,19 @@
             </c:otherwise>
         </c:choose>
 
-    </main>
+        </main>
+    </div>
 </div>
 
 <script>
-function toggleUserMenu(e){e.stopPropagation();e.currentTarget.closest('.hn-user-menu').classList.toggle('open');}
-document.addEventListener('click',()=>document.querySelectorAll('.hn-user-menu.open').forEach(m=>m.classList.remove('open')));
+function insToggleMenu(e) {
+    e.stopPropagation();
+    document.getElementById('insUserMenu').classList.toggle('open');
+}
+document.addEventListener('click', function() {
+    var m = document.getElementById('insUserMenu');
+    if (m) m.classList.remove('open');
+});
 </script>
 </body>
 </html>

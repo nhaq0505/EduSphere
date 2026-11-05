@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ import java.util.Date;
  * Tài khoản: admin@edusphere.vn / Admin@123456
  */
 @Component
+@Order(2)
 public class AdminDataInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AdminDataInitializer.class);
@@ -56,33 +58,39 @@ public class AdminDataInitializer implements ApplicationRunner {
     }
 
     private void initDefaultAdmin() {
-        if (userRepository.existsByEmail(ADMIN_EMAIL)) {
-            log.info("[AdminInit] Tài khoản {} đã tồn tại, bỏ qua.", ADMIN_EMAIL);
+        Roles adminRole = roleRepository.findByRoleName("ADMINISTRATOR")
+                .orElse(null);
+        if (adminRole == null) {
+            log.warn("[AdminInit] Role 'ADMINISTRATOR' không tồn tại trong bảng roles! Hãy chạy SQLQuery1.sql trước để seed roles.");
             return;
         }
 
-        Users admin = new Users();
-        admin.setFullName(ADMIN_NAME);
-        admin.setEmail(ADMIN_EMAIL);
-        admin.setPasswordHash(passwordEncoder.encode(ADMIN_PASSWORD));
-        admin.setStatus("ACTIVE");
-        admin.setCreatedAt(new Date());
-        admin = userRepository.save(admin);
+        Users admin = userRepository.findByEmail(ADMIN_EMAIL).orElse(null);
+        if (admin == null) {
+            admin = new Users();
+            admin.setFullName(ADMIN_NAME);
+            admin.setEmail(ADMIN_EMAIL);
+            admin.setPasswordHash(passwordEncoder.encode(ADMIN_PASSWORD));
+            admin.setStatus("ACTIVE");
+            admin.setCreatedAt(new Date());
+            admin = userRepository.save(admin);
 
-        Roles adminRole = roleRepository.findByRoleName("ADMINISTRATOR")
-                .orElseThrow(() -> new IllegalStateException(
-                        "[AdminInit] Role 'ADMINISTRATOR' không tồn tại trong bảng roles! " +
-                        "Hãy chạy SQLQuery1.sql trước để seed roles."));
+            UserRolesPK pk = new UserRolesPK(admin.getUserId(), adminRole.getRoleId());
+            UserRoles userRole = new UserRoles(pk, new Date());
+            userRoleRepository.save(userRole);
 
-        UserRolesPK pk = new UserRolesPK(admin.getUserId(), adminRole.getRoleId());
-        UserRoles userRole = new UserRoles(pk, new Date());
-        userRoleRepository.save(userRole);
-
-        log.info("╔══════════════════════════════════════════════╗");
-        log.info("║  [AdminInit] Đã tạo tài khoản admin          ║");
-        log.info("║  Email   : {}              ║", ADMIN_EMAIL);
-        log.info("║  Password: {}                  ║", ADMIN_PASSWORD);
-        log.info("╚══════════════════════════════════════════════╝");
+            log.info("╔══════════════════════════════════════════════╗");
+            log.info("║  [AdminInit] Đã tạo tài khoản admin          ║");
+            log.info("║  Email   : {}              ║", ADMIN_EMAIL);
+            log.info("║  Password: {}                  ║", ADMIN_PASSWORD);
+            log.info("╚══════════════════════════════════════════════╝");
+        } else {
+            UserRolesPK pk = new UserRolesPK(admin.getUserId(), adminRole.getRoleId());
+            if (!userRoleRepository.existsById(pk)) {
+                userRoleRepository.save(new UserRoles(pk, new Date()));
+            }
+            log.info("[AdminInit] Tài khoản {} đã tồn tại, giữ nguyên mật khẩu và trạng thái.", ADMIN_EMAIL);
+        }
     }
 
     private void initDemoAccounts() {
@@ -112,13 +120,11 @@ public class AdminDataInitializer implements ApplicationRunner {
             userRoleRepository.save(new UserRoles(pk, new Date()));
             log.info("[DemoInit] Đã tạo tài khoản demo: {} ({}) / pass: {}", email, roleName, password);
         } else {
-            user.setPasswordHash(passwordEncoder.encode(password));
-            user.setStatus("ACTIVE");
-            userRepository.save(user);
-
+            // Bảo toàn mật khẩu và trạng thái tài khoản nếu đã tồn tại trong DB (không ghi đè)
             UserRolesPK pk = new UserRolesPK(user.getUserId(), role.getRoleId());
             if (!userRoleRepository.existsById(pk)) {
                 userRoleRepository.save(new UserRoles(pk, new Date()));
+                log.info("[DemoInit] Đã gán bổ sung role {} cho tài khoản {}", roleName, email);
             }
         }
     }
