@@ -705,10 +705,14 @@
                                     </a>
                                 </c:when>
                                 <c:otherwise>
-                                    <button class="btn-quiz-cta btn-quiz-cta--locked" id="rightQuizBtn" disabled>
-                                        <span id="rightQuizBtnIcon">🔒</span>
-                                        <span id="rightQuizBtnLabel">Làm bài Quiz</span>
-                                    </button>
+                                    <a href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes"
+                                       id="rightQuizBtn"
+                                       class="btn-quiz-cta ${isQuizUnlocked ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
+                                       ${isQuizUnlocked ? '' : 'aria-disabled="true" onclick="return handleLockedQuizClick(event);"'}
+                                       data-quiz-url="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes">
+                                        <span id="rightQuizBtnIcon">${isQuizUnlocked ? '📝' : '🔒'}</span>
+                                        <span id="rightQuizBtnLabel">${isQuizUnlocked ? 'Làm bài Quiz ngay' : 'Làm bài Quiz'}</span>
+                                    </a>
                                 </c:otherwise>
                             </c:choose>
                         </div>

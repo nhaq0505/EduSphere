@@ -125,9 +125,12 @@ function unlockQuizUI(pct) {
         rightBtn.className = 'btn-quiz-cta btn-quiz-cta--active';
         rightBtn.removeAttribute('aria-disabled');
         rightBtn.removeAttribute('disabled');
+        rightBtn.removeAttribute('onclick');
         rightBtn.onclick = null;
         var qUrl = rightBtn.getAttribute('data-quiz-url');
-        if (qUrl) rightBtn.setAttribute('href', qUrl);
+        if (qUrl) {
+            rightBtn.setAttribute('href', qUrl);
+        }
     }
     if (rightIcon) rightIcon.textContent = '📝';
     if (rightLabel) rightLabel.textContent = 'Làm bài Quiz ngay';
