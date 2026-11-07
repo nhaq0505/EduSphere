@@ -117,3 +117,12 @@ IF COL_LENGTH('dbo.lesson_watch_progress', 'quiz_unlocked') IS NULL
     ALTER TABLE dbo.lesson_watch_progress ADD quiz_unlocked BIT NOT NULL CONSTRAINT DF_lwp_quiz_unlocked DEFAULT 0;
 GO
 
+-- Cập nhật quiz_unlocked = 1 cho các bản ghi đã đạt watch_percent >= 80 từ trước (nếu có)
+IF OBJECT_ID(N'dbo.lesson_watch_progress', N'U') IS NOT NULL
+BEGIN
+    UPDATE dbo.lesson_watch_progress
+    SET quiz_unlocked = 1
+    WHERE watch_percent >= 80 AND (quiz_unlocked IS NULL OR quiz_unlocked = 0);
+END;
+GO
+
