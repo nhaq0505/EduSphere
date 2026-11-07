@@ -139,6 +139,19 @@
                 </c:forEach>
 
                 <c:choose>
+                    <c:when test="${not videoRequirementMet}">
+                        <div class="qi-locked-banner">
+                            🔒 <strong>Bạn cần xem ít nhất ${requiredWatchPercent}% video để mở khóa bài kiểm tra.</strong>
+                            <br/><span style="font-size:.82rem;font-weight:normal;color:#7F1D1D;">Tiến độ xem hiện tại của bạn: <strong>${currentWatchPercent}%</strong>. Hãy xem tiếp bài giảng để mở khóa bài kiểm tra.</span>
+                        </div>
+                        <button class="qi-btn-start" disabled style="background:#94A3B8;cursor:not-allowed;">🔒 Bài kiểm tra đang bị khóa</button>
+                        <c:if test="${quiz.lesson != null}">
+                            <a href="${pageContext.request.contextPath}/courses/${courseId}/lessons/${quiz.lesson.lessonId}"
+                               class="qi-btn-start" style="background:#2563EB;margin-top:10px;text-decoration:none;display:block;">
+                                ▶ Quay lại xem video bài học
+                            </a>
+                        </c:if>
+                    </c:when>
                     <c:when test="${hasInProgress}">
                         <div class="qi-locked-banner">⏳ Bạn đang có bài làm chưa hoàn thành. Tiếp tục bài đó trước.</div>
                     </c:when>

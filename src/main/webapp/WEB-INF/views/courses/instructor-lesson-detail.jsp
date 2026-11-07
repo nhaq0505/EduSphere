@@ -71,18 +71,110 @@
                     <div class="ins-detail-main__body">
 
                         <!-- Video info if present -->
-                        <c:if test="${lesson.lessonType eq 'VIDEO' and not empty lesson.videoUrl}">
+                        <c:if test="${lesson.lessonType eq 'VIDEO'}">
                             <h2>Video bài giảng</h2>
-                            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:var(--r8); padding:14px 18px; margin-bottom:20px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                                    <div>
-                                        <div style="font-weight:700; color:var(--ink);">URL: <a href="<c:out value='${lesson.videoUrl}'/>" target="_blank" style="color:#2563EB;"><c:out value="${lesson.videoUrl}"/> ↗</a></div>
-                                        <div style="font-size:.82rem; color:#64748B; margin-top:4px;">
-                                            Thời lượng: <strong>${not empty lesson.videoDuration ? lesson.videoDuration : 'Chưa đặt'} phút</strong> · 
-                                            Tua video: <strong>${lesson.allowSeek ? 'Cho phép' : 'Bị khóa'}</strong>
+                            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:var(--r12); padding:18px 20px; margin-bottom:20px;">
+
+                                <%-- Trường hợp 1: Đã có Bunny Video (player URL từ Bunny) --%>
+                                <c:if test="${not empty lesson.videoUrl and fn:startsWith(lesson.videoUrl, 'https://player.mediadelivery.net')}">
+                                    <c:choose>
+                                        <c:when test="${lesson.videoStatus eq 'READY' or empty lesson.videoStatus}">
+                                            <%-- READY — hiển thị player --%>
+                                            <div style="position:relative; padding-bottom:56.25%; height:0; border-radius:8px; overflow:hidden; background:#000; margin-bottom:12px;">
+                                                <iframe src="<c:out value='${lesson.videoUrl}'/>"
+                                                        style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+                                                        allowfullscreen allow="autoplay; encrypted-media"></iframe>
+                                            </div>
+                                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                                                <div style="font-size:.82rem; color:#64748B;">
+                                                    <span style="background:#DCFCE7; color:#15803D; font-weight:700; padding:2px 8px; border-radius:4px; font-size:.75rem;">✅ READY</span>
+                                                    Thời lượng: <strong>${not empty lesson.videoDuration ? lesson.videoDuration : '—'} phút</strong> ·
+                                                    Tua video: <strong>${lesson.allowSeek ? 'Cho phép' : 'Bị khóa'}</strong>
+                                                </div>
+                                            </div>
+                                        </c:when>
+                                        <c:when test="${lesson.videoStatus eq 'PROCESSING' or lesson.videoStatus eq 'UPLOADING'}">
+                                            <%-- PROCESSING / UPLOADING — thông báo chờ --%>
+                                            <div style="background:#EFF6FF; border:1.5px solid #93C5FD; border-radius:8px; padding:20px; text-align:center;" id="processingBanner">
+                                                <div style="font-size:2rem; margin-bottom:8px;">⏳</div>
+                                                <div style="font-weight:700; color:#1D4ED8; font-size:.95rem; margin-bottom:4px;">
+                                                    <c:choose>
+                                                        <c:when test="${lesson.videoStatus eq 'UPLOADING'}">Đang upload video lên Bunny Stream...</c:when>
+                                                        <c:otherwise>Bunny Stream đang xử lý video...</c:otherwise>
+                                                    </c:choose>
+                                                </div>
+                                                <div style="font-size:.83rem; color:#3B82F6;">Quá trình này thường mất 1–5 phút. Trang sẽ tự cập nhật.</div>
+                                            </div>
+                                            <%-- Auto-poll trạng thái --%>
+                                            <script>
+                                            (function() {
+                                                var lessonId = '${lesson.lessonId}';
+                                                var ctx = '${pageContext.request.contextPath}';
+                                                function poll() {
+                                                    fetch(ctx + '/instructor/videos/' + lessonId + '/status')
+                                                        .then(function(r) { return r.json(); })
+                                                        .then(function(d) {
+                                                            if (d.videoStatus === 'READY' || d.videoStatus === 'FAILED') {
+                                                                location.reload();
+                                                            } else {
+                                                                setTimeout(poll, 10000);
+                                                            }
+                                                        })
+                                                        .catch(function() { setTimeout(poll, 15000); });
+                                                }
+                                                setTimeout(poll, 8000);
+                                            })();
+                                            </script>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <%-- FAILED --%>
+                                            <div style="background:#FEF2F2; border:1.5px solid #FCA5A5; border-radius:8px; padding:16px;">
+                                                <div style="font-weight:700; color:#DC2626; margin-bottom:4px;">❌ Xử lý video thất bại</div>
+                                                <div style="font-size:.83rem; color:#EF4444;">Bunny Stream không thể xử lý video này. Hãy thử upload lại bên dưới.</div>
+                                            </div>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </c:if>
+
+                                <%-- Trường hợp 2: Video URL thông thường (YouTube, Vimeo, local) --%>
+                                <c:if test="${not empty lesson.videoUrl and not fn:startsWith(lesson.videoUrl, 'https://player.mediadelivery.net')}">
+                                    <div style="font-weight:700; color:var(--ink); margin-bottom:6px;">
+                                        URL: <a href="<c:out value='${lesson.videoUrl}'/>" target="_blank" style="color:#2563EB;"><c:out value="${lesson.videoUrl}"/> ↗</a>
+                                    </div>
+                                    <div style="font-size:.82rem; color:#64748B;">
+                                        Thời lượng: <strong>${not empty lesson.videoDuration ? lesson.videoDuration : '—'} phút</strong> ·
+                                        Tua video: <strong>${lesson.allowSeek ? 'Cho phép' : 'Bị khóa'}</strong>
+                                    </div>
+                                </c:if>
+
+                                <%-- Trường hợp 3: Chưa có video --%>
+                                <c:if test="${empty lesson.videoUrl}">
+                                    <div style="color:#94A3B8; font-style:italic;">Chưa có video. Upload bên dưới.</div>
+                                </c:if>
+
+                                <%-- Upload video Bunny ngay từ trang này --%>
+                                <c:if test="${editable}">
+                                    <div style="margin-top:16px; padding-top:14px; border-top:1px solid #E2E8F0;">
+                                        <div style="font-size:.84rem; font-weight:700; color:#475569; margin-bottom:8px;">
+                                            ☁️ Upload video lên Bunny Stream
+                                        </div>
+                                        <div class="upload-row">
+                                            <button type="button" class="upload-btn" style="background:#EFF6FF; border-color:#93C5FD; color:#1D4ED8;"
+                                                    onclick="document.getElementById('bunnyVideoInput').click()">
+                                                ☁️ Chọn file video (MP4, WebM, MOV — tối đa 2GB)
+                                            </button>
+                                        </div>
+                                        <input type="file" id="bunnyVideoInput" accept="video/mp4,video/webm,video/quicktime,video/*"
+                                               style="display:none;" onchange="uploadBunnyVideo(this, ${lesson.lessonId})"/>
+                                        <div id="bunnyUploadStatus" class="upload-status" style="margin-top:8px;"></div>
+                                        <div id="bunnyUploadProgress" style="display:none; margin-top:8px;">
+                                            <div style="background:#E2E8F0; border-radius:99px; height:8px; overflow:hidden;">
+                                                <div id="bunnyProgressBar" style="height:100%; background:#2563EB; width:0%; transition:width .3s; border-radius:99px;"></div>
+                                            </div>
+                                            <div id="bunnyProgressText" style="font-size:.75rem; color:#64748B; margin-top:4px;"></div>
                                         </div>
                                     </div>
-                                </div>
+                                </c:if>
                             </div>
                         </c:if>
 
@@ -242,6 +334,76 @@
 <script>
 function insToggleMenu(e){e.stopPropagation();document.getElementById('insUserMenu').classList.toggle('open');}
 document.addEventListener('click',function(){var m=document.getElementById('insUserMenu');if(m)m.classList.remove('open');});
+
+// Upload video lên Bunny Stream từ trang chi tiết bài học
+function uploadBunnyVideo(inputElem, lessonId) {
+    if (!inputElem.files || inputElem.files.length === 0) return;
+    var file = inputElem.files[0];
+    var statusElem   = document.getElementById('bunnyUploadStatus');
+    var progressWrap = document.getElementById('bunnyUploadProgress');
+    var progressBar  = document.getElementById('bunnyProgressBar');
+    var progressText = document.getElementById('bunnyProgressText');
+
+    var allowed = ['mp4','webm','mov','avi','mkv','mpeg','mpg'];
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) {
+        statusElem.className = 'upload-status upload-status--error';
+        statusElem.textContent = '❌ Định dạng không hỗ trợ. Cho phép: MP4, WebM, MOV, AVI, MKV.';
+        return;
+    }
+    if (file.size > 2 * 1024 * 1024 * 1024) {
+        statusElem.className = 'upload-status upload-status--error';
+        statusElem.textContent = '❌ File quá lớn. Giới hạn 2GB.';
+        return;
+    }
+
+    statusElem.className = 'upload-status upload-status--loading';
+    statusElem.textContent = '⏳ Đang upload lên Bunny Stream (' + (file.size/1024/1024).toFixed(1) + ' MB)...';
+    progressWrap.style.display = 'block';
+    progressBar.style.width = '0%';
+
+    var csrfToken = document.querySelector('input[name="${_csrf.parameterName}"]').value;
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('lessonId', lessonId);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '${pageContext.request.contextPath}/instructor/videos/upload', true);
+    xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+
+    xhr.upload.onprogress = function(e) {
+        if (e.lengthComputable) {
+            var pct = Math.round(e.loaded * 100 / e.total);
+            progressBar.style.width = pct + '%';
+            progressText.textContent = pct + '% — ' + (e.loaded/1024/1024).toFixed(1)
+                + ' / ' + (e.total/1024/1024).toFixed(1) + ' MB';
+        }
+    };
+
+    xhr.onload = function() {
+        var data;
+        try { data = JSON.parse(xhr.responseText); } catch(e) { data = {}; }
+        if (data.success) {
+            statusElem.className = 'upload-status upload-status--success';
+            statusElem.textContent = '✅ Upload xong! Bunny đang xử lý. Trang sẽ tự cập nhật sau vài giây...';
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Đang xử lý trên Bunny CDN...';
+            setTimeout(function() { location.reload(); }, 4000);
+        } else {
+            statusElem.className = 'upload-status upload-status--error';
+            statusElem.textContent = '❌ ' + (data.message || 'Upload thất bại');
+            progressWrap.style.display = 'none';
+        }
+    };
+
+    xhr.onerror = function() {
+        statusElem.className = 'upload-status upload-status--error';
+        statusElem.textContent = '❌ Lỗi kết nối khi upload.';
+        progressWrap.style.display = 'none';
+    };
+
+    xhr.send(formData);
+}
 
 function uploadMaterialFile(inputElem) {
     if (!inputElem.files || inputElem.files.length === 0) return;

@@ -114,6 +114,8 @@ public class LessonManagementController {
         form.setVideoUrl(lesson.getVideoUrl());
         form.setVideoDuration(lesson.getVideoDuration());
         form.setAllowSeek(lesson.getAllowSeek() != null ? lesson.getAllowSeek() : true);
+        form.setQuizRequiresVideo(Boolean.TRUE.equals(lesson.getQuizRequiresVideo()));
+        form.setMinWatchPercent(lesson.getMinWatchPercent() != null ? lesson.getMinWatchPercent() : 0);
         form.setIsPreview(Boolean.TRUE.equals(lesson.getIsPreview()));
         form.setUnlockDaysAfterEnroll(lesson.getUnlockDaysAfterEnroll());
         form.setPrerequisiteLessonId(lesson.getPrerequisiteLesson() != null ? lesson.getPrerequisiteLesson().getLessonId() : null);

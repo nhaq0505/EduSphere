@@ -87,6 +87,7 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/courses", "/courses/{courseId}").permitAll()
                 .requestMatchers(HttpMethod.POST, "/payments/payos/webhook").permitAll()
+                .requestMatchers(HttpMethod.POST, "/webhooks/bunny").permitAll()
                 // Ghi danh & Vào học: hỗ trợ Học viên, Giảng viên (trải nghiệm khóa học) & Quản trị viên
                 .requestMatchers(HttpMethod.POST, "/courses/{courseId}/checkout").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers(HttpMethod.GET, "/payments/result").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
@@ -123,7 +124,13 @@ public class SecurityConfig {
                 .failureUrl("/login?oauth2Error=true")
             )
             .authenticationProvider(authenticationProvider())
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/payments/payos/webhook", "/courses/*/enroll"))
+            .csrf(csrf -> csrf.ignoringRequestMatchers(
+                    "/payments/payos/webhook",
+                    "/courses/*/enroll",
+                    "/webhooks/bunny",
+                    "/instructor/videos/upload",
+                    "/instructor/videos/*/status",
+                    "/courses/*/lessons/*/watch-progress"))
             .addFilterAfter(accountStateFilter, SecurityContextHolderFilter.class);
 
         return http.build();

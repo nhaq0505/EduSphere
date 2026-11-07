@@ -32,4 +32,6 @@ public interface LessonRepository extends JpaRepository<Lesson, Integer> {
     long countByCourse_CourseIdAndStatus(Integer courseId, String status);
 
     long countBySection_SectionId(Integer sectionId);
+
+    java.util.List<Lesson> findByBunnyVideoId(String bunnyVideoId);
 }
