@@ -108,3 +108,12 @@ BEGIN
 END;
 GO
 
+-- Bổ sung cho trường hợp thành viên đã có bảng lesson_watch_progress từ trước nhưng chưa có 2 cột mới
+IF COL_LENGTH('dbo.lesson_watch_progress', 'watched_segments') IS NULL
+    ALTER TABLE dbo.lesson_watch_progress ADD watched_segments NVARCHAR(MAX) NULL;
+GO
+
+IF COL_LENGTH('dbo.lesson_watch_progress', 'quiz_unlocked') IS NULL
+    ALTER TABLE dbo.lesson_watch_progress ADD quiz_unlocked BIT NOT NULL CONSTRAINT DF_lwp_quiz_unlocked DEFAULT 0;
+GO
+
