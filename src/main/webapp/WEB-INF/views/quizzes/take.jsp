@@ -5,233 +5,204 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đang làm bài: <c:out value="${attempt.quiz.title}"/> — EduSphere</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css?v=restore-0bfd0e1-20261014">
-    <style>
-        /* ── Header bar ── */
-        .qt-header {
-            position:sticky; top:0; z-index:100;
-            background:#0F172A; color:#fff;
-            padding:12px 24px; display:flex; align-items:center; justify-content:space-between;
-            gap:16px; flex-wrap:wrap;
-        }
-        .qt-header__title { font-weight:800; font-size:.95rem; }
-        .qt-header__meta { font-size:.82rem; opacity:.7; }
-        .qt-timer {
-            background:#EF4444; color:#fff; border-radius:8px;
-            padding:7px 16px; font-weight:900; font-size:1.1rem; letter-spacing:.05em;
-            min-width:80px; text-align:center;
-        }
-        .qt-timer--warning { background:#F59E0B; }
-        .qt-timer--ok { background:#16A34A; }
-
-        /* ── Progress bar ── */
-        .qt-progress-bar {
-            height:4px; background:#E2E8F0; margin-bottom:24px; border-radius:2px; overflow:hidden;
-        }
-        .qt-progress-bar__fill {
-            height:100%; background:#2563EB; border-radius:2px;
-            transition:width .3s ease;
-        }
-
-        /* ── Question card ── */
-        .qt-question {
-            background:#fff; border:2px solid #E2E8F0; border-radius:12px;
-            padding:22px 24px; margin-bottom:16px; transition:border-color .2s;
-        }
-        .qt-question.answered { border-color:#86EFAC; }
-        .qt-question__num {
-            display:inline-block; background:#EFF6FF; color:#2563EB;
-            font-weight:800; font-size:.8rem; padding:3px 12px; border-radius:20px; margin-bottom:10px;
-        }
-        .qt-question__score { color:#94A3B8; font-size:.8rem; }
-        .qt-question__text { font-size:.97rem; font-weight:600; color:#0F172A; line-height:1.6; margin-bottom:16px; white-space:pre-line; }
-        .qt-question__hint { font-size:.78rem; color:#94A3B8; margin-bottom:10px; }
-
-        /* ── Options ── */
-        .qt-option {
-            display:flex; align-items:center; gap:12px;
-            padding:12px 16px; border:2px solid #E2E8F0; border-radius:10px;
-            margin-bottom:8px; cursor:pointer; transition:all .15s;
-            font-size:.9rem; color:#334155; user-select:none;
-        }
-        .qt-option:hover { border-color:#3B82F6; background:#F0F7FF; }
-        .qt-option input[type=radio], .qt-option input[type=checkbox] {
-            width:18px; height:18px; accent-color:#2563EB; flex-shrink:0; cursor:pointer;
-        }
-        .qt-option.selected { border-color:#2563EB; background:#EFF6FF; font-weight:600; }
-
-        /* ── Text inputs ── */
-        .qt-text-input {
-            width:100%; box-sizing:border-box;
-            border:2px solid #E2E8F0; border-radius:10px;
-            padding:12px 14px; font-size:.9rem; font-family:inherit;
-            resize:vertical; transition:border-color .15s;
-        }
-        .qt-text-input:focus { outline:none; border-color:#3B82F6; }
-
-        /* ── Submit zone ── */
-        .qt-submit-zone {
-            background:#fff; border:1px solid #E2E8F0; border-radius:12px;
-            padding:24px; text-align:center; margin-top:24px; margin-bottom:40px;
-        }
-        .qt-btn-submit {
-            background:#16A34A; color:#fff; border:none; border-radius:10px;
-            padding:14px 40px; font-size:1rem; font-weight:800; cursor:pointer;
-            transition:background .15s;
-        }
-        .qt-btn-submit:hover { background:#15803D; }
-
-        /* ── Nav sidebar ── */
-        .qt-layout { display:grid; grid-template-columns:1fr 220px; gap:24px; align-items:start; margin-top:24px; }
-        @media(max-width:820px){ .qt-layout{ grid-template-columns:1fr; } }
-        .qt-nav { position:sticky; top:80px; background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:16px; }
-        .qt-nav__title { font-size:.78rem; font-weight:700; color:#94A3B8; text-transform:uppercase; margin-bottom:10px; }
-        .qt-nav-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; }
-        .qt-nav-btn {
-            width:34px; height:34px; border:2px solid #E2E8F0; border-radius:6px;
-            background:#F8FAFC; font-size:.82rem; font-weight:700; cursor:pointer;
-            display:flex; align-items:center; justify-content:center; color:#64748B;
-            transition:all .15s;
-        }
-        .qt-nav-btn:hover { border-color:#3B82F6; }
-        .qt-nav-btn.answered { background:#DCFCE7; border-color:#86EFAC; color:#166534; }
-        .qt-nav-btn.current { border-color:#2563EB; background:#EFF6FF; color:#2563EB; font-weight:900; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/quiz.css?v=2.0">
 </head>
-<body>
-<!-- Sticky header bar -->
-<div class="qt-header">
-    <div>
-        <div class="qt-header__title"><c:out value="${attempt.quiz.title}"/></div>
-        <div class="qt-header__meta">Lần làm ${attempt.attemptNumber} · ${fn:length(questions)} câu hỏi</div>
+<body style="background:#F8FAFD;">
+
+<!-- Sticky Exam Header -->
+<header class="quiz-take-header">
+    <div style="display:flex; align-items:center; gap:16px;">
+        <div style="font-size:1.4rem;">🎓</div>
+        <div>
+            <div class="quiz-take-header__title"><c:out value="${attempt.quiz.title}"/></div>
+            <div class="quiz-take-header__meta">Lần làm thứ ${attempt.attemptNumber} · Tổng cộng ${fn:length(questions)} câu hỏi</div>
+        </div>
     </div>
-    <c:if test="${attempt.deadlineAt != null}">
-        <div class="qt-timer qt-timer--ok" id="timer">--:--</div>
-    </c:if>
+    <div style="display:flex; align-items:center; gap:14px;">
+        <c:if test="${attempt.deadlineAt != null}">
+            <div class="quiz-timer-badge" id="timer">--:--</div>
+        </c:if>
+        <a href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}"
+           onclick="return confirm('Bạn có chắc chắn muốn thoát? Bài làm đang tiến hành sẽ được lưu tạm nhưng đồng hồ vẫn tiếp tục tính giờ.')"
+           class="quiz-btn quiz-btn--outline" style="padding:6px 14px; font-size:.82rem; background:rgba(255,255,255,0.1); color:#fff !important; border-color:rgba(255,255,255,0.25);">
+            Thoát
+        </a>
+    </div>
+</header>
+
+<div class="quiz-take-progress-bar">
+    <div class="quiz-take-progress-bar__fill" id="progressFill" style="width:0%"></div>
 </div>
 
-<main class="shell" style="padding-top:16px;">
+<div class="quiz-page-wrap" style="padding-top:8px;">
+    <main class="quiz-shell">
+        <form id="quizForm" method="post"
+              action="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${attemptId}/submit">
+            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
 
-    <!-- Progress bar -->
-    <div class="qt-progress-bar">
-        <div class="qt-progress-bar__fill" id="progressFill" style="width:0%"></div>
-    </div>
-
-    <form id="quizForm" method="post"
-          action="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${attemptId}/submit">
-        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-
-        <div class="qt-layout">
-            <!-- Questions -->
-            <div id="questionsArea">
-                <c:forEach var="q" items="${questions}" varStatus="st">
-                    <div class="qt-question" id="qcard-${q.questionId}" data-qid="${q.questionId}">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                            <span class="qt-question__num">Câu ${st.count}</span>
-                            <span class="qt-question__score"><fmt:formatNumber value="${q.score}" maxFractionDigits="1"/> điểm</span>
-                        </div>
-                        <p class="qt-question__text"><c:out value="${q.content}"/></p>
-
-                        <c:if test="${not empty q.imageUrl}">
-                            <div style="margin:12px 0;">
-                                <img src="${pageContext.request.contextPath}${q.imageUrl}"
-                                     style="max-height:260px;max-width:100%;border-radius:8px;border:1px solid #E2E8F0;cursor:pointer;object-fit:contain;"
-                                     onclick="zoomImage(this.src)" alt="Minh họa câu hỏi"/>
-                            </div>
-                        </c:if>
-                        <c:if test="${not empty q.videoUrl}">
-                            <div style="margin:10px 0;font-size:0.88rem;color:#4F46E5;">
-                                📹 Video bổ trợ câu hỏi: <a href="<c:out value="${q.videoUrl}"/>" target="_blank" style="color:#2563eb;text-decoration:underline;"><c:out value="${q.videoUrl}"/></a>
-                            </div>
-                        </c:if>
-
-                        <c:choose>
-                            <c:when test="${q.type eq 'SINGLE_CHOICE'}">
-                                <p class="qt-question__hint">🔘 Chọn một đáp án đúng</p>
-                                <c:forEach var="o" items="${q.options}">
-                                    <label class="qt-option" onclick="markAnswered(${q.questionId}, this.closest('.qt-question'))">
-                                        <input type="radio" name="answer_${q.questionId}" value="${o.optionId}">
-                                        <span><c:out value="${o.content}"/></span>
-                                    </label>
-                                </c:forEach>
-                            </c:when>
-
-                            <c:when test="${q.type eq 'MULTIPLE_CHOICE'}">
-                                <p class="qt-question__hint">☑️ Chọn tất cả đáp án đúng (có thể nhiều hơn 1)</p>
-                                <c:forEach var="o" items="${q.options}">
-                                    <label class="qt-option" onclick="markAnswered(${q.questionId}, this.closest('.qt-question'))">
-                                        <input type="checkbox" name="answer_${q.questionId}" value="${o.optionId}">
-                                        <span><c:out value="${o.content}"/></span>
-                                    </label>
-                                </c:forEach>
-                            </c:when>
-
-                            <c:when test="${q.type eq 'TRUE_FALSE'}">
-                                <p class="qt-question__hint">⚖️ Nhận định này là Đúng hay Sai?</p>
-                                <label class="qt-option" onclick="markAnswered(${q.questionId}, this.closest('.qt-question'))">
-                                    <input type="radio" name="answer_${q.questionId}" value="true">
-                                    <span>✅ Đúng (True)</span>
-                                </label>
-                                <label class="qt-option" onclick="markAnswered(${q.questionId}, this.closest('.qt-question'))">
-                                    <input type="radio" name="answer_${q.questionId}" value="false">
-                                    <span>❌ Sai (False)</span>
-                                </label>
-                            </c:when>
-
-                            <c:when test="${q.type eq 'SHORT_ANSWER'}">
-                                <p class="qt-question__hint">✍️ Điền câu trả lời ngắn vào ô bên dưới</p>
-                                <input class="qt-text-input" type="text"
-                                       name="answer_${q.questionId}"
-                                       placeholder="Nhập câu trả lời của bạn..."
-                                       oninput="markAnswered(${q.questionId}, this.closest('.qt-question'))">
-                            </c:when>
-
-                            <c:otherwise>
-                                <p class="qt-question__hint">📝 Viết câu trả lời tự luận đầy đủ</p>
-                                <textarea class="qt-text-input" name="answer_${q.questionId}" rows="6"
-                                          placeholder="Viết câu trả lời của bạn tại đây..."
-                                          oninput="markAnswered(${q.questionId}, this.closest('.qt-question'))"></textarea>
-                            </c:otherwise>
-                        </c:choose>
-                    </div>
-                </c:forEach>
-
-                <!-- Submit zone -->
-                <div class="qt-submit-zone">
-                    <p style="font-size:.9rem;color:#64748B;margin-bottom:16px;">
-                        Kiểm tra lại tất cả câu trả lời trước khi nộp. <strong>Bạn không thể sửa sau khi đã nộp.</strong>
-                    </p>
-                    <div id="unansweredWarning" style="display:none;background:#FEF9C3;border:1px solid #FDE68A;border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:.87rem;color:#854D0E;font-weight:600;"></div>
-                    <button class="qt-btn-submit" type="button" onclick="confirmSubmit()">
-                        📤 Nộp bài
-                    </button>
-                </div>
-            </div>
-
-            <!-- Navigation sidebar -->
-            <aside class="qt-nav" id="questionNav">
-                <p class="qt-nav__title">Điều hướng câu hỏi</p>
-                <div class="qt-nav-grid">
+            <div class="quiz-layout">
+                <!-- Questions Area -->
+                <div id="questionsArea">
                     <c:forEach var="q" items="${questions}" varStatus="st">
-                        <button type="button" class="qt-nav-btn" id="navbtn-${q.questionId}"
-                                onclick="scrollToQuestion(${q.questionId})">
-                            ${st.count}
-                        </button>
+                        <div class="quiz-test-qcard" id="qcard-${q.questionId}" data-qid="${q.questionId}">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                                <span class="quiz-qcard__num" style="background:#EFF6FF; color:#1B9AF5; font-size:.88rem; padding:4px 12px; border-radius:8px;">
+                                    Câu hỏi ${st.count}
+                                </span>
+                                <span style="font-size:.86rem; font-weight:700; color:#64748B;">
+                                    <fmt:formatNumber value="${q.score}" maxFractionDigits="1"/> điểm
+                                </span>
+                            </div>
+
+                            <div class="quiz-qcard__title" style="font-size:1.05rem; margin-bottom:16px;">
+                                <c:out value="${q.content}"/>
+                            </div>
+
+                            <c:if test="${not empty q.imageUrl}">
+                                <div style="margin:14px 0;">
+                                    <img src="${pageContext.request.contextPath}${q.imageUrl}"
+                                         style="max-height:280px; max-width:100%; border-radius:10px; border:1px solid #E2E8F0; cursor:pointer; object-fit:contain;"
+                                         onclick="zoomImage(this.src)" alt="Minh họa câu hỏi"/>
+                                </div>
+                            </c:if>
+
+                            <c:if test="${not empty q.videoUrl}">
+                                <div style="margin:12px 0; font-size:0.88rem; color:#2563eb; background:#EFF6FF; padding:8px 14px; border-radius:8px;">
+                                    📹 Video bổ trợ câu hỏi: <a href="<c:out value="${q.videoUrl}"/>" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:600;"><c:out value="${q.videoUrl}"/></a>
+                                </div>
+                            </c:if>
+
+                            <c:choose>
+                                <%-- 1. SINGLE_CHOICE --%>
+                                <c:when test="${q.type eq 'SINGLE_CHOICE'}">
+                                    <div style="font-size:.8rem; font-weight:700; color:#64748B; text-transform:uppercase; margin-bottom:10px;">
+                                        🔘 Chọn một đáp án đúng nhất
+                                    </div>
+                                    <c:forEach var="o" items="${q.options}">
+                                        <label class="quiz-opt-select" onclick="markAnswered(${q.questionId}, this.closest('.quiz-test-qcard'))">
+                                            <input type="radio" name="answer_${q.questionId}" value="${o.optionId}">
+                                            <span><c:out value="${o.content}"/></span>
+                                        </label>
+                                    </c:forEach>
+                                </c:when>
+
+                                <%-- 2. MULTIPLE_CHOICE --%>
+                                <c:when test="${q.type eq 'MULTIPLE_CHOICE'}">
+                                    <div style="font-size:.8rem; font-weight:700; color:#64748B; text-transform:uppercase; margin-bottom:10px;">
+                                        ☑️ Chọn tất cả các đáp án đúng
+                                    </div>
+                                    <c:forEach var="o" items="${q.options}">
+                                        <label class="quiz-opt-select" onclick="markAnswered(${q.questionId}, this.closest('.quiz-test-qcard'))">
+                                            <input type="checkbox" name="answer_${q.questionId}" value="${o.optionId}">
+                                            <span><c:out value="${o.content}"/></span>
+                                        </label>
+                                    </c:forEach>
+                                </c:when>
+
+                                <%-- 3. TRUE_FALSE --%>
+                                <c:when test="${q.type eq 'TRUE_FALSE'}">
+                                    <div style="font-size:.8rem; font-weight:700; color:#64748B; text-transform:uppercase; margin-bottom:10px;">
+                                        ⚖️ Nhận định trên là Đúng hay Sai?
+                                    </div>
+                                    <label class="quiz-opt-select" onclick="markAnswered(${q.questionId}, this.closest('.quiz-test-qcard'))">
+                                        <input type="radio" name="answer_${q.questionId}" value="true">
+                                        <span>✅ Đúng (True)</span>
+                                    </label>
+                                    <label class="quiz-opt-select" onclick="markAnswered(${q.questionId}, this.closest('.quiz-test-qcard'))">
+                                        <input type="radio" name="answer_${q.questionId}" value="false">
+                                        <span>❌ Sai (False)</span>
+                                    </label>
+                                </c:when>
+
+                                <%-- 4. SHORT_ANSWER --%>
+                                <c:when test="${q.type eq 'SHORT_ANSWER'}">
+                                    <div style="font-size:.8rem; font-weight:700; color:#64748B; text-transform:uppercase; margin-bottom:10px;">
+                                        ✍️ Điền câu trả lời ngắn vào ô bên dưới
+                                    </div>
+                                    <input type="text" name="answer_${q.questionId}"
+                                           placeholder="Nhập câu trả lời ngắn của bạn tại đây..."
+                                           style="width:100%; box-sizing:border-box; border:1.5px solid #CBD5E1; border-radius:10px; padding:12px 16px; font-size:.95rem; font-family:inherit; outline:none; transition:border-color .15s;"
+                                           onfocus="this.style.borderColor='#1B9AF5'" onblur="this.style.borderColor='#CBD5E1'"
+                                           oninput="markAnswered(${q.questionId}, this.closest('.quiz-test-qcard'))">
+                                </c:when>
+
+                                <%-- 5. ESSAY --%>
+                                <c:otherwise>
+                                    <div style="font-size:.8rem; font-weight:700; color:#64748B; text-transform:uppercase; margin-bottom:10px;">
+                                        📝 Trả lời tự luận
+                                    </div>
+                                    <textarea name="answer_${q.questionId}" rows="6"
+                                              placeholder="Trình bày chi tiết câu trả lời của bạn tại đây..."
+                                              style="width:100%; box-sizing:border-box; border:1.5px solid #CBD5E1; border-radius:10px; padding:12px 16px; font-size:.95rem; font-family:inherit; outline:none; transition:border-color .15s; resize:vertical;"
+                                              onfocus="this.style.borderColor='#1B9AF5'" onblur="this.style.borderColor='#CBD5E1'"
+                                              oninput="markAnswered(${q.questionId}, this.closest('.quiz-test-qcard'))"></textarea>
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
                     </c:forEach>
+
+                    <!-- Submit zone -->
+                    <div class="quiz-card" style="text-align:center; padding:32px 24px; margin-top:28px;">
+                        <div style="font-size:1.8rem; margin-bottom:8px;">📤</div>
+                        <h3 style="font-size:1.15rem; font-weight:800; color:#0F172A; margin:0 0 6px 0;">Sẵn sàng nộp bài?</h3>
+                        <p style="font-size:.9rem; color:#64748B; margin-bottom:18px;">
+                            Hãy kiểm tra lại tất cả các câu trả lời trước khi nộp. Sau khi nộp bài, bạn sẽ không thể thay đổi đáp án.
+                        </p>
+                        <div id="unansweredWarning" style="display:none; background:#FEF9C3; border:1px solid #FDE68A; border-radius:10px; padding:12px 18px; margin-bottom:18px; font-size:.9rem; color:#854D0E; font-weight:600;"></div>
+                        <button class="quiz-btn quiz-btn--primary" style="padding:14px 48px; font-size:1.05rem; font-weight:800; border-radius:12px;" type="button" onclick="confirmSubmit()">
+                            Nộp bài kiểm tra
+                        </button>
+                    </div>
                 </div>
-                <p style="font-size:.75rem;color:#94A3B8;margin-top:10px;">
-                    🟢 Đã trả lời &nbsp; ⬜ Chưa trả lời
-                </p>
-                <div style="margin-top:12px;text-align:center;">
-                    <span id="answeredCount" style="font-size:.82rem;font-weight:700;color:#16A34A;">0</span>
-                    <span style="font-size:.82rem;color:#64748B;"> / ${fn:length(questions)} đã trả lời</span>
-                </div>
-            </aside>
-        </div>
-    </form>
-</main>
+
+                <!-- Navigation Palette (Sidebar) -->
+                <aside>
+                    <div class="quiz-palette-card">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                            <span style="font-size:.82rem; font-weight:800; color:#64748B; text-transform:uppercase;">Mục lục câu hỏi</span>
+                            <span style="font-size:.82rem; font-weight:700; color:#1B9AF5;">
+                                <span id="answeredCount">0</span> / ${fn:length(questions)}
+                            </span>
+                        </div>
+
+                        <div class="quiz-palette-grid">
+                            <c:forEach var="q" items="${questions}" varStatus="st">
+                                <button type="button" class="quiz-palette-btn" id="navbtn-${q.questionId}"
+                                        onclick="scrollToQuestion(${q.questionId})">
+                                    ${st.count}
+                                </button>
+                            </c:forEach>
+                        </div>
+
+                        <div style="margin-top:16px; padding-top:14px; border-top:1px solid #F1F5F9; font-size:.78rem; color:#64748B; display:flex; flex-direction:column; gap:6px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-block; width:12px; height:12px; background:#DCFCE7; border:1.5px solid #86EFAC; border-radius:3px;"></span>
+                                <span>Đã trả lời</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-block; width:12px; height:12px; background:#F8FAFC; border:1.5px solid #CBD5E1; border-radius:3px;"></span>
+                                <span>Chưa trả lời</span>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </form>
+    </main>
+</div>
+
+<!-- Modal zoom image -->
+<div id="imageZoomModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;" onclick="closeZoomModal()">
+    <img id="zoomedImg" src="" style="max-width:92vw; max-height:92vh; border-radius:12px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);"/>
+</div>
+
+<jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 
 <script>
 var totalQuestions = ${fn:length(questions)};
@@ -253,22 +224,18 @@ function checkQuestionAnswered(qid, card) {
         });
     }
     var navBtn = document.getElementById('navbtn-' + qid);
-    var qnavBtn = document.getElementById('qnav-' + qid);
     if (isAnswered) {
         answeredSet.add(qid);
         card.classList.add('answered');
         if (navBtn) navBtn.classList.add('answered');
-        if (qnavBtn) qnavBtn.classList.add('answered');
     } else {
         answeredSet.delete(qid);
         card.classList.remove('answered');
         if (navBtn) navBtn.classList.remove('answered');
-        if (qnavBtn) qnavBtn.classList.remove('answered');
     }
     updateProgress();
 }
 
-// Mark a question as answered
 function markAnswered(qid, card) {
     checkQuestionAnswered(qid, card);
     setTimeout(function() {
@@ -278,56 +245,64 @@ function markAnswered(qid, card) {
 
 function updateProgress() {
     var count = answeredSet.size;
-    document.getElementById('answeredCount').textContent = count;
+    var countEl = document.getElementById('answeredCount');
+    if (countEl) countEl.textContent = count;
     var pct = totalQuestions > 0 ? (count / totalQuestions * 100) : 0;
-    document.getElementById('progressFill').style.width = pct + '%';
+    var fillEl = document.getElementById('progressFill');
+    if (fillEl) fillEl.style.width = pct + '%';
 }
 
-// Scroll to question
 function scrollToQuestion(qid) {
     var el = document.getElementById('qcard-' + qid);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.querySelectorAll('.quiz-palette-btn').forEach(function(b) { b.classList.remove('current'); });
+        var navBtn = document.getElementById('navbtn-' + qid);
+        if (navBtn) navBtn.classList.add('current');
+    }
 }
 
-// Submit with confirmation
 function confirmSubmit() {
     var unanswered = [];
-    var navBtns = document.querySelectorAll('.qt-nav-btn:not(.answered)');
+    var navBtns = document.querySelectorAll('.quiz-palette-btn:not(.answered)');
     navBtns.forEach(function(d) {
         unanswered.push(d.textContent.trim());
     });
 
     if (unanswered.length > 0) {
         var warn = document.getElementById('unansweredWarning');
-        warn.style.display = '';
-        warn.textContent = '⚠️ Bạn còn ' + unanswered.length + ' câu chưa trả lời (Câu ' + unanswered.join(', ') + '). Nộp bài sẽ tính 0 điểm cho các câu đó.';
-        if (!confirm('Bạn còn ' + unanswered.length + ' câu chưa trả lời (Câu ' + unanswered.join(', ') + '). Vẫn nộp bài?')) return;
+        warn.style.display = 'block';
+        warn.textContent = '⚠️ Bạn còn ' + unanswered.length + ' câu chưa trả lời (Câu số ' + unanswered.join(', ') + '). Những câu này sẽ được tính 0 điểm.';
+        if (!confirm('Bạn còn ' + unanswered.length + ' câu chưa trả lời (Câu số ' + unanswered.join(', ') + '). Bạn có chắc chắn muốn nộp bài?')) return;
     } else {
-        if (!confirm('Bạn đã trả lời tất cả ' + totalQuestions + ' câu. Nộp bài ngay?')) return;
+        if (!confirm('Bạn đã hoàn thành đủ ' + totalQuestions + ' câu hỏi. Nộp bài ngay bây giờ?')) return;
     }
     document.getElementById('quizForm').submit();
 }
 
-// Highlight selected radio option labels
-document.querySelectorAll('.qt-option input').forEach(function(inp) {
+// Option item select highlight
+document.querySelectorAll('.quiz-opt-select input').forEach(function(inp) {
     inp.addEventListener('change', function() {
         if (inp.type === 'radio') {
             var name = inp.getAttribute('name');
             document.querySelectorAll('input[name="' + name + '"]').forEach(function(r) {
-                r.closest('.qt-option').classList.remove('selected');
+                var p = r.closest('.quiz-opt-select');
+                if (p) p.classList.remove('selected');
             });
-            inp.closest('.qt-option').classList.add('selected');
+            var parent = inp.closest('.quiz-opt-select');
+            if (parent) parent.classList.add('selected');
         } else {
-            inp.closest('.qt-option').classList.toggle('selected', inp.checked);
+            var parent = inp.closest('.quiz-opt-select');
+            if (parent) parent.classList.toggle('selected', inp.checked);
         }
-        var card = inp.closest('.qt-question');
+        var card = inp.closest('.quiz-test-qcard');
         if (card && card.getAttribute('data-qid')) {
             checkQuestionAnswered(parseInt(card.getAttribute('data-qid')), card);
         }
     });
 });
 
-// Timer countdown
+// Timer
 <c:if test="${attempt.deadlineAt != null}">
 (function() {
     var endStr = '${fn:replace(fn:substring(attempt.deadlineAt, 0, 19), "T", " ")}';
@@ -338,15 +313,20 @@ document.querySelectorAll('.qt-option input').forEach(function(inp) {
         var left = Math.floor((end - Date.now()) / 1000);
         if (left <= 0) {
             timerEl.textContent = '00:00';
-            timerEl.className = 'qt-timer';
+            timerEl.className = 'quiz-timer-badge quiz-timer-badge--danger';
+            alert('Đã hết thời gian làm bài! Hệ thống sẽ tự động nộp bài làm của bạn.');
             form.submit();
             return;
         }
         var m = Math.floor(left / 60), s = left % 60;
         timerEl.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-        if (left <= 60) timerEl.className = 'qt-timer';
-        else if (left <= 300) timerEl.className = 'qt-timer qt-timer--warning';
-        else timerEl.className = 'qt-timer qt-timer--ok';
+        if (left <= 60) {
+            timerEl.className = 'quiz-timer-badge quiz-timer-badge--danger';
+        } else if (left <= 300) {
+            timerEl.className = 'quiz-timer-badge quiz-timer-badge--warning';
+        } else {
+            timerEl.className = 'quiz-timer-badge';
+        }
         setTimeout(tick, 1000);
     }
     tick();
@@ -361,11 +341,5 @@ function closeZoomModal() {
     document.getElementById('imageZoomModal').style.display = 'none';
 }
 </script>
-
-<div id="imageZoomModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:10000;align-items:center;justify-content:center" onclick="closeZoomModal()">
-    <img id="zoomedImg" src="" style="max-width:92vw;max-height:92vh;border-radius:10px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5)"/>
-</div>
-
-<jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 </body>
 </html>
