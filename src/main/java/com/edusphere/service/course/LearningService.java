@@ -13,6 +13,7 @@ import com.edusphere.entity.course.LessonCompletion;
 import com.edusphere.entity.course.Question;
 import com.edusphere.entity.course.LessonWatchProgress;
 import com.edusphere.entity.course.Quiz;
+import com.edusphere.entity.course.QuizAttempt;
 import com.edusphere.entity.account.Users;
 import com.edusphere.repository.course.AssignmentRepository;
 import com.edusphere.repository.course.CourseRepository;
@@ -238,9 +239,27 @@ public class LearningService {
         wp.setWatchedSegments(intervalsToJson(intervals));
 
         // 8. Kiểm tra và cập nhật điều kiện mở khóa Quiz (>= 80%)
-        boolean isUnlocked = Boolean.TRUE.equals(wp.getQuizUnlocked()) || (finalPercent >= 80);
+        int minWatchReq = (lesson.getMinWatchPercent() != null && lesson.getMinWatchPercent() > 0) ? lesson.getMinWatchPercent() : 80;
+        boolean isUnlocked = Boolean.TRUE.equals(wp.getQuizUnlocked()) || (finalPercent >= minWatchReq);
         if (isUnlocked) {
             wp.setQuizUnlocked(true);
+        }
+
+        // Nếu bài học không có Quiz nào và đã xem đạt yêu cầu -> tự động ghi nhận hoàn thành bài học
+        if (finalPercent >= minWatchReq && lessonCompletionRepository != null
+                && !lessonCompletionRepository.existsByStudent_UserIdAndLesson_LessonId(studentId, lessonId)) {
+            boolean hasQuiz = quizRepository != null
+                    && !quizRepository.findByCourse_CourseIdAndLesson_LessonIdAndStatus(courseId, lessonId, "PUBLISHED").isEmpty();
+            if (!hasQuiz) {
+                try {
+                    LessonCompletion lc = new LessonCompletion();
+                    lc.setStudent(student);
+                    lc.setCourse(lesson.getCourse());
+                    lc.setLesson(lesson);
+                    lc.setCompletedAt(LocalDateTime.now());
+                    lessonCompletionRepository.save(lc);
+                } catch (Exception ignored) {}
+            }
         }
 
         LessonWatchProgress saved = watchProgressRepository.save(wp);
@@ -361,14 +380,26 @@ public class LearningService {
 
         List<LessonItemView> lessonItemViews = new ArrayList<>();
         LessonItemView currentLessonView = null;
-        for (Lesson l : publishedLessons) {
+        boolean prevPassed = true;
+        for (int i = 0; i < publishedLessons.size(); i++) {
+            Lesson l = publishedLessons.get(i);
             boolean isCur = Objects.equals(l.getLessonId(), current.getLessonId());
             boolean isComp = completedLessonIds.contains(l.getLessonId());
+
+            // Bài đầu tiên (i == 0) luôn mở khóa.
+            // Các bài tiếp theo (i > 0) bị khóa nếu bài trước đó chưa hoàn thành cả bài học và bài quiz (nếu có).
+            boolean locked = (i > 0) && !prevPassed;
+
+            // Kiểm tra bài hiện tại có đạt cả bài học và quiz hay không để mở bài tiếp:
+            if (!isLessonAndQuizCompleted(l, studentId)) {
+                prevPassed = false;
+            }
+
             String sTitle = l.getSection() != null ? l.getSection().getTitle() : null;
             Integer sId = l.getSection() != null ? l.getSection().getSectionId() : null;
             LessonItemView itemView = new LessonItemView(l.getLessonId(), l.getTitle(), l.getOrderIndex(), isComp, isCur,
                     l.getLessonType() != null ? l.getLessonType() : "ARTICLE",
-                    l.getVideoDuration(), Boolean.TRUE.equals(l.getIsPreview()), sId, sTitle);
+                    l.getVideoDuration(), Boolean.TRUE.equals(l.getIsPreview()), sId, sTitle, locked);
             lessonItemViews.add(itemView);
             if (isCur) {
                 currentLessonView = itemView;
@@ -490,7 +521,7 @@ public class LearningService {
             Integer sId = l.getSection() != null ? l.getSection().getSectionId() : null;
             LessonItemView itemView = new LessonItemView(l.getLessonId(), l.getTitle(), l.getOrderIndex(), false, isCur,
                     l.getLessonType() != null ? l.getLessonType() : "ARTICLE",
-                    l.getVideoDuration(), Boolean.TRUE.equals(l.getIsPreview()), sId, sTitle);
+                    l.getVideoDuration(), Boolean.TRUE.equals(l.getIsPreview()), sId, sTitle, false);
             lessonItemViews.add(itemView);
             if (isCur) currentLessonView = itemView;
         }
@@ -526,11 +557,86 @@ public class LearningService {
         );
     }
 
+    /**
+     * Kiểm tra một bài học đã hoàn thành cả phần nội dung/video VÀ bài quiz (nếu có) hay chưa.
+     * Dùng để quyết định việc mở khóa bài học kế tiếp.
+     */
+    public boolean isLessonAndQuizCompleted(Lesson lesson, Integer studentId) {
+        if (lesson == null) return false;
+        Integer lessonId = lesson.getLessonId();
+        Integer courseId = lesson.getCourse() != null ? lesson.getCourse().getCourseId() : null;
+
+        // 1. Kiểm tra hoàn thành bài học (hoặc video xem >= 80% / minWatchPercent)
+        boolean lessonCompleted = lessonCompletionRepository != null
+                && lessonCompletionRepository.existsByStudent_UserIdAndLesson_LessonId(studentId, lessonId);
+        if (!lessonCompleted && "VIDEO".equalsIgnoreCase(lesson.getLessonType()) && watchProgressRepository != null) {
+            int minPct = (lesson.getMinWatchPercent() != null && lesson.getMinWatchPercent() > 0) ? lesson.getMinWatchPercent() : 80;
+            lessonCompleted = watchProgressRepository.findByStudent_UserIdAndLesson_LessonId(studentId, lessonId)
+                    .map(wp -> Boolean.TRUE.equals(wp.getQuizUnlocked()) || (wp.getWatchPercent() != null && wp.getWatchPercent() >= minPct))
+                    .orElse(false);
+        }
+
+        if (!lessonCompleted) {
+            return false;
+        }
+
+        // 2. Nếu bài học có Quiz PUBLISHED -> học viên phải hoàn thành / nộp Quiz
+        if (courseId != null && quizRepository != null && quizAttemptRepository != null) {
+            List<Quiz> quizzes = quizRepository.findByCourse_CourseIdAndLesson_LessonIdAndStatus(courseId, lessonId, "PUBLISHED");
+            if (quizzes != null && !quizzes.isEmpty()) {
+                for (Quiz q : quizzes) {
+                    List<QuizAttempt> attempts = quizAttemptRepository.findByQuiz_QuizIdAndStudent_UserIdOrderByAttemptNumberDesc(q.getQuizId(), studentId);
+                    boolean qPassed = false;
+                    for (QuizAttempt att : attempts) {
+                        if ("SCORED".equals(att.getStatus()) || "SUBMITTED".equals(att.getStatus())) {
+                            if (q.getPassingScore() != null && att.getMaxScore() != null
+                                    && att.getMaxScore().compareTo(BigDecimal.ZERO) > 0 && att.getScore() != null) {
+                                double pct = att.getScore().doubleValue() / att.getMaxScore().doubleValue() * 100.0;
+                                if (pct >= q.getPassingScore().doubleValue()) {
+                                    qPassed = true;
+                                    break;
+                                }
+                            } else {
+                                qPassed = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!qPassed) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
     @Transactional
     public Integer completeLesson(Integer courseId, Integer lessonId, Integer studentId) {
         Enrollment enrollment = verifyEnrollment(studentId, courseId);
         Lesson lesson = lessonRepository.findByLessonIdAndCourse_CourseIdAndStatus(lessonId, courseId, PUBLISHED)
                 .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy bài học để hoàn thành."));
+
+        // Kiểm tra điều kiện hoàn thành Quiz nếu bài học có gắn Quiz
+        if (quizRepository != null && quizAttemptRepository != null) {
+            List<Quiz> quizzes = quizRepository.findByCourse_CourseIdAndLesson_LessonIdAndStatus(courseId, lessonId, "PUBLISHED");
+            if (quizzes != null && !quizzes.isEmpty()) {
+                boolean allQuizzesDone = true;
+                for (Quiz q : quizzes) {
+                    List<QuizAttempt> attempts = quizAttemptRepository.findByQuiz_QuizIdAndStudent_UserIdOrderByAttemptNumberDesc(q.getQuizId(), studentId);
+                    boolean done = attempts.stream().anyMatch(a -> "SCORED".equals(a.getStatus()) || "SUBMITTED".equals(a.getStatus()));
+                    if (!done) {
+                        allQuizzesDone = false;
+                        break;
+                    }
+                }
+                if (!allQuizzesDone) {
+                    throw new CourseActionException(HttpStatus.BAD_REQUEST,
+                            "Bạn cần hoàn thành bài kiểm tra (Quiz) của bài học này trước khi đánh dấu hoàn thành để chuyển sang bài tiếp theo.");
+                }
+            }
+        }
 
         if (lesson.getPrerequisiteLesson() != null) {
             boolean prereqDone = lessonCompletionRepository.existsByStudent_UserIdAndLesson_LessonId(

@@ -1,5 +1,6 @@
 package com.edusphere.controller.course;
 
+import com.edusphere.dto.course.LessonItemView;
 import com.edusphere.dto.course.StudyCourseView;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
@@ -41,8 +42,21 @@ public class LessonStudyController {
     public String studyLesson(@PathVariable Integer courseId,
                               @PathVariable Integer lessonId,
                               @RequestParam(required = false) String tab,
-                              @AuthenticationPrincipal CustomUserDetails user, Model model) {
+                              @AuthenticationPrincipal CustomUserDetails user,
+                              Model model,
+                              RedirectAttributes flash) {
         StudyCourseView context = learningService.getStudyContext(courseId, lessonId, user.getUserId());
+        if (context.getCurrentLesson() != null && context.getCurrentLesson().isLocked() && !context.isPreviewMode()) {
+            Integer fallbackLessonId = context.getLessons().stream()
+                    .filter(l -> !l.isLocked())
+                    .map(LessonItemView::getLessonId)
+                    .reduce((first, second) -> second)
+                    .orElse(lessonId);
+            flash.addFlashAttribute("error", "🔒 Bài học này đang bị khóa. Bạn cần hoàn thành bài học và bài kiểm tra trước đó để mở khóa.");
+            if (fallbackLessonId != null && !fallbackLessonId.equals(lessonId)) {
+                return "redirect:/courses/" + courseId + "/lessons/" + fallbackLessonId;
+            }
+        }
         model.addAttribute("study", context);
         model.addAttribute("studyContext", context);
         if ("exercise".equals(tab)) model.addAttribute("initialTab", "exercise");
@@ -54,11 +68,16 @@ public class LessonStudyController {
                                  @PathVariable Integer lessonId,
                                  @AuthenticationPrincipal CustomUserDetails user,
                                  RedirectAttributes flash) {
-        Integer nextLessonId = learningService.completeLesson(courseId, lessonId, user.getUserId());
-        flash.addFlashAttribute("success", "Đã đánh dấu hoàn thành bài học.");
-        if (nextLessonId != null) return "redirect:/courses/" + courseId + "/lessons/" + nextLessonId;
-        flash.addFlashAttribute("courseCompleted", true);
-        return "redirect:/courses/" + courseId + "/lessons/" + lessonId;
+        try {
+            Integer nextLessonId = learningService.completeLesson(courseId, lessonId, user.getUserId());
+            flash.addFlashAttribute("success", "Đã đánh dấu hoàn thành bài học.");
+            if (nextLessonId != null) return "redirect:/courses/" + courseId + "/lessons/" + nextLessonId;
+            flash.addFlashAttribute("courseCompleted", true);
+            return "redirect:/courses/" + courseId + "/lessons/" + lessonId;
+        } catch (CourseActionException ex) {
+            flash.addFlashAttribute("error", ex.getMessage());
+            return "redirect:/courses/" + courseId + "/lessons/" + lessonId;
+        }
     }
 
     /**

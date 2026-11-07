@@ -327,4 +327,13 @@ public final class StudyCourseView {
         return !url.contains("youtube.com") && !url.contains("youtu.be")
                 && !url.contains("vimeo.com") && !url.contains("player.mediadelivery.net");
     }
+
+    public boolean isNextLessonLocked() {
+        if (nextLessonId == null || lessons == null) return false;
+        return lessons.stream()
+                .filter(l -> java.util.Objects.equals(l.getLessonId(), nextLessonId))
+                .findFirst()
+                .map(LessonItemView::isLocked)
+                .orElse(false);
+    }
 }

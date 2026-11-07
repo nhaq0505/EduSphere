@@ -11,6 +11,7 @@ import com.edusphere.entity.course.BankQuestion;
 import com.edusphere.entity.course.Course;
 import com.edusphere.entity.course.Enrollment;
 import com.edusphere.entity.course.Lesson;
+import com.edusphere.entity.course.LessonCompletion;
 import com.edusphere.entity.course.Question;
 import com.edusphere.entity.course.QuestionBank;
 import com.edusphere.entity.course.Quiz;
@@ -785,6 +786,27 @@ public class QuizService {
             Quiz quiz = attempt.getQuiz();
             learningProgressService.recordActivity(attempt.getStudent(), quiz.getCourse(),
                     "QUIZ_SUBMITTED", quiz.getLesson(), null, quiz, "Đã làm bài kiểm tra: " + quiz.getTitle());
+        }
+
+        // Tự động ghi nhận hoàn thành bài học khi học viên hoàn thành/đạt bài Quiz gắn với bài học
+        if (lessonCompletions != null && attempt.getQuiz() != null && attempt.getQuiz().getLesson() != null) {
+            Lesson quizLesson = attempt.getQuiz().getLesson();
+            boolean passedQuiz = true;
+            if (attempt.getQuiz().getPassingScore() != null && attempt.getMaxScore() != null
+                    && attempt.getMaxScore().compareTo(BigDecimal.ZERO) > 0 && attempt.getScore() != null) {
+                double pct = attempt.getScore().doubleValue() / attempt.getMaxScore().doubleValue() * 100.0;
+                passedQuiz = pct >= attempt.getQuiz().getPassingScore().doubleValue();
+            }
+            if (passedQuiz && !lessonCompletions.existsByStudent_UserIdAndLesson_LessonId(studentId, quizLesson.getLessonId())) {
+                try {
+                    LessonCompletion lc = new LessonCompletion();
+                    lc.setStudent(attempt.getStudent());
+                    lc.setCourse(attempt.getQuiz().getCourse());
+                    lc.setLesson(quizLesson);
+                    lc.setCompletedAt(now);
+                    lessonCompletions.save(lc);
+                } catch (Exception ignored) {}
+            }
         }
     }
 

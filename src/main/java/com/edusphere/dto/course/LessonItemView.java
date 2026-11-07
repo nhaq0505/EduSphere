@@ -17,11 +17,18 @@ public record LessonItemView(
         Integer videoDuration,
         boolean preview,
         Integer sectionId,
-        String sectionTitle
+        String sectionTitle,
+        boolean locked
 ) {
     /** Compact constructor cho tương thích ngược (5 tham số). */
     public LessonItemView(Integer lessonId, String title, Integer orderIndex, boolean completed, boolean current) {
-        this(lessonId, title, orderIndex, completed, current, "ARTICLE", null, false, null, null);
+        this(lessonId, title, orderIndex, completed, current, "ARTICLE", null, false, null, null, false);
+    }
+
+    /** Compact constructor cho tương thích ngược (10 tham số). */
+    public LessonItemView(Integer lessonId, String title, Integer orderIndex, boolean completed, boolean current,
+                          String lessonType, Integer videoDuration, boolean preview, Integer sectionId, String sectionTitle) {
+        this(lessonId, title, orderIndex, completed, current, lessonType, videoDuration, preview, sectionId, sectionTitle, false);
     }
 
     // --- JavaBean-style getters cho JSP EL (BeanELResolver) ---
@@ -37,4 +44,5 @@ public record LessonItemView(
     public boolean isPreview()        { return this.preview(); }
     public Integer getSectionId()     { return this.sectionId(); }
     public String  getSectionTitle()  { return this.sectionTitle(); }
+    public boolean isLocked()         { return this.locked(); }
 }

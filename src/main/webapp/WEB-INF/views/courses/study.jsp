@@ -205,6 +205,20 @@
         </c:when>
 
         <c:otherwise>
+            <%-- Flash Notifications (Khóa bài học / thành công) --%>
+            <c:if test="${not empty error}">
+                <div style="background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; padding: 12px 18px; border-radius: 12px; margin-bottom: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(220,38,38,0.06);">
+                    <span style="font-size: 1.25rem;">⚠️</span>
+                    <span><c:out value="${error}"/></span>
+                </div>
+            </c:if>
+            <c:if test="${not empty success}">
+                <div style="background: #ECFDF5; border: 1px solid #A7F3D0; color: #059669; padding: 12px 18px; border-radius: 12px; margin-bottom: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(5,150,105,0.06);">
+                    <span style="font-size: 1.25rem;">✅</span>
+                    <span><c:out value="${success}"/></span>
+                </div>
+            </c:if>
+
             <%-- ════ 3. MAIN 3-COLUMN LAYOUT ════ --%>
             <div class="study-grid">
 
@@ -226,11 +240,15 @@
                                     </div>
                                     <ul class="chapter-lessons-list">
                                         <c:forEach var="item" items="${sec.lessons}">
-                                            <li class="sidebar-lesson-item ${item.current ? 'sidebar-lesson-item--active' : ''}">
+                                            <li class="sidebar-lesson-item ${item.current ? 'sidebar-lesson-item--active' : ''} ${item.locked and not study.previewMode ? 'sidebar-lesson-item--locked' : ''}">
                                                 <a class="sidebar-lesson-link"
-                                                   href="<c:choose><c:when test='${study.previewMode}'>${pageContext.request.contextPath}/instructor/courses/${study.courseId}/preview/lessons/${item.lessonId}</c:when><c:otherwise>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${item.lessonId}</c:otherwise></c:choose>">
+                                                   href="<c:choose><c:when test='${study.previewMode}'>${pageContext.request.contextPath}/instructor/courses/${study.courseId}/preview/lessons/${item.lessonId}</c:when><c:when test='${item.locked}'>javascript:void(0)</c:when><c:otherwise>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${item.lessonId}</c:otherwise></c:choose>"
+                                                   <c:if test="${item.locked and not study.previewMode}">onclick="alert('🔒 Bài học này chưa được mở khóa!\nBạn cần hoàn thành bài học và bài kiểm tra trước đó để mở khóa.'); return false;" style="opacity: 0.65; cursor: not-allowed;"</c:if>>
                                                     <span class="sidebar-lesson-icon">
                                                         <c:choose>
+                                                            <c:when test="${item.locked and not study.previewMode}">
+                                                                <span style="font-size: 13px;">🔒</span>
+                                                            </c:when>
                                                             <c:when test="${item.current}">
                                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                                                             </c:when>
@@ -248,8 +266,14 @@
                                                     </div>
                                                     <div class="sidebar-lesson-status">
                                                         <c:choose>
-                                                            <c:when test="${item.completed or item.current}">
-                                                                <span class="status-check-blue">✔</span>
+                                                            <c:when test="${item.locked and not study.previewMode}">
+                                                                <span class="status-locked" title="Chưa mở khóa" style="color: #94A3B8; font-size: 13px;">🔒</span>
+                                                            </c:when>
+                                                            <c:when test="${item.completed}">
+                                                                <span class="status-check-blue" title="Đã hoàn thành">✔</span>
+                                                            </c:when>
+                                                            <c:when test="${item.current}">
+                                                                <span class="status-check-blue" style="background: rgba(37,99,235,0.1); color: #2563EB;">▶</span>
                                                             </c:when>
                                                             <c:otherwise>
                                                                 <span class="status-empty-circle"></span>
@@ -456,7 +480,7 @@
                             <div class="study-actions" style="margin-top:24px;">
                                 <c:if test="${not empty study.prevLessonId}">
                                     <a class="study-btn study-btn--outline"
-                                       href="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.prevLessonId}">
+                                       href="<c:choose><c:when test='${study.previewMode}'>${pageContext.request.contextPath}/instructor/courses/${study.courseId}/preview/lessons/${study.prevLessonId}</c:when><c:otherwise>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.prevLessonId}</c:otherwise></c:choose>">
                                         ← Bài trước
                                     </a>
                                 </c:if>
@@ -475,11 +499,29 @@
                                         ✅ Đã hoàn thành bài học
                                     </div>
                                 </c:if>
-                                <c:if test="${not empty study.nextLessonId}">
-                                    <a class="study-btn study-btn--outline"
-                                       href="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}">
-                                        Bài tiếp →
+                                <c:if test="${not empty study.currentLessonQuizzes and not study.currentLesson.completed and not study.previewMode}">
+                                    <a class="study-btn study-btn--primary"
+                                       href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${study.currentLessonQuizzes[0].quizId}"
+                                       style="background: linear-gradient(135deg, #1B9AF5, #2563EB); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.25);">
+                                        📝 Làm bài Quiz để mở bài tiếp →
                                     </a>
+                                </c:if>
+                                <c:if test="${not empty study.nextLessonId}">
+                                    <c:choose>
+                                        <c:when test="${study.nextLessonLocked and not study.previewMode}">
+                                            <button type="button" class="study-btn study-btn--outline"
+                                                    onclick="alert('🔒 Bài học tiếp theo đang bị khóa!\nBạn cần hoàn thành bài học hiện tại và làm bài kiểm tra liên quan để mở khóa.');"
+                                                    style="opacity: 0.65; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px;">
+                                                <span>🔒 Bài tiếp (Đang khóa)</span>
+                                            </button>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <a class="study-btn study-btn--outline"
+                                               href="<c:choose><c:when test='${study.previewMode}'>${pageContext.request.contextPath}/instructor/courses/${study.courseId}/preview/lessons/${study.nextLessonId}</c:when><c:otherwise>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}</c:otherwise></c:choose>">
+                                                Bài tiếp →
+                                            </a>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </c:if>
                             </div>
                         </div>

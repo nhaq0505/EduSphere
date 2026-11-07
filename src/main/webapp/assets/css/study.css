@@ -311,6 +311,23 @@ body {
     border-radius: 0 4px 4px 0;
 }
 
+.sidebar-lesson-item--locked .sidebar-lesson-link {
+    opacity: 0.55;
+    cursor: not-allowed !important;
+    background: transparent;
+}
+.sidebar-lesson-item--locked .sidebar-lesson-link:hover {
+    background: transparent !important;
+    color: #64748B !important;
+}
+.sidebar-lesson-item--locked .sidebar-lesson-icon {
+    background: #F1F5F9;
+    color: #94A3B8;
+}
+.sidebar-lesson-item--locked .sidebar-lesson-title {
+    color: #94A3B8 !important;
+}
+
 .sidebar-lesson-icon {
     width: 24px;
     height: 24px;
