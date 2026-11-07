@@ -134,6 +134,19 @@
                         </div>
                         <p class="qt-question__text"><c:out value="${q.content}"/></p>
 
+                        <c:if test="${not empty q.imageUrl}">
+                            <div style="margin:12px 0;">
+                                <img src="${pageContext.request.contextPath}${q.imageUrl}"
+                                     style="max-height:260px;max-width:100%;border-radius:8px;border:1px solid #E2E8F0;cursor:pointer;object-fit:contain;"
+                                     onclick="zoomImage(this.src)" alt="Minh họa câu hỏi"/>
+                            </div>
+                        </c:if>
+                        <c:if test="${not empty q.videoUrl}">
+                            <div style="margin:10px 0;font-size:0.88rem;color:#4F46E5;">
+                                📹 Video bổ trợ câu hỏi: <a href="<c:out value="${q.videoUrl}"/>" target="_blank" style="color:#2563eb;text-decoration:underline;"><c:out value="${q.videoUrl}"/></a>
+                            </div>
+                        </c:if>
+
                         <c:choose>
                             <c:when test="${q.type eq 'SINGLE_CHOICE'}">
                                 <p class="qt-question__hint">🔘 Chọn một đáp án đúng</p>
@@ -339,7 +352,20 @@ document.querySelectorAll('.qt-option input').forEach(function(inp) {
     tick();
 })();
 </c:if>
+
+function zoomImage(src) {
+    document.getElementById('zoomedImg').src = src;
+    document.getElementById('imageZoomModal').style.display = 'flex';
+}
+function closeZoomModal() {
+    document.getElementById('imageZoomModal').style.display = 'none';
+}
 </script>
+
+<div id="imageZoomModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:10000;align-items:center;justify-content:center" onclick="closeZoomModal()">
+    <img id="zoomedImg" src="" style="max-width:92vw;max-height:92vh;border-radius:10px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5)"/>
+</div>
+
 <jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 </body>
 </html>

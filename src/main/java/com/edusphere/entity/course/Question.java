@@ -37,8 +37,18 @@ public class Question {
     @JoinColumn(name = "quiz_id", referencedColumnName = "quiz_id", nullable = false)
     private Quiz quiz;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bank_question_id", referencedColumnName = "bank_question_id")
+    private BankQuestion bankQuestion;
+
     @Column(name = "content", nullable = false, columnDefinition = "nvarchar(max)")
     private String content;
+
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
+    @Column(name = "video_url", length = 500)
+    private String videoUrl;
 
     /** SINGLE_CHOICE / MULTIPLE_CHOICE / TRUE_FALSE / SHORT_ANSWER / ESSAY */
     @Column(name = "type", nullable = false, length = 30)
@@ -55,6 +65,9 @@ public class Question {
 
     @Column(name = "explanation", columnDefinition = "nvarchar(max)")
     private String explanation;
+
+    @Column(name = "sample_essay_answer", columnDefinition = "nvarchar(max)")
+    private String sampleEssayAnswer;
 
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("orderIndex ASC")

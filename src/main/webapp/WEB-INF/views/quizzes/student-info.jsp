@@ -51,9 +51,6 @@
                 </c:choose>
             </span>
             <span class="qi-meta-item">🔄 Tối đa ${quiz.maxAttempts} lần làm</span>
-            <c:if test="${quiz.dueDate != null}">
-                <span class="qi-meta-item">⏰ Hạn: ${fn:replace(fn:substring(quiz.dueDate, 0, 16), 'T', ' ')}</span>
-            </c:if>
             <c:if test="${quiz.passingScore != null}">
                 <span class="qi-meta-item">🎯 Qua bài: ${quiz.passingScore}%</span>
             </c:if>

@@ -243,13 +243,40 @@
                 <%-- ════ TAB: QUESTIONS ════ --%>
                 <div class="qb-panel active" id="panel-questions">
 
+                    <!-- Fast Action Toolbar -->
+                    <div style="background:#fff;border:1.5px solid #E2E8F0;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div style="font-size:0.9rem;font-weight:700;color:#1e293b;display:flex;align-items:center;gap:8px;">
+                            <span>📋 Số câu hỏi trong đề:</span>
+                            <span style="font-weight:800;color:#2563EB;">${fn:length(questions)} câu</span>
+                        </div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button type="button" class="qb-btn-primary" style="background:linear-gradient(135deg, #4f46e5, #7c3aed);border:none;box-shadow:0 2px 4px rgba(79,70,229,0.25);" onclick="openAutoGenerateModal()">
+                                🎲 Tự động sinh từ Ngân hàng
+                            </button>
+                            <button type="button" class="qb-btn-primary" style="background:#0284c7;border:none;" onclick="openPickFromBankModal()">
+                                📥 Chọn từ Ngân hàng
+                            </button>
+                            <button type="button" class="qb-btn-primary" onclick="qbShowAddForm()">
+                                ➕ Thêm thủ công
+                            </button>
+                        </div>
+                    </div>
+
                     <c:choose>
                         <c:when test="${empty questions}">
                             <div class="ins-empty" style="padding:40px 20px;text-align:center;">
                                 <div style="font-size:2.5rem;margin-bottom:12px;">❓</div>
                                 <h3 style="margin:0 0 6px;">Chưa có câu hỏi nào</h3>
-                                <p style="color:#64748B;margin:0 0 18px;">Thêm câu hỏi đầu tiên để bắt đầu xây dựng bài kiểm tra.</p>
-                                <button class="qb-btn-primary" onclick="qbShowAddForm()">➕ Thêm câu hỏi đầu tiên</button>
+                                <p style="color:#64748B;margin:0 0 18px;">Bạn có thể bốc ngẫu nhiên siêu tốc từ ngân hàng câu hỏi hoặc soạn thủ công.</p>
+                                <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+                                    <button type="button" class="qb-btn-primary" style="background:linear-gradient(135deg, #4f46e5, #7c3aed);border:none;" onclick="openAutoGenerateModal()">
+                                        🎲 Tự động sinh ngẫu nhiên
+                                    </button>
+                                    <button type="button" class="qb-btn-primary" style="background:#0284c7;border:none;" onclick="openPickFromBankModal()">
+                                        📥 Chọn từ Ngân hàng
+                                    </button>
+                                    <button type="button" class="qb-btn-primary" onclick="qbShowAddForm()">➕ Thêm thủ công</button>
+                                </div>
                             </div>
                         </c:when>
                         <c:otherwise>
@@ -295,6 +322,24 @@
                                         </div>
                                     </div>
 
+                                    <c:if test="${not empty q.imageUrl}">
+                                        <div style="margin:10px 0;">
+                                            <img src="${pageContext.request.contextPath}${q.imageUrl}"
+                                                 style="max-height:160px;max-width:320px;border-radius:8px;border:1px solid #E2E8F0;cursor:pointer;object-fit:cover;"
+                                                 onclick="zoomImage(this.src)" alt="Minh họa"/>
+                                        </div>
+                                    </c:if>
+                                    <c:if test="${not empty q.videoUrl}">
+                                        <div style="margin:6px 0;font-size:0.82rem;color:#4F46E5;">
+                                            📹 Video đính kèm: <a href="<c:out value="${q.videoUrl}"/>" target="_blank"><c:out value="${q.videoUrl}"/></a>
+                                        </div>
+                                    </c:if>
+                                    <c:if test="${q.type eq 'ESSAY' and not empty q.sampleEssayAnswer}">
+                                        <div style="margin-top:8px;padding:8px 12px;background:#FDF4FF;border-left:3px solid #C026D3;border-radius:4px;font-size:0.83rem;color:#86198F;">
+                                            💡 <strong>Gợi ý đáp án / Tiêu chí chấm:</strong> <c:out value="${q.sampleEssayAnswer}"/>
+                                        </div>
+                                    </c:if>
+
                                     <div class="qb-question-meta">
                                         <span class="qb-type-badge">
                                             <c:choose>
@@ -306,6 +351,11 @@
                                             </c:choose>
                                         </span>
                                         <span>⭐ <fmt:formatNumber value="${q.score}" maxFractionDigits="1"/> điểm</span>
+                                        <c:if test="${q.bankQuestion != null}">
+                                            <span style="padding:2px 8px;border-radius:12px;background:#E0E7FF;color:#4338CA;font-weight:700;">
+                                                📚 Từ Ngân hàng
+                                            </span>
+                                        </c:if>
                                     </div>
 
                                     <%-- Options --%>
@@ -516,22 +566,10 @@
                                     <p class="qb-hint">Nhập 1 để chỉ cho phép làm 1 lần.</p>
                                 </div>
                             </div>
-                            <div class="qb-grid-3">
-                                <div class="qb-field">
-                                    <label>Thời điểm mở bài</label>
-                                    <input class="qb-input" type="datetime-local" name="startTime"
-                                           value="<c:if test='${quiz.startTime != null}'><c:out value='${quiz.startTime}'/></c:if>">
-                                </div>
-                                <div class="qb-field">
-                                    <label>Hạn làm bài (due date)</label>
-                                    <input class="qb-input" type="datetime-local" name="dueDate"
-                                           value="<c:if test='${quiz.dueDate != null}'><c:out value='${quiz.dueDate}'/></c:if>">
-                                </div>
-                                <div class="qb-field">
-                                    <label>Thời điểm đóng bài</label>
-                                    <input class="qb-input" type="datetime-local" name="endTime"
-                                           value="<c:if test='${quiz.endTime != null}'><c:out value='${quiz.endTime}'/></c:if>">
-                                </div>
+                            <div class="qb-field">
+                                <label>Thời điểm mở bài (để trống nếu mở ngay)</label>
+                                <input class="qb-input" type="datetime-local" name="startTime"
+                                       value="<c:if test='${quiz.startTime != null}'><c:out value='${quiz.startTime}'/></c:if>">
                             </div>
                         </div>
 
@@ -740,6 +778,196 @@ document.addEventListener('click', function() {
     var m = document.getElementById('insUserMenu');
     if (m) m.classList.remove('open');
 });
+
+// ── Question Bank Integration ──
+function openAutoGenerateModal() {
+    var el = document.getElementById('autoGenModal');
+    if (el) el.style.display = 'flex';
+}
+function closeAutoGenerateModal() {
+    var el = document.getElementById('autoGenModal');
+    if (el) el.style.display = 'none';
+}
+function openPickFromBankModal() {
+    var el = document.getElementById('pickBankModal');
+    if (el) {
+        el.style.display = 'flex';
+        var sel = document.getElementById('pickBankSelect');
+        if (sel && sel.value) loadBankQuestionsForPicker(sel.value);
+    }
+}
+function closePickFromBankModal() {
+    var el = document.getElementById('pickBankModal');
+    if (el) el.style.display = 'none';
+}
+function zoomImage(src) {
+    document.getElementById('zoomedImg').src = src;
+    document.getElementById('imageZoomModal').style.display = 'flex';
+}
+function closeZoomModal() {
+    document.getElementById('imageZoomModal').style.display = 'none';
+}
+function loadBankQuestionsForPicker(bankId) {
+    var cont = document.getElementById('pickerQuestionsContainer');
+    if (!bankId) {
+        cont.innerHTML = '<div style="text-align:center;color:#64748b;padding:40px 10px">Vui lòng chọn ngân hàng câu hỏi.</div>';
+        return;
+    }
+    cont.innerHTML = '<div style="text-align:center;color:#64748b;padding:40px 10px">⏳ Đang tải danh sách câu hỏi...</div>';
+    fetch('${pageContext.request.contextPath}/instructor/question-banks/api/' + bankId + '/questions')
+        .then(res => res.json())
+        .then(data => {
+            if (!data || data.length === 0) {
+                cont.innerHTML = '<div style="text-align:center;color:#64748b;padding:40px 10px">Ngân hàng này hiện chưa có câu hỏi nào.</div>';
+                updatePickedCount();
+                return;
+            }
+            var html = '';
+            data.forEach((q, i) => {
+                var typeLabel = q.type === 'SINGLE_CHOICE' ? 'Trắc nghiệm đơn' : (q.type === 'MULTIPLE_CHOICE' ? 'Nhiều đáp án' : (q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : (q.type === 'ESSAY' ? 'Tự luận' : q.type)));
+                html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;">' +
+                    '<input type="checkbox" name="bankQuestionIds" value="' + q.id + '" style="margin-top:4px;accent-color:#0284c7;" onchange="updatePickedCount()"/>' +
+                    '<div style="flex:1;">' +
+                        '<div style="font-weight:600;font-size:0.9rem;color:#1e293b;line-height:1.4;">#' + (i+1) + '. ' + escapeHtml(q.content) + '</div>' +
+                        '<div style="display:flex;gap:8px;margin-top:6px;font-size:0.75rem;color:#64748b;">' +
+                            '<span style="background:#e0e7ff;color:#4338ca;padding:1px 6px;border-radius:4px;font-weight:700;">' + typeLabel + '</span>' +
+                            '<span style="background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:4px;">' + (q.difficulty || 'MEDIUM') + '</span>' +
+                            '<span>' + (q.score || 1) + ' điểm</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            });
+            cont.innerHTML = html;
+            updatePickedCount();
+        })
+        .catch(err => {
+            cont.innerHTML = '<div style="text-align:center;color:#ef4444;padding:40px 10px">Lỗi khi tải câu hỏi: ' + err + '</div>';
+        });
+}
+function selectAllPickerQuestions(checked) {
+    document.querySelectorAll('#pickerQuestionsContainer input[type=checkbox]').forEach(cb => cb.checked = checked);
+    updatePickedCount();
+}
+function updatePickedCount() {
+    var cnt = document.querySelectorAll('#pickerQuestionsContainer input[type=checkbox]:checked').length;
+    var el = document.getElementById('pickedCountText');
+    if (el) el.innerText = 'Đã chọn: ' + cnt + ' câu';
+}
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
 </script>
+
+<%-- MODAL 1: TỰ ĐỘNG SINH CÂU HỎI TỪ NGÂN HÀNG (RANDOM) --%>
+<div class="modal-overlay" id="autoGenModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:520px;padding:28px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1)">
+        <h2 style="margin:0 0 12px;font-size:1.25rem;font-weight:800;color:#1e293b;display:flex;align-items:center;gap:8px">
+            <span>🎲</span> Tự động sinh câu hỏi từ Ngân hàng
+        </h2>
+        <p style="color:#64748b;font-size:0.88rem;margin:0 0 20px">
+            Hệ thống sẽ bốc ngẫu nhiên số lượng câu hỏi từ ngân hàng đã chọn và gắn vào bài quiz chỉ trong 1 giây.
+        </p>
+
+        <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${courseId}/quizzes/${quizId}/auto-generate">
+            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+
+            <div style="margin-bottom:16px">
+                <label style="display:block;margin-bottom:6px;font-weight:700;font-size:0.88rem;color:#334155">
+                    Chọn ngân hàng câu hỏi nguồn <span style="color:#ef4444">*</span>
+                </label>
+                <select name="bankId" class="qb-input" required>
+                    <c:forEach var="b" items="${questionBanks}">
+                        <option value="${b.bankId}"><c:out value="${b.name}"/> (${b.questions != null ? b.questions.size() : 0} câu)</option>
+                    </c:forEach>
+                </select>
+                <c:if test="${empty questionBanks}">
+                    <div style="font-size:0.8rem;color:#dc2626;margin-top:4px">
+                        Bạn chưa có ngân hàng câu hỏi nào. Hãy <a href="${pageContext.request.contextPath}/instructor/question-banks" target="_blank" style="color:#2563eb">tạo ngân hàng</a> trước.
+                    </div>
+                </c:if>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:700;font-size:0.88rem;color:#334155">
+                        Số câu hỏi cần bốc <span style="color:#ef4444">*</span>
+                    </label>
+                    <input type="number" name="count" class="qb-input" value="10" min="1" max="100" required/>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:700;font-size:0.88rem;color:#334155">
+                        Điểm mỗi câu
+                    </label>
+                    <input type="number" name="defaultScore" class="qb-input" value="1.0" min="0.25" step="0.25"/>
+                </div>
+            </div>
+
+            <div style="margin-bottom:20px;padding:12px 14px;background:#fef2f2;border:1px solid #fee2e2;border-radius:8px">
+                <label style="display:flex;align-items:center;gap:8px;font-size:0.86rem;color:#991b1b;cursor:pointer">
+                    <input type="checkbox" name="replaceExisting" value="true" style="accent-color:#dc2626"/>
+                    <strong>Xóa toàn bộ câu hỏi hiện tại trong quiz và tạo mới</strong>
+                </label>
+                <div style="font-size:0.78rem;color:#b91c1c;margin-top:4px;margin-left:24px">
+                    (Nếu bỏ chọn, câu hỏi được bốc sẽ được thêm tiếp vào sau các câu hỏi hiện tại)
+                </div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px">
+                <button type="button" class="qb-btn-secondary" onclick="closeAutoGenerateModal()">Hủy</button>
+                <button type="submit" class="qb-btn-primary" style="background:linear-gradient(135deg, #4f46e5, #7c3aed);border:none"
+                        <c:if test="${empty questionBanks}">disabled</c:if>>
+                    🚀 Sinh đề siêu tốc
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<%-- MODAL 2: CHỌN CÂU HỎI TỪ NGÂN HÀNG --%>
+<div class="modal-overlay" id="pickBankModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(2px)">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:720px;padding:26px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);max-height:90vh;display:flex;flex-direction:column">
+        <h2 style="margin:0 0 10px;font-size:1.25rem;font-weight:800;color:#1e293b;display:flex;align-items:center;gap:8px">
+            <span>📥</span> Chọn câu hỏi từ Ngân hàng
+        </h2>
+        
+        <form id="pickBankForm" method="post" action="${pageContext.request.contextPath}/instructor/courses/${courseId}/quizzes/${quizId}/import-bank-questions" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+                <label style="font-weight:700;font-size:0.88rem;color:#334155">Ngân hàng:</label>
+                <select id="pickBankSelect" name="bankId" class="qb-input" style="flex:1" onchange="loadBankQuestionsForPicker(this.value)">
+                    <option value="">-- Chọn ngân hàng câu hỏi --</option>
+                    <c:forEach var="b" items="${questionBanks}">
+                        <option value="${b.bankId}"><c:out value="${b.name}"/></option>
+                    </c:forEach>
+                </select>
+                <button type="button" class="qb-btn-secondary" style="font-size:0.8rem;padding:6px 12px" onclick="selectAllPickerQuestions(true)">Chọn tất cả</button>
+                <button type="button" class="qb-btn-secondary" style="font-size:0.8rem;padding:6px 12px" onclick="selectAllPickerQuestions(false)">Bỏ chọn</button>
+            </div>
+
+            <div id="pickerQuestionsContainer" style="flex:1;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#f8fafc;min-height:220px;margin-bottom:16px">
+                <div style="text-align:center;color:#64748b;padding:40px 10px">
+                    Vui lòng chọn ngân hàng câu hỏi phía trên để xem danh sách câu hỏi.
+                </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <span id="pickedCountText" style="font-size:0.85rem;color:#64748b;font-weight:600">Đã chọn: 0 câu</span>
+                <div style="display:flex;gap:10px">
+                    <button type="button" class="qb-btn-secondary" onclick="closePickFromBankModal()">Hủy</button>
+                    <button type="submit" class="qb-btn-primary" style="background:#0284c7;border:none">
+                        + Thêm các câu đã chọn vào bài Quiz
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<%-- MODAL 3: ZOOM HÌNH ẢNH --%>
+<div id="imageZoomModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10000;align-items:center;justify-content:center" onclick="closeZoomModal()">
+    <img id="zoomedImg" src="" style="max-width:90vw;max-height:90vh;border-radius:10px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5)"/>
+</div>
 </body>
 </html>

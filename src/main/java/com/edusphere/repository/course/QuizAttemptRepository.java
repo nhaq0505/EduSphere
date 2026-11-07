@@ -17,6 +17,8 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Intege
 
     int countByQuiz_QuizIdAndStudent_UserId(Integer quizId, Integer studentId);
 
+    long countByQuiz_QuizId(Integer quizId);
+
     Optional<QuizAttempt> findFirstByQuiz_QuizIdAndStudent_UserIdAndStatus(
             Integer quizId, Integer studentId, String status);
 

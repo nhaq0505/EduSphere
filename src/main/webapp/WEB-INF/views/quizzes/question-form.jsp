@@ -191,6 +191,31 @@
                     <p class="qf-hint">Hệ thống không tự chấm loại này. Giảng viên xem đáp án tham khảo khi chấm tay.</p>
                 </div>
 
+                <!-- Step 3d: ESSAY Rubric -->
+                <div id="essayBox" class="ins-field" style="display:none; margin-top:16px;">
+                    <label class="ins-label" for="sampleEssayAnswer">
+                        💡 Gợi ý đáp án / Tiêu chí chấm điểm (Rubric)
+                    </label>
+                    <textarea class="ins-input" id="sampleEssayAnswer" name="sampleEssayAnswer" rows="4"
+                              style="resize:vertical;" placeholder="Nêu các luận điểm và thang điểm thành phần để hỗ trợ chấm thi tự luận..."><c:out value="${questionForm.sampleEssayAnswer}"/></textarea>
+                </div>
+
+                <!-- Step 3e: Media (Image & Video URL) -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
+                    <div class="ins-field" style="margin:0;">
+                        <label class="ins-label" for="imageUrl">🖼️ Đường dẫn hình ảnh (Image URL)</label>
+                        <input class="ins-input" type="text" id="imageUrl" name="imageUrl"
+                               value="<c:out value='${questionForm.imageUrl}'/>"
+                               placeholder="/uploads/questions/... hoặc https://...">
+                    </div>
+                    <div class="ins-field" style="margin:0;">
+                        <label class="ins-label" for="videoUrl">📹 Đường dẫn Video (Video URL)</label>
+                        <input class="ins-input" type="text" id="videoUrl" name="videoUrl"
+                               value="<c:out value='${questionForm.videoUrl}'/>"
+                               placeholder="https://...">
+                    </div>
+                </div>
+
                 <!-- Step 4: Explanation -->
                 <div class="ins-field" style="margin-top:16px;">
                     <label class="ins-label" for="explanation">
@@ -236,6 +261,8 @@ function qfSelectType(type, card) {
 
     document.getElementById('shortBox').style.display = type === 'SHORT_ANSWER' ? '' : 'none';
     document.getElementById('shortAnswer').disabled = type !== 'SHORT_ANSWER';
+
+    document.getElementById('essayBox').style.display = type === 'ESSAY' ? '' : 'none';
 }
 
 function qfToggleCorrect(btn, idx) {

@@ -128,6 +128,7 @@ public class LessonManagementController {
         model.addAttribute("lessonId", lessonId);
         model.addAttribute("sections", sectionService.getSectionsWithLessons(courseId, instructor.getUserId()));
         model.addAttribute("existingLessons", candidatePrereqs);
+        model.addAttribute("materials", service.materials(courseId, lessonId, instructor.getUserId()));
         model.addAttribute("maxOrder", allLessons.size());
         model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons/" + lessonId + "/edit");
         return "courses/lesson-form";
@@ -145,6 +146,7 @@ public class LessonManagementController {
             model.addAttribute("lessonId", lessonId);
             model.addAttribute("sections", sectionService.getSectionsWithLessons(courseId, instructor.getUserId()));
             model.addAttribute("existingLessons", service.lessons(courseId, instructor.getUserId()).stream().filter(l -> !l.getLessonId().equals(lessonId)).toList());
+            model.addAttribute("materials", service.materials(courseId, lessonId, instructor.getUserId()));
             model.addAttribute("maxOrder", service.lessons(courseId, instructor.getUserId()).size());
             model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons/" + lessonId + "/edit");
             return "courses/lesson-form";

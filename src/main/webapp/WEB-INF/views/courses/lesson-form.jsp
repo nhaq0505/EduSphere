@@ -196,6 +196,74 @@
                         <form:errors path="content" cssClass="ins-field__error"/>
                     </div>
 
+                    <!-- 3.3: Đính kèm tài liệu học tập (Hỗ trợ tải tệp máy tính hoặc dán URL) -->
+                    <div style="margin-top:24px; padding:22px; background:#F8FAFC; border:1.5px dashed #CBD5E1; border-radius:var(--r12);">
+                        <h2 style="margin-top:0; margin-bottom:14px; font-size:1.05rem; font-weight:800; color:#1E293B; display:flex; align-items:center; gap:8px;">
+                            ➕ Đính kèm tài liệu mới (Hỗ trợ tải tệp máy tính hoặc dán URL)
+                        </h2>
+
+                        <c:if test="${course.status eq 'PUBLISHED' or course.status eq 'APPROVED'}">
+                            <div class="ins-alert" style="background:#ECFDF5; border:1px solid #86EFAC; color:#166534; margin-bottom:16px; font-size:.86rem; padding:10px 14px; border-radius:8px;">
+                                ✅ <strong>Khóa học đang công bố.</strong> Tài liệu đính kèm sẽ được học viên thấy ngay mà không cần gửi duyệt lại.
+                            </div>
+                        </c:if>
+
+                        <c:if test="${not empty materials}">
+                            <div style="margin-bottom:16px;">
+                                <div style="font-size:.85rem; font-weight:700; color:#475569; margin-bottom:8px;">📁 Tài liệu hiện có của bài học:</div>
+                                <div style="display:flex; flex-direction:column; gap:6px;">
+                                    <c:forEach var="mat" items="${materials}">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px solid #E2E8F0; border-radius:6px; padding:8px 12px; font-size:.85rem;">
+                                            <div>
+                                                <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-size:.72rem; font-weight:700; background:#E2E8F0; color:#334155; margin-right:6px;">${mat.type}</span>
+                                                <strong><c:out value="${mat.title}"/></strong>
+                                                <c:if test="${not empty mat.originalFileName}">
+                                                    <span style="color:#64748B; font-size:.8rem; margin-left:6px;">(<c:out value="${mat.originalFileName}"/>)</span>
+                                                </c:if>
+                                            </div>
+                                            <a href="<c:out value='${mat.fileUrl}'/>" target="_blank" style="color:#2563EB; font-size:.82rem; font-weight:600; text-decoration:none;">Mở file ↗</a>
+                                        </div>
+                                    </c:forEach>
+                                </div>
+                            </div>
+                        </c:if>
+
+                        <div class="ins-form-grid" style="margin-bottom:16px;">
+                            <div class="ins-field">
+                                <label for="mat-title">Tên tài liệu / Tiêu đề file</label>
+                                <form:input path="materialTitle" id="mat-title" maxlength="255"
+                                            placeholder="VD: Slide bài giảng (PDF), Source code mẫu (.zip)..."/>
+                                <span class="ins-field__hint">Để trống sẽ tự động lấy theo tên file bạn tải lên.</span>
+                            </div>
+                            <div class="ins-field">
+                                <label for="mat-type">Loại tài liệu</label>
+                                <form:select path="materialType" id="mat-type">
+                                    <form:option value="" label="Chọn loại"/>
+                                    <form:option value="DOCUMENT" label="📄 Tài liệu (PDF, Word, Slides, ZIP)"/>
+                                    <form:option value="LINK"     label="🔗 Liên kết ngoài / GitHub"/>
+                                    <form:option value="VIDEO"    label="🎬 Video bổ trợ"/>
+                                </form:select>
+                            </div>
+                        </div>
+
+                        <div class="ins-field">
+                            <label for="mat-url">Đường dẫn URL hoặc Tải từ máy tính</label>
+                            <div class="upload-row">
+                                <form:input path="materialUrl" id="mat-url" maxlength="2048"
+                                            placeholder="Dán link hoặc bấm nút tải tệp từ máy tính..."/>
+                                <button type="button" class="upload-btn" onclick="document.getElementById('matFileInput').click()">
+                                    📤 Tải file từ máy
+                                </button>
+                                <input type="file" id="matFileInput" style="display:none;" onchange="uploadMaterialFile(this)"/>
+                            </div>
+                            <form:hidden path="materialOriginalName" id="mat-original-name"/>
+                            <form:hidden path="materialSizeBytes" id="mat-size-bytes"/>
+
+                            <div id="matStatus" class="upload-status" style="margin-top:6px;"></div>
+                            <span class="ins-field__hint">Hỗ trợ tải trực tiếp tệp từ máy tính hoặc dán link Google Drive, Dropbox, GitHub... Tài liệu sẽ được lưu cùng bài học.</span>
+                        </div>
+                    </div>
+
                     <c:if test="${not empty lessonId}">
                         <div class="ins-field" style="max-width:220px; margin-top:16px;">
                             <label for="orderIndex">Vị trí bài học trong khóa</label>
@@ -323,6 +391,55 @@ function uploadLessonVideo(inputElem) {
             document.getElementById('videoUrl').value = data.url;
             statusElem.className = 'upload-status upload-status--success';
             statusElem.textContent = '✅ Đã tải lên thành công: ' + data.originalName;
+        } else {
+            statusElem.className = 'upload-status upload-status--error';
+            statusElem.textContent = '❌ Lỗi: ' + (data.message || 'Không thể tải tệp lên');
+        }
+    })
+    .catch(function(err) {
+        statusElem.className = 'upload-status upload-status--error';
+        statusElem.textContent = '❌ Lỗi kết nối: ' + err.message;
+    });
+}
+
+// Upload lesson material asynchronously
+function uploadMaterialFile(inputElem) {
+    if (!inputElem.files || inputElem.files.length === 0) return;
+    var file = inputElem.files[0];
+    var statusElem = document.getElementById('matStatus');
+    statusElem.className = 'upload-status upload-status--loading';
+    statusElem.textContent = '⏳ Đang tải tệp lên (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)...';
+
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', 'material');
+
+    var csrfToken = document.querySelector('input[name="${_csrf.parameterName}"]').value;
+
+    fetch('${pageContext.request.contextPath}/instructor/upload', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken
+        },
+        body: formData
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.success) {
+            document.getElementById('mat-url').value = data.url;
+            if (!document.getElementById('mat-title').value.trim()) {
+                document.getElementById('mat-title').value = data.originalName;
+            }
+            if (!document.getElementById('mat-type').value) {
+                document.getElementById('mat-type').value = 'DOCUMENT';
+            }
+            var origInput = document.getElementById('mat-original-name');
+            if (origInput) origInput.value = data.originalName;
+            var sizeInput = document.getElementById('mat-size-bytes');
+            if (sizeInput) sizeInput.value = data.size;
+
+            statusElem.className = 'upload-status upload-status--success';
+            statusElem.textContent = '✅ Đã tải lên thành công: ' + data.originalName + ' (' + (data.size / 1024 / 1024).toFixed(2) + ' MB). Tệp sẽ được đính kèm khi bạn lưu bài học.';
         } else {
             statusElem.className = 'upload-status upload-status--error';
             statusElem.textContent = '❌ Lỗi: ' + (data.message || 'Không thể tải tệp lên');

@@ -11,7 +11,41 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/instructor.css">
+    <!-- Document Viewers for in-browser Word & Excel preview -->
+    <script src="${pageContext.request.contextPath}/assets/js/jszip.min.js"></script>
+    <script src="${pageContext.request.contextPath}/assets/js/docx-preview.js"></script>
+    <script src="${pageContext.request.contextPath}/assets/js/xlsx.full.min.js"></script>
     <style>
+        .mat-spinner {
+            width: 32px; height: 32px; border: 3.5px solid rgba(255,255,255,.2);
+            border-radius: 50%; border-top-color: #3B82F6; animation: matSpin .8s linear infinite;
+        }
+        @keyframes matSpin { to { transform: rotate(360deg); } }
+
+        /* Docx Preview Styling */
+        .docx-wrapper {
+            background: transparent !important; padding: 0 !important;
+        }
+        .docx-wrapper > section.docx {
+            background: #fff !important;
+            box-shadow: 0 4px 24px rgba(0,0,0,.35) !important;
+            margin: 0 auto 24px auto !important;
+            padding: 40px 50px !important;
+            border-radius: 4px !important;
+            max-width: 850px !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Excel Styling */
+        .excel-table-wrapper table {
+            border-collapse: collapse; width: 100%; font-size: .88rem;
+        }
+        .excel-table-wrapper th, .excel-table-wrapper td {
+            border: 1px solid #CBD5E1; padding: 6px 12px; text-align: left;
+        }
+        .excel-table-wrapper tr:first-child td, .excel-table-wrapper th {
+            background: #F1F5F9; font-weight: 700; color: #1E293B;
+        }
         .upload-row {
             display: flex; gap: 8px; align-items: center; margin-top: 4px;
         }
@@ -140,8 +174,13 @@
                                             </div>
                                             <div style="display:flex; align-items:center; gap:8px;">
                                                 <c:if test="${fn:startsWith(mat.fileUrl,'http://') || fn:startsWith(mat.fileUrl,'https://') || fn:startsWith(mat.fileUrl,'/')}">
-                                                    <a class="ins-link-btn" href="${mat.fileUrl}" target="_blank" rel="noopener noreferrer">
-                                                        Mở / Tải ↗
+                                                    <button type="button" class="ins-link-btn" style="color:#2563EB; font-weight:700; background:#EFF6FF; border:1px solid #BFDBFE; padding:5px 12px; border-radius:6px; cursor:pointer;"
+                                                            onclick="openMaterialPreview('<c:out value="${mat.title}" escapeXml="true"/>', '<c:out value="${mat.fileUrl}" escapeXml="true"/>', '<c:out value="${mat.type}"/>', '<c:out value="${mat.originalFileName}" escapeXml="true"/>')">
+                                                        👁️ Xem trên web
+                                                    </button>
+                                                    <a class="ins-link-btn" href="${mat.fileUrl}" download="<c:out value='${mat.title}'/>" target="_blank" rel="noopener noreferrer"
+                                                       style="padding:5px 10px; border:1px solid #CBD5E1; border-radius:6px;">
+                                                        ⬇️ Tải
                                                     </a>
                                                 </c:if>
                                                 <c:if test="${editable}">
@@ -285,5 +324,181 @@ function uploadMaterialFile(inputElem) {
         statusElem.textContent = '❌ Lỗi kết nối: ' + err.message;
     });
 }
+
+function openMaterialPreview(title, url, type, origName) {
+    var modal = document.getElementById('materialPreviewModal');
+    var titleElem = document.getElementById('matModalTitle');
+    var subElem = document.getElementById('matModalSub');
+    var iconElem = document.getElementById('matModalIcon');
+    var downloadBtn = document.getElementById('matModalDownloadBtn');
+    var contentElem = document.getElementById('matModalContent');
+
+    titleElem.textContent = title;
+    subElem.textContent = origName ? ('Tệp: ' + origName) : url;
+    downloadBtn.href = url;
+    downloadBtn.setAttribute('download', origName || title);
+
+    var lowerUrl = url.toLowerCase();
+    var lowerOrig = (origName || '').toLowerCase();
+
+    if (lowerUrl.indexOf('.pdf') !== -1 || lowerOrig.indexOf('.pdf') !== -1) {
+        iconElem.textContent = '📕';
+        contentElem.innerHTML = '<iframe src="' + url + '#toolbar=1&navpanes=1" width="100%" height="100%" style="border:none;background:#fff;" title="' + title + '"></iframe>';
+    } else if (lowerOrig.indexOf('.docx') !== -1 || lowerUrl.indexOf('.docx') !== -1) {
+        iconElem.textContent = '📘';
+        contentElem.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#fff;gap:12px;">' +
+            '<div class="mat-spinner"></div>' +
+            '<div style="font-size:.95rem;font-weight:600;">⏳ Đang đọc và hiển thị tài liệu Word trực tiếp...</div>' +
+        '</div>';
+
+        fetch(url)
+            .then(function(res) {
+                if (!res.ok) throw new Error('Không thể tải tệp (HTTP ' + res.status + ')');
+                return res.blob();
+            })
+            .then(function(blob) {
+                contentElem.innerHTML = '<div id="docxContainerIns" style="width:100%;height:100%;overflow:auto;background:#525659;padding:24px 10px;box-sizing:border-box;"></div>';
+                var target = document.getElementById('docxContainerIns');
+                if (window.docx && window.docx.renderAsync) {
+                    return window.docx.renderAsync(blob, target, null, {
+                        className: 'docx-preview-paper',
+                        inWrapper: true,
+                        breakPages: true
+                    });
+                } else {
+                    throw new Error('Thư viện hiển thị Word chưa tải xong.');
+                }
+            })
+            .catch(function(err) {
+                contentElem.innerHTML = '<div style="text-align:center;background:#fff;padding:36px;border-radius:12px;max-width:520px;box-shadow:0 12px 30px rgba(0,0,0,.25);margin:20px;">' +
+                    '<div style="font-size:3rem;margin-bottom:12px;">📘</div>' +
+                    '<h3 style="margin:0 0 8px;color:#0F172A;font-size:1.15rem;">' + (origName || title) + '</h3>' +
+                    '<p style="color:#64748B;font-size:.88rem;line-height:1.6;margin:0 0 20px;">' + (err.message || 'Không thể hiển thị xem trước tệp Word') + '</p>' +
+                    '<div style="display:flex;gap:10px;justify-content:center;">' +
+                        '<a href="' + url + '" download="' + (origName || title) + '" style="background:#2563EB;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;">⬇️ Tải tệp về máy</a>' +
+                    '</div>' +
+                '</div>';
+            });
+    } else if (lowerOrig.match(/\.xlsx?$/) || lowerUrl.match(/\.xlsx?$/)) {
+        iconElem.textContent = '📗';
+        contentElem.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#fff;gap:12px;">' +
+            '<div class="mat-spinner"></div>' +
+            '<div style="font-size:.95rem;font-weight:600;">⏳ Đang mở bảng tính Excel...</div>' +
+        '</div>';
+
+        fetch(url)
+            .then(function(res) {
+                if (!res.ok) throw new Error('Không thể tải tệp (HTTP ' + res.status + ')');
+                return res.arrayBuffer();
+            })
+            .then(function(buf) {
+                if (!window.XLSX) throw new Error('Thư viện hiển thị Excel chưa tải xong.');
+                var wb = XLSX.read(buf, { type: 'array' });
+                var sheetName = wb.SheetNames[0];
+                var ws = wb.Sheets[sheetName];
+                var html = XLSX.utils.sheet_to_html(ws, { id: 'excelTable', editable: false });
+                contentElem.innerHTML = '<div style="width:100%;height:100%;overflow:auto;background:#fff;padding:20px;box-sizing:border-box;">' +
+                    '<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;margin-bottom:14px;border-bottom:2px solid #E2E8F0;">' +
+                        '<div style="font-weight:800;font-size:1rem;color:#0F172A;">📊 Sheet: ' + sheetName + '</div>' +
+                        '<div style="font-size:.8rem;color:#64748B;">Tổng cộng ' + wb.SheetNames.length + ' sheet</div>' +
+                    '</div>' +
+                    '<div class="excel-table-wrapper" style="overflow:auto;">' + html + '</div>' +
+                '</div>';
+            })
+            .catch(function(err) {
+                contentElem.innerHTML = '<div style="text-align:center;background:#fff;padding:36px;border-radius:12px;max-width:520px;box-shadow:0 12px 30px rgba(0,0,0,.25);margin:20px;">' +
+                    '<div style="font-size:3rem;margin-bottom:12px;">📗</div>' +
+                    '<h3 style="margin:0 0 8px;color:#0F172A;font-size:1.15rem;">' + (origName || title) + '</h3>' +
+                    '<p style="color:#64748B;font-size:.88rem;line-height:1.6;margin:0 0 20px;">' + (err.message || 'Không thể hiển thị xem trước tệp Excel') + '</p>' +
+                    '<div style="display:flex;gap:10px;justify-content:center;">' +
+                        '<a href="' + url + '" download="' + (origName || title) + '" style="background:#2563EB;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;">⬇️ Tải tệp về máy</a>' +
+                    '</div>' +
+                '</div>';
+            });
+    } else if (lowerUrl.match(/\.(png|jpe?g|gif|webp|svg)(\?.*)?$/) || lowerOrig.match(/\.(png|jpe?g|gif|webp|svg)$/)) {
+        iconElem.textContent = '🖼️';
+        contentElem.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;"><img src="' + url + '" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.5);" alt="' + title + '"/></div>';
+    } else if (type === 'VIDEO' || lowerUrl.match(/\.(mp4|webm|mov)(\?.*)?$/) || lowerUrl.indexOf('youtube.com') !== -1 || lowerUrl.indexOf('youtu.be') !== -1) {
+        iconElem.textContent = '🎬';
+        if (lowerUrl.indexOf('youtube.com') !== -1 || lowerUrl.indexOf('youtu.be') !== -1) {
+            var vId = '';
+            if (lowerUrl.indexOf('watch?v=') !== -1) vId = url.split('watch?v=')[1].split('&')[0];
+            else if (lowerUrl.indexOf('youtu.be/') !== -1) vId = url.split('youtu.be/')[1].split('?')[0];
+            var embed = 'https://www.youtube.com/embed/' + vId;
+            contentElem.innerHTML = '<iframe src="' + embed + '" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>';
+        } else {
+            contentElem.innerHTML = '<video src="' + url + '" controls autoplay style="max-width:100%;max-height:100%;border-radius:8px;"></video>';
+        }
+    } else if (lowerUrl.match(/\.(mp3|wav|ogg)(\?.*)?$/)) {
+        iconElem.textContent = '🎧';
+        contentElem.innerHTML = '<div style="text-align:center;color:#fff;"><div style="font-size:3.5rem;margin-bottom:16px;">🎧</div><div style="font-size:1.1rem;font-weight:700;margin-bottom:14px;">' + title + '</div><audio src="' + url + '" controls autoplay style="width:420px;max-width:90%;"></audio></div>';
+    } else {
+        iconElem.textContent = '📄';
+        contentElem.innerHTML = '<iframe src="' + url + '" width="100%" height="100%" style="border:none;background:#fff;" title="' + title + '"></iframe>';
+    }
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMaterialPreview() {
+    var modal = document.getElementById('materialPreviewModal');
+    var contentElem = document.getElementById('matModalContent');
+    if (contentElem) contentElem.innerHTML = '';
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function toggleMaterialFullscreen() {
+    var modal = document.getElementById('materialPreviewModal');
+    if (modal) {
+        var box = modal.firstElementChild;
+        if (box.style.width === '100vw') {
+            box.style.width = '92vw';
+            box.style.height = '88vh';
+            box.style.maxWidth = '1150px';
+            box.style.borderRadius = '14px';
+        } else {
+            box.style.width = '100vw';
+            box.style.height = '100vh';
+            box.style.maxWidth = '100vw';
+            box.style.borderRadius = '0';
+        }
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMaterialPreview();
+});
 </script>
+
+<!-- Modal Preview -->
+<div id="materialPreviewModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.75); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; border-radius:14px; width:92vw; max-width:1150px; height:88vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,.45); transition:all .2s;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid #E2E8F0; background:#F8FAFC; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                <span id="matModalIcon" style="font-size:1.4rem;">📄</span>
+                <div style="min-width:0;">
+                    <h3 id="matModalTitle" style="margin:0; font-size:.96rem; font-weight:800; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:560px;">Tiêu đề</h3>
+                    <div id="matModalSub" style="font-size:.76rem; color:#64748B; margin-top:2px;"></div>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <a id="matModalDownloadBtn" href="#" download target="_blank"
+                   style="display:inline-flex; align-items:center; gap:6px; padding:7px 14px; font-size:.82rem; font-weight:700; color:#2563EB; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; text-decoration:none;">
+                    ⬇️ Tải về máy
+                </a>
+                <button type="button" onclick="toggleMaterialFullscreen()"
+                        style="padding:7px 11px; font-size:.85rem; font-weight:600; color:#475569; background:#fff; border:1px solid #CBD5E1; border-radius:6px; cursor:pointer;" title="Toàn màn hình">
+                    ⛶
+                </button>
+                <button type="button" onclick="closeMaterialPreview()"
+                        style="padding:7px 14px; font-size:.85rem; font-weight:800; color:#DC2626; background:#FEF2F2; border:1px solid #FECACA; border-radius:6px; cursor:pointer;">
+                    ✕ Đóng
+                </button>
+            </div>
+        </div>
+        <div id="matModalContent" style="flex:1; background:#0F172A; position:relative; overflow:auto; display:flex; align-items:center; justify-content:center;"></div>
+    </div>
+</div>
 </body></html>

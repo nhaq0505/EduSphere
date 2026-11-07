@@ -16,7 +16,6 @@
 ${q.questionCount} câu · Tổng điểm: <strong><fmt:formatNumber value="${q.maxScore}" maxFractionDigits="1"/></strong>
 <c:if test="${q.timeLimitMinutes != null}"> · ${q.timeLimitMinutes} phút</c:if>
 · Tối đa ${q.maxAttempts} lần
-<c:if test="${q.dueDate != null}"> · Hạn: ${fn:replace(fn:substring(q.dueDate, 0, 16), 'T', ' ')}</c:if>
 </p>
 <div style="margin-top:10px"><a class="button button--outline" href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${q.quizId}">Xem chi tiết</a></div>
 </article></c:forEach>

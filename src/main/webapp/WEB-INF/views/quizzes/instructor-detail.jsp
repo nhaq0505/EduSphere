@@ -42,7 +42,6 @@
         <p>
             Số lần làm tối đa: <strong>${quiz.maxAttempts}</strong>
             <c:if test="${quiz.timeLimitMinutes != null}"> · Thời gian: <strong>${quiz.timeLimitMinutes} phút</strong></c:if>
-            <c:if test="${quiz.dueDate != null}"> · Hạn: <strong>${fn:replace(fn:substring(quiz.dueDate, 0, 16), 'T', ' ')}</strong></c:if>
         </p>
         <c:if test="${not empty quiz.description}"><p style="white-space:pre-wrap"><c:out value="${quiz.description}"/></p></c:if>
 

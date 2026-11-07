@@ -20,4 +20,8 @@ public interface QuizRepository extends JpaRepository<Quiz, Integer> {
             Integer courseId, Integer lessonId, String status);
 
     List<Quiz> findByLesson_LessonId(Integer lessonId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Quiz q SET q.bank = null WHERE q.bank.bankId = :bankId")
+    void detachBank(@org.springframework.data.repository.query.Param("bankId") Integer bankId);
 }

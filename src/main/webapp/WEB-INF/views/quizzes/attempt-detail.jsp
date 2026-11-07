@@ -64,11 +64,16 @@
                         <div style="margin-top:8px">
                             <c:choose>
                                 <c:when test="${a.questionTypeSnapshot eq 'SHORT_ANSWER' || a.questionTypeSnapshot eq 'ESSAY'}">
+                                    <c:if test="${a.question != null and not empty a.question.sampleEssayAnswer}">
+                                        <div style="margin-bottom:8px;padding:8px 12px;background:#fdf4ff;border-left:3px solid #c026d3;border-radius:4px;font-size:0.83rem;color:#86198f">
+                                            💡 <strong>Gợi ý đáp án / Tiêu chí chấm:</strong> <c:out value="${a.question.sampleEssayAnswer}"/>
+                                        </div>
+                                    </c:if>
                                     <form method="post" style="display:flex;gap:8px;align-items:center"
                                           action="${pageContext.request.contextPath}/instructor/courses/${courseId}/quizzes/${quizId}/attempts/${attempt.attemptId}/answers/${a.answerId}/grade">
                                         <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
                                         <label>Điểm:</label>
-                                        <input class="ins-input" type="number" name="score" min="0" max="${a.maxScore}" step="0.5" required
+                                        <input class="ins-input" type="number" name="score" min="0" max="${a.maxScore}" step="0.25" required
                                                value="${a.awardedScore}" style="width:100px">
                                         <button type="submit" class="ins-link-btn ins-link-btn--primary">Lưu điểm</button>
                                     </form>

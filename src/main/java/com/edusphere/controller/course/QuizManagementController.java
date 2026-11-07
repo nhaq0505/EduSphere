@@ -6,12 +6,14 @@ import com.edusphere.entity.course.Quiz;
 import com.edusphere.repository.course.LessonRepository;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
+import com.edusphere.service.course.QuestionBankService;
 import com.edusphere.service.course.QuizService;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -32,10 +34,12 @@ public class QuizManagementController {
 
     private final QuizService service;
     private final LessonRepository lessonRepository;
+    private final QuestionBankService questionBankService;
 
-    public QuizManagementController(QuizService service, LessonRepository lessonRepository) {
+    public QuizManagementController(QuizService service, LessonRepository lessonRepository, QuestionBankService questionBankService) {
         this.service = service;
         this.lessonRepository = lessonRepository;
+        this.questionBankService = questionBankService;
     }
 
     @GetMapping
@@ -83,9 +87,49 @@ public class QuizManagementController {
         model.addAttribute("quiz", service.getQuizWithQuestions(courseId, quizId, user.getUserId()));
         model.addAttribute("questions", service.getQuestionsWithOptions(courseId, quizId, user.getUserId()));
         model.addAttribute("lessons", lessonRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId));
+        model.addAttribute("questionBanks", questionBankService.listBanksForInstructor(user.getUserId()));
         model.addAttribute("courseId", courseId);
         model.addAttribute("quizId", quizId);
         return "quizzes/quiz-builder";
+    }
+
+    // ── Auto-generate questions from Question Bank ──
+    @PostMapping("/{quizId}/auto-generate")
+    public String autoGenerate(@PathVariable Integer courseId, @PathVariable Integer quizId,
+                               @RequestParam Integer bankId,
+                               @RequestParam(required = false) Integer categoryId,
+                               @RequestParam(defaultValue = "10") int count,
+                               @RequestParam(defaultValue = "false") boolean replaceExisting,
+                               @RequestParam(required = false) BigDecimal defaultScore,
+                               @AuthenticationPrincipal CustomUserDetails user,
+                               RedirectAttributes flash) {
+        try {
+            int generated = service.autoGenerateFromBank(courseId, quizId, user.getUserId(), bankId, categoryId, count, defaultScore, replaceExisting);
+            flash.addFlashAttribute("success", "Đã tự động bốc thành công " + generated + " câu hỏi từ ngân hàng vào bài quiz!");
+        } catch (CourseActionException ex) {
+            flash.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/instructor/courses/" + courseId + "/quizzes/" + quizId;
+    }
+
+    // ── Import selected questions from Question Bank ──
+    @PostMapping("/{quizId}/import-bank-questions")
+    public String importBankQuestions(@PathVariable Integer courseId, @PathVariable Integer quizId,
+                                      @RequestParam Integer bankId,
+                                      @RequestParam(value = "bankQuestionIds", required = false) List<Integer> bankQuestionIds,
+                                      @AuthenticationPrincipal CustomUserDetails user,
+                                      RedirectAttributes flash) {
+        if (bankQuestionIds == null || bankQuestionIds.isEmpty()) {
+            flash.addFlashAttribute("error", "Chưa chọn câu hỏi nào từ ngân hàng.");
+            return "redirect:/instructor/courses/" + courseId + "/quizzes/" + quizId;
+        }
+        try {
+            int added = service.importQuestionsFromBank(courseId, quizId, user.getUserId(), bankId, bankQuestionIds);
+            flash.addFlashAttribute("success", "Đã thêm thành công " + added + " câu hỏi từ ngân hàng vào bài quiz!");
+        } catch (CourseActionException ex) {
+            flash.addFlashAttribute("error", ex.getMessage());
+        }
+        return "redirect:/instructor/courses/" + courseId + "/quizzes/" + quizId;
     }
 
     // ── Edit quiz settings ──
@@ -99,8 +143,6 @@ public class QuizManagementController {
         form.setTimeLimitMinutes(quiz.getTimeLimitMinutes());
         form.setMaxAttempts(quiz.getMaxAttempts());
         form.setStartTime(quiz.getStartTime() != null ? quiz.getStartTime().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")) : null);
-        form.setDueDate(quiz.getDueDate() != null ? quiz.getDueDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")) : null);
-        form.setEndTime(quiz.getEndTime() != null ? quiz.getEndTime().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")) : null);
         form.setRules(quiz.getRules());
         form.setLessonId(quiz.getLesson() != null ? quiz.getLesson().getLessonId() : null);
         form.setPassingScore(quiz.getPassingScore());
@@ -144,6 +186,9 @@ public class QuizManagementController {
         form.setScore(q.getScore());
         form.setCorrectAnswer(q.getCorrectAnswer());
         form.setExplanation(q.getExplanation());
+        form.setImageUrl(q.getImageUrl());
+        form.setVideoUrl(q.getVideoUrl());
+        form.setSampleEssayAnswer(q.getSampleEssayAnswer());
         var optContents = new java.util.ArrayList<String>();
         var optCorrects = new java.util.ArrayList<Boolean>();
         for (var opt : q.getOptions()) {

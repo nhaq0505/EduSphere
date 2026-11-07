@@ -144,7 +144,12 @@ public class LessonManagementService {
         lesson.setOrderIndex(Math.toIntExact(lessons.countByCourse_CourseId(courseId) + 1));
         lesson.setStatus("DRAFT");
         lesson.setCreatedAt(LocalDateTime.now());
-        return lessons.save(lesson).getLessonId();
+        lesson = lessons.save(lesson);
+
+        // Lưu tài liệu đính kèm nếu có
+        saveAttachedMaterial(lesson, instructorId, form);
+
+        return lesson.getLessonId();
     }
 
     @Transactional
@@ -164,6 +169,9 @@ public class LessonManagementService {
         }
         lesson.setUpdatedAt(LocalDateTime.now());
         lessons.save(lesson);
+
+        // Lưu tài liệu đính kèm nếu có
+        saveAttachedMaterial(lesson, instructorId, form);
     }
 
     @Transactional
@@ -283,6 +291,38 @@ public class LessonManagementService {
         }
         // Xóa tài liệu đính kèm — không cần bump course status
         materials.deleteById(materialId);
+    }
+
+    private void saveAttachedMaterial(Lesson lesson, Integer instructorId, LessonForm form) {
+        String url = trimmed(form.getMaterialUrl());
+        if (url == null || url.isBlank()) {
+            return;
+        }
+        String title = trimmed(form.getMaterialTitle());
+        if (title == null || title.isBlank()) {
+            title = form.getMaterialOriginalName() != null && !form.getMaterialOriginalName().isBlank()
+                    ? form.getMaterialOriginalName().trim()
+                    : "Tài liệu bài học";
+        }
+        String type = form.getMaterialType();
+        if (type == null || !Set.of("DOCUMENT", "LINK", "VIDEO").contains(type)) {
+            type = "DOCUMENT";
+        }
+        Material material = new Material();
+        material.setLesson(lesson);
+        material.setTitle(title);
+        material.setType(type);
+        material.setFileUrl(url);
+        if (form.getMaterialOriginalName() != null && !form.getMaterialOriginalName().isBlank()) {
+            material.setOriginalFileName(form.getMaterialOriginalName().trim());
+        }
+        if (form.getMaterialSizeBytes() != null) {
+            material.setSizeBytes(form.getMaterialSizeBytes());
+        }
+        int currentOrder = materials.findByLesson_LessonIdOrderByOrderIndexAsc(lesson.getLessonId()).size();
+        material.setOrderIndex(currentOrder + 1);
+        material.setUploadedBy(users.getReferenceById(instructorId));
+        materials.save(material);
     }
 
     private void applyLessonForm(Lesson lesson, LessonForm form, Integer courseId) {

@@ -73,5 +73,21 @@ public class FileUploadService {
             throw new CourseActionException(HttpStatus.INTERNAL_SERVER_ERROR, "Không thể lưu tệp lên hệ thống: " + e.getMessage());
         }
     }
+
+    public String storeBytes(byte[] data, String ext, String subFolder) {
+        if (data == null || data.length == 0) return null;
+        try {
+            Path targetDir = Paths.get(baseUploadDir, subFolder);
+            if (!Files.exists(targetDir)) {
+                Files.createDirectories(targetDir);
+            }
+            String storedFileName = System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "." + ext;
+            Path targetPath = targetDir.resolve(storedFileName);
+            Files.write(targetPath, data);
+            return "/uploads/" + subFolder + "/" + storedFileName;
+        } catch (IOException e) {
+            return null;
+        }
+    }
 }
 

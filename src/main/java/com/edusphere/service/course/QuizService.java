@@ -6,9 +6,12 @@ import com.edusphere.dto.quiz.QuizForm;
 import com.edusphere.dto.quiz.QuizView;
 import com.edusphere.entity.account.Users;
 import com.edusphere.entity.course.AnswerOption;
+import com.edusphere.entity.course.BankAnswerOption;
+import com.edusphere.entity.course.BankQuestion;
 import com.edusphere.entity.course.Course;
 import com.edusphere.entity.course.Lesson;
 import com.edusphere.entity.course.Question;
+import com.edusphere.entity.course.QuestionBank;
 import com.edusphere.entity.course.Quiz;
 import com.edusphere.entity.course.QuizAnswer;
 import com.edusphere.entity.course.QuizAnswerOption;
@@ -16,9 +19,11 @@ import com.edusphere.entity.course.QuizAnswerOptionPK;
 import com.edusphere.entity.course.QuizAttempt;
 import com.edusphere.repository.account.UserRepository;
 import com.edusphere.repository.course.AnswerOptionRepository;
+import com.edusphere.repository.course.BankQuestionRepository;
 import com.edusphere.repository.course.CourseRepository;
 import com.edusphere.repository.course.EnrollmentRepository;
 import com.edusphere.repository.course.LessonRepository;
+import com.edusphere.repository.course.QuestionBankRepository;
 import com.edusphere.repository.course.QuestionRepository;
 import com.edusphere.repository.course.QuizAnswerOptionRepository;
 import com.edusphere.repository.course.QuizAnswerRepository;
@@ -54,13 +59,15 @@ public class QuizService {
     private final EnrollmentRepository enrollments;
     private final UserRepository users;
     private final LearningProgressService learningProgressService;
+    private final QuestionBankRepository questionBanks;
+    private final BankQuestionRepository bankQuestions;
 
     public QuizService(QuizRepository quizzes, QuestionRepository questions,
                        AnswerOptionRepository answerOptions, QuizAttemptRepository attempts,
                        QuizAnswerRepository answers, QuizAnswerOptionRepository answerOptionLinks,
                        CourseRepository courses, LessonRepository lessons,
                        EnrollmentRepository enrollments, UserRepository users) {
-        this(quizzes, questions, answerOptions, attempts, answers, answerOptionLinks, courses, lessons, enrollments, users, null);
+        this(quizzes, questions, answerOptions, attempts, answers, answerOptionLinks, courses, lessons, enrollments, users, null, null, null);
     }
 
     @Autowired
@@ -69,7 +76,9 @@ public class QuizService {
                        QuizAnswerRepository answers, QuizAnswerOptionRepository answerOptionLinks,
                        CourseRepository courses, LessonRepository lessons,
                        EnrollmentRepository enrollments, UserRepository users,
-                       LearningProgressService learningProgressService) {
+                       LearningProgressService learningProgressService,
+                       QuestionBankRepository questionBanks,
+                       BankQuestionRepository bankQuestions) {
         this.quizzes = quizzes;
         this.questions = questions;
         this.answerOptions = answerOptions;
@@ -81,6 +90,8 @@ public class QuizService {
         this.enrollments = enrollments;
         this.users = users;
         this.learningProgressService = learningProgressService;
+        this.questionBanks = questionBanks;
+        this.bankQuestions = bankQuestions;
     }
 
     // ===================== INSTRUCTOR OPERATIONS =====================
@@ -168,6 +179,9 @@ public class QuizService {
         q.setOrderIndex((int) nextIndex);
         q.setCorrectAnswer(form.getCorrectAnswer());
         q.setExplanation(form.getExplanation());
+        q.setImageUrl(form.getImageUrl() != null && !form.getImageUrl().isBlank() ? form.getImageUrl().trim() : null);
+        q.setVideoUrl(form.getVideoUrl() != null && !form.getVideoUrl().isBlank() ? form.getVideoUrl().trim() : null);
+        q.setSampleEssayAnswer(form.getSampleEssayAnswer());
         q = questions.save(q);
 
         // Save options for choice-type questions
@@ -207,6 +221,9 @@ public class QuizService {
         q.setScore(form.getScore());
         q.setCorrectAnswer(form.getCorrectAnswer());
         q.setExplanation(form.getExplanation());
+        q.setImageUrl(form.getImageUrl() != null && !form.getImageUrl().isBlank() ? form.getImageUrl().trim() : null);
+        q.setVideoUrl(form.getVideoUrl() != null && !form.getVideoUrl().isBlank() ? form.getVideoUrl().trim() : null);
+        q.setSampleEssayAnswer(form.getSampleEssayAnswer());
 
         // Rebuild options (delete old, add new)
         List<Integer> oldOptionIds = q.getOptions().stream()
@@ -237,6 +254,147 @@ public class QuizService {
             }
         }
         questions.save(q);
+    }
+
+    /** Xóa toàn bộ câu hỏi trong quiz (dùng khi sinh lại đề từ đầu) */
+    private void clearQuizQuestions(Integer quizId) {
+        List<Question> existing = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
+        for (Question q : existing) {
+            List<Integer> optionIds = q.getOptions().stream()
+                    .map(AnswerOption::getOptionId)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+            if (!optionIds.isEmpty()) {
+                answerOptionLinks.deleteByOption_OptionIdIn(optionIds);
+            }
+            if (!q.getOptions().isEmpty()) {
+                answerOptions.deleteAll(q.getOptions());
+                q.getOptions().clear();
+            }
+            questions.delete(q);
+        }
+        answerOptions.flush();
+        questions.flush();
+    }
+
+    /**
+     * Tự động bốc ngẫu nhiên N câu hỏi từ ngân hàng vào bài quiz.
+     */
+    @Transactional
+    public int autoGenerateFromBank(Integer courseId, Integer quizId, Integer instructorId,
+                                    Integer bankId, Integer categoryId, int count,
+                                    BigDecimal defaultScore, boolean replaceExisting) {
+        Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
+        QuestionBank bank = questionBanks.findByBankIdAndInstructor_UserId(bankId, instructorId)
+                .orElseThrow(() -> notFound("Không tìm thấy ngân hàng câu hỏi."));
+
+        if (replaceExisting) {
+            long attemptCount = attempts.countByQuiz_QuizId(quizId);
+            if (attemptCount > 0) {
+                throw conflict("Quiz đã có học viên làm bài, không thể xóa và sinh lại toàn bộ câu hỏi.");
+            }
+            clearQuizQuestions(quizId);
+        }
+
+        List<BankQuestion> sampled;
+        if (categoryId != null && categoryId > 0) {
+            sampled = bankQuestions.findRandomByBankAndCategory(bankId, categoryId, count);
+        } else {
+            sampled = bankQuestions.findRandomByBank(bankId, count);
+        }
+
+        if (sampled.isEmpty()) {
+            throw conflict("Ngân hàng câu hỏi không có câu hỏi nào để bốc ngẫu nhiên.");
+        }
+
+        int currentCount = (int) questions.countByQuiz_QuizId(quizId);
+        for (BankQuestion bq : sampled) {
+            currentCount++;
+            Question q = new Question();
+            q.setQuiz(quiz);
+            q.setBankQuestion(bq);
+            q.setContent(bq.getContent());
+            q.setType(bq.getType());
+            q.setScore(bq.getDefaultScore() != null ? bq.getDefaultScore() : (defaultScore != null ? defaultScore : BigDecimal.ONE));
+            q.setOrderIndex(currentCount);
+            q.setCorrectAnswer(bq.getCorrectAnswer());
+            q.setExplanation(bq.getExplanation());
+            q.setImageUrl(bq.getImageUrl());
+            q.setVideoUrl(bq.getVideoUrl());
+            q.setSampleEssayAnswer(bq.getSampleEssayAnswer());
+            Question savedQ = questions.save(q);
+
+            if (Set.of("SINGLE_CHOICE", "MULTIPLE_CHOICE").contains(bq.getType())) {
+                List<BankAnswerOption> bOptions = bq.getOptions();
+                if (bOptions != null && !bOptions.isEmpty()) {
+                    for (BankAnswerOption bo : bOptions) {
+                        AnswerOption opt = new AnswerOption();
+                        opt.setQuestion(savedQ);
+                        opt.setContent(bo.getContent());
+                        opt.setCorrect(bo.isCorrect());
+                        opt.setOrderIndex(bo.getOrderIndex());
+                        answerOptions.save(opt);
+                    }
+                }
+            }
+        }
+
+        quiz.setBank(bank);
+        quizzes.save(quiz);
+        return sampled.size();
+    }
+
+    /**
+     * Chọn danh sách câu hỏi cụ thể từ ngân hàng để thêm vào bài quiz.
+     */
+    @Transactional
+    public int importQuestionsFromBank(Integer courseId, Integer quizId, Integer instructorId,
+                                       Integer bankId, List<Integer> bankQuestionIds) {
+        Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
+        QuestionBank bank = questionBanks.findByBankIdAndInstructor_UserId(bankId, instructorId)
+                .orElseThrow(() -> notFound("Không tìm thấy ngân hàng câu hỏi."));
+
+        if (bankQuestionIds == null || bankQuestionIds.isEmpty()) return 0;
+
+        int currentCount = (int) questions.countByQuiz_QuizId(quizId);
+        int added = 0;
+        for (Integer bqId : bankQuestionIds) {
+            BankQuestion bq = bankQuestions.findByBankQuestionIdAndBank_BankId(bqId, bankId).orElse(null);
+            if (bq == null) continue;
+
+            currentCount++;
+            added++;
+            Question q = new Question();
+            q.setQuiz(quiz);
+            q.setBankQuestion(bq);
+            q.setContent(bq.getContent());
+            q.setType(bq.getType());
+            q.setScore(bq.getDefaultScore() != null ? bq.getDefaultScore() : BigDecimal.ONE);
+            q.setOrderIndex(currentCount);
+            q.setCorrectAnswer(bq.getCorrectAnswer());
+            q.setExplanation(bq.getExplanation());
+            q.setImageUrl(bq.getImageUrl());
+            q.setVideoUrl(bq.getVideoUrl());
+            q.setSampleEssayAnswer(bq.getSampleEssayAnswer());
+            Question savedQ = questions.save(q);
+
+            if (Set.of("SINGLE_CHOICE", "MULTIPLE_CHOICE").contains(bq.getType())) {
+                List<BankAnswerOption> bOptions = bq.getOptions();
+                if (bOptions != null && !bOptions.isEmpty()) {
+                    for (BankAnswerOption bo : bOptions) {
+                        AnswerOption opt = new AnswerOption();
+                        opt.setQuestion(savedQ);
+                        opt.setContent(bo.getContent());
+                        opt.setCorrect(bo.isCorrect());
+                        opt.setOrderIndex(bo.getOrderIndex());
+                        answerOptions.save(opt);
+                    }
+                }
+            }
+        }
+        quiz.setBank(bank);
+        quizzes.save(quiz);
+        return added;
     }
 
     @Transactional
@@ -430,8 +588,6 @@ public class QuizService {
         LocalDateTime now = LocalDateTime.now();
         if (quiz.getStartTime() != null && now.isBefore(quiz.getStartTime()))
             throw conflict("Quiz chưa đến giờ bắt đầu.");
-        if (quiz.getEndTime() != null && now.isAfter(quiz.getEndTime()))
-            throw conflict("Quiz đã kết thúc.");
 
         // Calculate max score
         List<Question> qList = questions.findByQuiz_QuizIdOrderByOrderIndexAsc(quizId);
@@ -641,8 +797,8 @@ public class QuizService {
         quiz.setTimeLimitMinutes(form.getTimeLimitMinutes());
         quiz.setMaxAttempts(form.getMaxAttempts() != null ? form.getMaxAttempts() : 1);
         quiz.setStartTime(parseDateTime(form.getStartTime()));
-        quiz.setDueDate(parseDateTime(form.getDueDate()));
-        quiz.setEndTime(parseDateTime(form.getEndTime()));
+        quiz.setDueDate(null);
+        quiz.setEndTime(null);
         quiz.setRules(form.getRules());
         quiz.setPassingScore(form.getPassingScore());
         quiz.setShuffleQuestions(form.isShuffleQuestions());
