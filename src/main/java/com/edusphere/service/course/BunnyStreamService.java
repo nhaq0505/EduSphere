@@ -78,9 +78,16 @@ public class BunnyStreamService {
         } catch (CourseActionException ex) {
             throw ex;
         } catch (Exception ex) {
-            log.severe("Bunny createVideo error: " + ex.getMessage());
+            String detail = ex.getMessage();
+            if (detail == null || detail.isBlank()) {
+                detail = ex.getClass().getSimpleName();
+                if (ex.getCause() != null && ex.getCause().getMessage() != null) {
+                    detail += " (" + ex.getCause().getMessage() + ")";
+                }
+            }
+            log.severe("Bunny createVideo error: " + detail);
             throw new CourseActionException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "Không thể kết nối đến Bunny Stream: " + ex.getMessage());
+                    "Không thể kết nối đến Bunny Stream (" + detail + "). Vui lòng kiểm tra kết nối mạng hoặc thiết lập lại BUNNY_API_KEY.");
         }
     }
 
