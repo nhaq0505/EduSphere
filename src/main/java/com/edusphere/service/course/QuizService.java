@@ -22,8 +22,11 @@ import com.edusphere.repository.course.AnswerOptionRepository;
 import com.edusphere.repository.course.BankQuestionRepository;
 import com.edusphere.repository.course.CourseRepository;
 import com.edusphere.repository.course.EnrollmentRepository;
+import com.edusphere.entity.course.LessonWatchProgress;
 import com.edusphere.repository.course.LessonRepository;
 import com.edusphere.repository.course.QuestionBankRepository;
+import com.edusphere.repository.course.LessonCompletionRepository;
+import com.edusphere.repository.course.LessonWatchProgressRepository;
 import com.edusphere.repository.course.QuestionRepository;
 import com.edusphere.repository.course.QuizAnswerOptionRepository;
 import com.edusphere.repository.course.QuizAnswerRepository;
@@ -35,6 +38,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -61,13 +65,16 @@ public class QuizService {
     private final LearningProgressService learningProgressService;
     private final QuestionBankRepository questionBanks;
     private final BankQuestionRepository bankQuestions;
+    private final LessonCompletionRepository lessonCompletions;
+    private final LessonWatchProgressRepository watchProgress;
 
     public QuizService(QuizRepository quizzes, QuestionRepository questions,
                        AnswerOptionRepository answerOptions, QuizAttemptRepository attempts,
                        QuizAnswerRepository answers, QuizAnswerOptionRepository answerOptionLinks,
                        CourseRepository courses, LessonRepository lessons,
                        EnrollmentRepository enrollments, UserRepository users) {
-        this(quizzes, questions, answerOptions, attempts, answers, answerOptionLinks, courses, lessons, enrollments, users, null, null, null);
+        this(quizzes, questions, answerOptions, attempts, answers, answerOptionLinks,
+                courses, lessons, enrollments, users, null, null, null, null, null);
     }
 
     @Autowired
@@ -78,7 +85,9 @@ public class QuizService {
                        EnrollmentRepository enrollments, UserRepository users,
                        LearningProgressService learningProgressService,
                        QuestionBankRepository questionBanks,
-                       BankQuestionRepository bankQuestions) {
+                       BankQuestionRepository bankQuestions,
+                       LessonCompletionRepository lessonCompletions,
+                       LessonWatchProgressRepository watchProgress) {
         this.quizzes = quizzes;
         this.questions = questions;
         this.answerOptions = answerOptions;
@@ -92,6 +101,8 @@ public class QuizService {
         this.learningProgressService = learningProgressService;
         this.questionBanks = questionBanks;
         this.bankQuestions = bankQuestions;
+        this.lessonCompletions = lessonCompletions;
+        this.watchProgress = watchProgress;
     }
 
     // ===================== INSTRUCTOR OPERATIONS =====================
@@ -574,6 +585,24 @@ public class QuizService {
     public Integer startAttempt(Integer courseId, Integer quizId, Integer studentId) {
         Quiz quiz = getQuizForStudent(courseId, quizId, studentId);
 
+        // ── Backend gate: kiểm tra điều kiện xem video tối thiểu 80% để mở khóa Quiz ──
+        Lesson quizLesson = quiz.getLesson();
+        if (quizLesson != null && isVideoLesson(quizLesson)) {
+            int minPct = (quizLesson.getMinWatchPercent() != null && quizLesson.getMinWatchPercent() > 0)
+                    ? quizLesson.getMinWatchPercent()
+                    : 80;
+            boolean isUnlocked = false;
+            if (watchProgress != null) {
+                isUnlocked = watchProgress
+                        .findByStudent_UserIdAndLesson_LessonId(studentId, quizLesson.getLessonId())
+                        .map(wp -> Boolean.TRUE.equals(wp.getQuizUnlocked()) || (wp.getWatchPercent() != null && wp.getWatchPercent() >= minPct))
+                        .orElse(false);
+            }
+            if (!isUnlocked) {
+                throw conflict("Bạn cần xem ít nhất " + minPct + "% video bài học để mở khóa bài kiểm tra này.");
+            }
+        }
+
         // Check existing IN_PROGRESS attempt
         attempts.findFirstByQuiz_QuizIdAndStudent_UserIdAndStatus(quizId, studentId, "IN_PROGRESS")
                 .ifPresent(a -> {
@@ -762,6 +791,20 @@ public class QuizService {
     }
 
     // ===================== HELPERS =====================
+
+    public boolean isVideoLesson(Lesson lesson) {
+        if (lesson == null) return false;
+        return "VIDEO".equalsIgnoreCase(lesson.getLessonType())
+                || (lesson.getVideoUrl() != null && !lesson.getVideoUrl().isBlank())
+                || (lesson.getBunnyVideoId() != null && !lesson.getBunnyVideoId().isBlank())
+                || Boolean.TRUE.equals(lesson.getQuizRequiresVideo());
+    }
+
+    public Optional<LessonWatchProgress> getLessonWatchProgress(Integer studentId, Integer lessonId) {
+        return watchProgress != null
+                ? watchProgress.findByStudent_UserIdAndLesson_LessonId(studentId, lessonId)
+                : Optional.empty();
+    }
 
     private void saveSelectedOption(QuizAnswer qa, Question q, String optionIdStr, List<AnswerOption> opts) {
         try {

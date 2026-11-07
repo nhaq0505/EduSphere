@@ -1,35 +1,34 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="c"   uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
-<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
+<%@ taglib prefix="fn"  uri="jakarta.tags.functions" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><c:out value="${study.courseTitle}"/> — Học bài</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css?v=restore-0bfd0e1-20261014">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/study.css?v=1.1">
+
     <!-- Document Viewers for in-browser Word & Excel preview -->
     <script src="${pageContext.request.contextPath}/assets/js/jszip.min.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/docx-preview.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/xlsx.full.min.js"></script>
+
     <style>
         /* ── Material Cards & In-Web Preview ── */
-        .material-card {
-            display: flex; align-items: center; justify-content: space-between;
-            flex-wrap: wrap; gap: 14px; padding: 14px 18px; border: 1.5px solid #E2E8F0;
-            border-radius: 10px; background: #fff; margin-bottom: 12px; transition: all .18s;
-        }
-        .material-card:hover { border-color: #93C5FD; box-shadow: 0 4px 14px rgba(37,99,235,.07); }
         .btn-mat-preview {
-            display: inline-flex; align-items: center; gap: 6px; padding: 7px 15px;
-            font-size: .84rem; font-weight: 700; color: #2563EB; background: #EFF6FF;
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+            font-size: .8rem; font-weight: 700; color: #2563EB; background: #EFF6FF;
             border: 1.5px solid #BFDBFE; border-radius: 6px; cursor: pointer; transition: all .15s;
         }
         .btn-mat-preview:hover { background: #DBEAFE; border-color: #3B82F6; transform: translateY(-1px); }
         .btn-mat-download {
-            display: inline-flex; align-items: center; gap: 6px; padding: 7px 15px;
-            font-size: .84rem; font-weight: 600; color: #475569; background: #F8FAFC;
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+            font-size: .8rem; font-weight: 600; color: #475569; background: #F8FAFC;
             border: 1.5px solid #CBD5E1; border-radius: 6px; text-decoration: none; transition: all .15s;
         }
         .btn-mat-download:hover { background: #E2E8F0; color: #1E293B; transform: translateY(-1px); }
@@ -71,559 +70,697 @@
         .excel-table-wrapper tr:first-child td, .excel-table-wrapper th {
             background: #F1F5F9; font-weight: 700; color: #1E293B;
         }
-        .video-container {
-            position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
-            max-width: 100%; background: #000; border-radius: var(--r8); margin-bottom: 20px;
-        }
-        .video-container iframe, .video-container video {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;
-        }
-        .preview-banner {
-            background: #EFF6FF; border: 1.5px solid #3B82F6; color: #1E40AF; border-radius: var(--r8);
-            padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;
-            flex-wrap: wrap; gap: 10px; font-weight: 600; font-size: .9rem;
-        }
-        .seek-notice {
-            background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; padding: 6px 12px;
-            border-radius: 4px; font-size: .8rem; margin-bottom: 12px; display: inline-block;
-        }
 
-        /* ── Lesson / Exercise Tabs ── */
-        .lesson-tabs {
-            display: flex; gap: 0; border-bottom: 2px solid #E2E8F0; margin-bottom: 20px;
-        }
-        .lesson-tab {
-            padding: 10px 20px; font-weight: 700; font-size: .9rem;
-            cursor: pointer; color: #64748B; border-bottom: 2px solid transparent;
-            margin-bottom: -2px; transition: color .15s, border-color .15s;
-            display: flex; align-items: center; gap: 6px; background: none; border-top: none;
-            border-left: none; border-right: none;
-        }
-        .lesson-tab:hover { color: #0F172A; }
-        .lesson-tab.active { color: #2563EB; border-bottom-color: #2563EB; }
-        .lesson-tab__badge {
-            background: #EFF6FF; color: #2563EB; border-radius: 20px;
-            padding: 1px 8px; font-size: .72rem; font-weight: 700;
-        }
-        .lesson-tab__badge--locked {
-            background: #F1F5F9; color: #94A3B8;
-        }
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
-
-        /* ── Assignment cards ── */
-        .assignment-gate {
-            background: #FFF7ED; border: 1.5px solid #FED7AA;
-            border-radius: 12px; padding: 20px 24px; text-align: center; margin-bottom: 20px;
-        }
-        .assignment-gate__icon { font-size: 2rem; margin-bottom: 8px; }
-        .assignment-gate__title { font-weight: 800; color: #92400E; margin: 0 0 6px; font-size: 1rem; }
-        .assignment-gate__desc { color: #B45309; font-size: .87rem; margin: 0; }
-
+        /* Assignment Card in Tab 2 */
         .assignment-card {
-            border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 18px 20px;
-            margin-bottom: 14px; background: #fff;
+            background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px;
+            padding: 18px 20px; margin-bottom: 14px; transition: all .18s;
         }
+        .assignment-card:hover { border-color: #CBD5E1; box-shadow: 0 4px 12px rgba(0,0,0,.04); }
         .assignment-card__title {
-            font-weight: 700; font-size: 1rem; color: #0F172A; margin: 0 0 6px;
-            display: flex; align-items: center; gap: 8px;
+            font-size: 1rem; font-weight: 800; color: #0F172A; margin-bottom: 6px;
+            display: flex; align-items: center; justify-content: space-between;
         }
         .assignment-card__meta {
-            font-size: .82rem; color: #64748B; margin-bottom: 10px;
-            display: flex; flex-wrap: wrap; gap: 10px;
+            display: flex; flex-wrap: wrap; gap: 14px; font-size: .8rem; color: #64748B; margin-bottom: 10px;
         }
         .assignment-card__desc {
-            font-size: .87rem; color: #475569; line-height: 1.55;
-            margin-bottom: 12px; white-space: pre-line;
+            font-size: .88rem; color: #334155; line-height: 1.55; margin-bottom: 12px;
         }
-        .assignment-card__actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        .btn-do-assignment {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: #2563EB; color: #fff; border: none; border-radius: 8px;
-            padding: 9px 18px; font-size: .88rem; font-weight: 700;
-            text-decoration: none; cursor: pointer; transition: background .15s;
-        }
-        .btn-do-assignment:hover { background: #1D4ED8; color: #fff; }
-        .btn-do-assignment--submitted {
-            background: #16A34A;
-        }
-        .btn-do-assignment--submitted:hover { background: #15803D; }
-        .assignment-status-done {
-            display: inline-flex; align-items: center; gap: 5px;
-            color: #16A34A; font-weight: 700; font-size: .85rem;
-        }
-
-        /* ── Submit inline form ── */
         .inline-submit-form {
-            background: #F8FAFC; border: 1.5px solid #E2E8F0;
-            border-radius: 10px; padding: 16px 18px; margin-top: 12px;
-        }
-        .inline-submit-form label {
-            font-size: .82rem; font-weight: 700; color: #475569;
-            display: block; margin-bottom: 6px;
+            background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px;
+            padding: 16px; margin-top: 12px;
         }
         .inline-submit-form textarea {
-            width: 100%; box-sizing: border-box;
-            border: 1.5px solid #E2E8F0; border-radius: 8px;
-            padding: 10px 12px; font-size: .88rem; font-family: inherit;
-            resize: vertical; margin-bottom: 10px; min-height: 100px;
+            width: 100%; box-sizing: border-box; border: 1.5px solid #CBD5E1; border-radius: 8px;
+            padding: 10px 12px; font-size: .88rem; font-family: inherit; resize: vertical; min-height: 100px; margin-bottom: 10px;
         }
         .inline-submit-form textarea:focus { outline: none; border-color: #3B82F6; }
+        .btn-do-assignment {
+            background: #2563EB; color: #fff; border: none; padding: 8px 18px;
+            border-radius: 8px; font-weight: 700; font-size: .85rem; cursor: pointer; transition: all .15s;
+        }
+        .btn-do-assignment:hover { background: #1D4ED8; }
+        .btn-do-assignment--submitted { background: #059669; }
+        .btn-do-assignment--submitted:hover { background: #047857; }
+        .assignment-status-done {
+            display: inline-flex; align-items: center; gap: 4px; font-weight: 700;
+            font-size: .85rem; color: #059669; background: #ECFDF5; padding: 6px 12px; border-radius: 6px;
+        }
     </style>
 </head>
 <body>
 <jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
-<main class="shell">
 
-    <c:choose>
-        <c:when test="${study.previewMode}">
-            <div class="preview-banner">
-                <div>👁️ <strong>Chế độ xem trước dành cho Giảng viên (Preview Mode)</strong> — Trải nghiệm trực quan góc nhìn học viên.</div>
-                <a class="button button--outline" style="padding:4px 12px; font-size:.82rem; background:#fff;"
-                   href="${pageContext.request.contextPath}/instructor/courses/${study.courseId}">
-                    ← Quay lại Quản lý khóa học
-                </a>
+<c:set var="curWatchPct" value="${study.currentWatchPercent >= 0 ? study.currentWatchPercent : 0}"/>
+<c:set var="isQuizUnlocked" value="${study.currentQuizUnlocked or curWatchPct >= 80}"/>
+
+<div class="study-page-wrapper"
+     id="studyApp"
+     data-course-id="${study.courseId}"
+     data-lesson-id="${study.currentLesson.lessonId}"
+     data-video-url="<c:out value='${study.currentVideoUrl}'/>"
+     data-video-status="<c:out value='${study.currentVideoStatus}'/>"
+     data-last-pos="${study.currentLastPosition}"
+     data-watch-pct="${curWatchPct}"
+     data-quiz-unlocked="${isQuizUnlocked}"
+     data-csrf-param="${_csrf.parameterName}"
+     data-csrf-token="${_csrf.token}"
+     data-context-path="${pageContext.request.contextPath}">
+
+    <%-- ════ 1. COURSE HERO BANNER ════ --%>
+    <div class="course-hero-banner">
+        <div class="hero-banner__left">
+            <div class="hero-banner__icon">
+                <svg width="68" height="68" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M40 58L14 45V20L40 33L66 20V45L40 58Z" fill="#1D4ED8"/>
+                    <path d="M40 60L12 46V22L40 36L68 22V46L40 60Z" fill="#2563EB"/>
+                    <path d="M40 34L14 21L17 44L40 56V34Z" fill="#F8FAFC"/>
+                    <path d="M20 28L35 36" stroke="#93C5FD" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M20 34L35 42" stroke="#93C5FD" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M20 40L32 46" stroke="#93C5FD" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M40 34L66 21L63 44L40 56V34Z" fill="#FFFFFF"/>
+                    <path d="M45 36L60 28" stroke="#93C5FD" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M45 42L60 34" stroke="#93C5FD" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M45 48L57 42" stroke="#93C5FD" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M40 34V46L37 43L34 46V35" fill="#F59E0B"/>
+                </svg>
             </div>
-        </c:when>
-        <c:otherwise>
-            <a class="back-link" href="${pageContext.request.contextPath}/my-courses">← Khóa học của tôi</a>
-        </c:otherwise>
-    </c:choose>
-
-    <header class="page-heading">
-        <div>
-            <p class="eyebrow"><c:choose><c:when test="${study.previewMode}">Xem trước khóa học</c:when><c:otherwise>Không gian học viên</c:otherwise></c:choose></p>
-            <h1><c:out value="${study.courseTitle}"/></h1>
-            <p>Giảng viên <c:out value="${study.instructorName}"/></p>
+            <div class="hero-banner__titles">
+                <h1 class="hero-banner__title">Khóa học: <c:out value="${study.courseTitle}"/></h1>
+                <p class="hero-banner__subtitle">Học tập hôm nay – Kiến tạo tương lai ngày mai</p>
+            </div>
         </div>
-    </header>
 
-    <c:if test="${not empty success}"><div class="alert alert--success"><c:out value="${success}"/></div></c:if>
+        <div class="hero-banner__right">
+            <div class="hero-progress-pill">
+                <div class="hero-progress-header">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 20V10M12 20V4M6 20v-6"/>
+                    </svg>
+                    <span>Tiến độ khóa học</span>
+                </div>
+                <div class="hero-progress-bar-wrap">
+                    <div class="hero-progress-track">
+                        <div class="hero-progress-fill" style="width: ${study.progressPercent}%;"></div>
+                    </div>
+                    <span class="hero-progress-pct">${study.progressPercent}%</span>
+                </div>
+            </div>
+        </div>
+
+        <%-- Watermark Graduation Cap --%>
+        <div class="hero-banner__watermark">
+            <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+            </svg>
+        </div>
+    </div>
+
+    <%-- ════ 2. BREADCRUMBS ════ --%>
+    <div class="study-breadcrumbs">
+        <a href="${pageContext.request.contextPath}/">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </a>
+        <span class="breadcrumb-sep">&gt;</span>
+        <a href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a>
+        <span class="breadcrumb-sep">&gt;</span>
+        <a href="${pageContext.request.contextPath}/courses/${study.courseId}"><c:out value="${study.courseTitle}"/></a>
+        <c:if test="${not empty study.currentLesson.sectionTitle}">
+            <span class="breadcrumb-sep">&gt;</span>
+            <span><c:out value="${study.currentLesson.sectionTitle}"/></span>
+        </c:if>
+        <span class="breadcrumb-sep">&gt;</span>
+        <span class="breadcrumb-active">Bài ${study.currentLesson.orderIndex}: <c:out value="${study.currentLesson.title}"/></span>
+    </div>
 
     <c:choose>
         <c:when test="${empty study.currentLesson}">
-            <div class="empty-state">
-                <span class="empty-state__mark">○</span>
-                <h2>Chưa có bài học để xem</h2>
-                <p>Khóa học hiện chưa có bài học nào được hoàn thiện.</p>
-                <c:choose>
-                    <c:when test="${study.previewMode}">
-                        <a class="button button--primary" href="${pageContext.request.contextPath}/instructor/courses/${study.courseId}/lessons/new">➕ Thêm bài học đầu tiên</a>
-                    </c:when>
-                    <c:otherwise>
-                        <a class="button button--outline" href="${pageContext.request.contextPath}/my-courses">Khóa học của tôi</a>
-                    </c:otherwise>
-                </c:choose>
+            <div style="background:#fff;border-radius:18px;border:1px solid #E2E8F0;padding:60px 32px;text-align:center;">
+                <div style="font-size:3rem;margin-bottom:14px;">📚</div>
+                <h2 style="font-size:1.1rem;font-weight:800;color:#0F172A;margin:0 0 8px;">Chưa có bài học nào</h2>
+                <p style="color:#64748B;margin:0 0 20px;">Khóa học hiện chưa có bài học nào được công bố.</p>
+                <a class="study-btn study-btn--outline" href="${pageContext.request.contextPath}/my-courses">← Khóa học của tôi</a>
             </div>
         </c:when>
 
         <c:otherwise>
-            <div class="study-layout">
-                <!-- ══ Sidebar Outline ══ -->
-                <aside class="card study-sidebar">
-                    <h2>Nội dung khóa học</h2>
-                    <c:if test="${not study.previewMode}">
-                        <p class="small muted"><c:out value="${study.completedCount}"/> / <c:out value="${study.totalCount}"/> bài đã hoàn thành</p>
-                        <progress value="${study.completedCount}" max="${study.totalCount}"></progress>
-                    </c:if>
+            <%-- ════ 3. MAIN 3-COLUMN LAYOUT ════ --%>
+            <div class="study-grid">
 
-                    <ol class="study-outline" style="list-style:none; padding:0; margin:14px 0 0;">
-                        <c:forEach var="item" items="${study.lessons}">
-                            <li style="margin-bottom:8px;">
-                                <a class="<c:if test='${item.current}'>study-outline__active</c:if>"
-                                   href="<c:choose><c:when test='${study.previewMode}'>${pageContext.request.contextPath}/instructor/courses/${study.courseId}/preview/lessons/${item.lessonId}</c:when><c:otherwise>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${item.lessonId}</c:otherwise></c:choose>"
-                                   style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 12px; border-radius:6px; text-decoration:none;">
-                                    <div style="display:flex; align-items:center; gap:6px;">
-                                        <span>
-                                            <c:choose>
-                                                <c:when test="${item.lessonType eq 'VIDEO'}">🎥</c:when>
-                                                <c:when test="${item.lessonType eq 'QUIZ'}">📝</c:when>
-                                                <c:otherwise>📄</c:otherwise>
-                                            </c:choose>
-                                        </span>
-                                        <span><c:out value="${item.title}"/></span>
+                <%-- ── COL 1: LEFT SIDEBAR (Nội dung khóa học) ── --%>
+                <aside class="study-left-sidebar">
+                    <div class="sidebar-course-card">
+                        <div class="sidebar-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
+                            <span>Nội dung khóa học</span>
+                        </div>
+                        <div class="sidebar-accordion-wrap">
+                            <c:forEach var="sec" items="${study.sections}">
+                                <div class="chapter-accordion ${sec.active ? 'open' : ''}">
+                                    <div class="chapter-head" onclick="toggleChapter(this)">
+                                        <span><c:out value="${sec.title}"/></span>
+                                        <span class="chapter-head-arrow">${sec.active ? '▲' : '▼'}</span>
                                     </div>
-                                    <c:if test="${item.completed}"><span class="pill pill--success">Đã học</span></c:if>
-                                    <c:if test="${item.preview}"><span class="pill pill--neutral" style="font-size:.7rem;">Thử</span></c:if>
-                                </a>
-                            </li>
-                        </c:forEach>
-                    </ol>
+                                    <ul class="chapter-lessons-list">
+                                        <c:forEach var="item" items="${sec.lessons}">
+                                            <li class="sidebar-lesson-item ${item.current ? 'sidebar-lesson-item--active' : ''}">
+                                                <a class="sidebar-lesson-link"
+                                                   href="<c:choose><c:when test='${study.previewMode}'>${pageContext.request.contextPath}/instructor/courses/${study.courseId}/preview/lessons/${item.lessonId}</c:when><c:otherwise>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${item.lessonId}</c:otherwise></c:choose>">
+                                                    <span class="sidebar-lesson-icon">
+                                                        <c:choose>
+                                                            <c:when test="${item.current}">
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                                            </c:when>
+                                                            <c:when test="${item.lessonType eq 'VIDEO'}">
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2.18"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </span>
+                                                    <div class="sidebar-lesson-info">
+                                                        <div class="sidebar-lesson-title"><c:out value="${item.title}"/></div>
+                                                        <div class="sidebar-lesson-duration">⏱ ${item.videoDuration != null ? item.videoDuration : 5} phút</div>
+                                                    </div>
+                                                    <div class="sidebar-lesson-status">
+                                                        <c:choose>
+                                                            <c:when test="${item.completed or item.current}">
+                                                                <span class="status-check-blue">✔</span>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <span class="status-empty-circle"></span>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </div>
+                                                </a>
+                                            </li>
 
-                    <div style="margin-top:16px; padding-top:14px; border-top:1px dashed #E2E8F0;">
+                                            <%-- Nếu là bài đang xem và có Quizzes, hiển thị item Quiz ngay bên dưới bài học --%>
+                                            <c:if test="${item.current and not empty study.currentLessonQuizzes}">
+                                                <c:forEach var="qv" items="${study.currentLessonQuizzes}">
+                                                    <li class="sidebar-lesson-item">
+                                                        <a class="sidebar-lesson-link"
+                                                           href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${qv.quizId}"
+                                                           id="sidebarQuizLink-${qv.quizId}"
+                                                           ${isQuizUnlocked ? '' : 'onclick="return handleLockedQuizClick(event);"'}
+                                                           style="background: #FAFAFC;">
+                                                            <span class="sidebar-quiz-icon">❓</span>
+                                                            <div class="sidebar-lesson-info">
+                                                                <div class="sidebar-lesson-title"><c:out value="${qv.title}"/></div>
+                                                            </div>
+                                                            <div class="sidebar-lesson-status">
+                                                                <span class="sidebar-lock-badge" id="sidebarQuizLock-${qv.quizId}">
+                                                                    ${isQuizUnlocked ? '🔓' : '🔒'}
+                                                                </span>
+                                                            </div>
+                                                        </a>
+                                                    </li>
+                                                </c:forEach>
+                                            </c:if>
+                                        </c:forEach>
+                                    </ul>
+                                </div>
+                            </c:forEach>
+                        </div>
+                    </div>
+
+                    <%-- Bottom cheer card & link to course quiz list --%>
+                    <div class="sidebar-cheer-card">
+                        <div class="cheer-icon">🏆</div>
+                        <div class="cheer-content">
+                            <div class="cheer-title">Cố gắng học tập nhé!</div>
+                            <div class="cheer-subtitle">Bạn đang tiến bộ rất tốt!</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:14px;">
                         <a href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes"
-                           class="button button--outline" style="width:100%; display:block; text-align:center; font-size:.85rem; padding:8px 12px; background:#FAF5FF; border-color:#D8B4FE; color:#7E22CE; font-weight:600; text-decoration:none; border-radius:8px;">
-                            📝 Danh sách Quiz của khóa
+                           style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:#FAF5FF; border:1.5px solid #D8B4FE; color:#7E22CE; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
+                            <span>📝</span> Danh sách Quiz của khóa học
                         </a>
                     </div>
                 </aside>
 
-                <!-- ══ Main Content ══ -->
-                <article class="card study-content">
-                    <p class="eyebrow">
-                        Bài <c:out value="${study.currentLesson.orderIndex}"/>
-                        <c:if test="${study.currentLessonType eq 'VIDEO'}"> · 🎥 Bài giảng Video</c:if>
-                        <c:if test="${study.currentLessonType eq 'QUIZ'}"> · 📝 Bài tập / Quiz</c:if>
-                    </p>
-                    <h2><c:out value="${study.currentLesson.title}"/></h2>
+                <%-- ── COL 2: CENTER (Video Player & Progress) ── --%>
+                <main class="study-center-col">
 
-                    <%-- ── Tab header ── --%>
-                    <c:set var="hasAssignments" value="${not empty study.currentLessonAssignments}"/>
-                    <c:set var="hasQuizzes" value="${not empty study.currentLessonQuizzes}"/>
-                    <c:set var="hasExercises" value="${hasAssignments or hasQuizzes}"/>
-                    <div class="lesson-tabs">
-                        <button class="lesson-tab active" id="tab-lesson" onclick="switchTab('lesson')">
-                            📖 Nội dung bài học
-                        </button>
-                        <c:if test="${hasExercises}">
-                            <button class="lesson-tab" id="tab-exercise" onclick="switchTab('exercise')">
-                                ✏️ Bài tập & Quiz
-                                <span class="lesson-tab__badge<c:if test='${not study.currentLessonCompleted and not study.previewMode}'> lesson-tab__badge--locked</c:if>">
-                                    <c:set var="exerciseCount" value="${study.currentLessonAssignments.size() + study.currentLessonQuizzes.size()}"/>
-                                    ${exerciseCount}
-                                </span>
-                            </button>
-                        </c:if>
+                    <%-- Header above video --%>
+                    <div class="video-header-bar">
+                        <div class="video-header-title">
+                            <span class="video-play-indicator">▶</span>
+                            <span>Bài ${study.currentLesson.orderIndex}: <c:out value="${study.currentLesson.title}"/></span>
+                        </div>
+                        <div class="video-header-badge">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                            </svg>
+                            <span>Video bài giảng</span>
+                        </div>
                     </div>
 
-                    <%-- ════ TAB 1: Bài học ════ --%>
-                    <div class="tab-panel active" id="panel-lesson">
+                    <%-- 16:9 Video container --%>
+                    <div class="video-frame-wrap" id="studyPlayerContainer"></div>
 
-                        <!-- Video Player -->
-                        <c:if test="${study.currentLessonType eq 'VIDEO' and not empty study.currentVideoUrl}">
-                            <c:if test="${not study.currentAllowSeek}">
-                                <div class="seek-notice">⚠️ Bài học yêu cầu xem tuần tự để nắm vững kiến thức (Hạn chế tua nhanh).</div>
-                            </c:if>
-                            <div class="video-container" id="studyPlayerContainer"></div>
-                        </c:if>
+                    <%-- Watch Progress Card (Circular ring + horizontal bar) --%>
+                    <div class="watch-progress-card">
+                        <div class="watch-circular-meter">
+                            <svg class="circular-chart" viewBox="0 0 36 36">
+                                <path class="circle-bg"
+                                      d="M18 2.0845
+                                         a 15.9155 15.9155 0 0 1 0 31.831
+                                         a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="circle-fill" id="circularProgressFill"
+                                      stroke-dasharray="${curWatchPct}, 100"
+                                      d="M18 2.0845
+                                         a 15.9155 15.9155 0 0 1 0 31.831
+                                         a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="circular-meter__text" id="circWatchPct">${curWatchPct}%</div>
+                        </div>
 
-                        <!-- Text / Article Body -->
-                        <c:if test="${not empty study.lessonContent}">
-                            <div class="lesson-body" style="white-space:pre-wrap; line-height:1.6; margin-bottom:24px;">
-                                <c:out value="${study.lessonContent}"/>
+                        <div class="watch-progress-details">
+                            <div class="watch-progress-title">Tiến độ xem video</div>
+                            <div class="watch-progress-subtitle ${isQuizUnlocked ? 'unlocked-text' : ''}" id="watchProgressSubtitle">
+                                <c:choose>
+                                    <c:when test="${isQuizUnlocked}">
+                                        🎉 Chúc mừng! Bạn đã mở khóa bài kiểm tra
+                                    </c:when>
+                                    <c:otherwise>
+                                        Bạn cần xem ít nhất 80% video để mở khóa bài kiểm tra
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
-                        </c:if>
+                            <div class="watch-bar-row">
+                                <div class="watch-bar-track">
+                                    <div class="watch-bar-fill" id="watchBarFill" style="width: ${curWatchPct}%;"></div>
+                                </div>
+                                <span class="watch-bar-badge" id="barPctBadge">${curWatchPct}%</span>
+                            </div>
+                        </div>
+                    </div>
 
-                        <!-- Materials -->
-                        <h3 style="display:flex; align-items:center; gap:8px;">
-                            📁 Tài liệu & Tài nguyên đính kèm
-                            <c:if test="${not empty study.materials}">
-                                <span style="font-size:.8rem; font-weight:700; background:#EFF6FF; color:#2563EB; padding:2px 8px; border-radius:12px;">
-                                    ${study.materials.size()} tệp
-                                </span>
+                    <%-- Lesson content tabs (Notes, Materials, Quizzes & Exercises) --%>
+                    <div class="lesson-content-card">
+                        <c:set var="hasAssignments" value="${not empty study.currentLessonAssignments}"/>
+                        <c:set var="hasQuizzes"     value="${not empty study.currentLessonQuizzes}"/>
+                        <c:set var="hasExercises"   value="${hasAssignments or hasQuizzes}"/>
+
+                        <div class="lesson-tabs">
+                            <button class="lesson-tab active" id="tab-lesson" onclick="switchTab('lesson')">
+                                📖 Nội dung &amp; Tài liệu
+                            </button>
+                            <c:if test="${hasExercises}">
+                                <button class="lesson-tab" id="tab-exercise" onclick="switchTab('exercise')">
+                                    ✏️ Bài tập &amp; Quiz
+                                    <span class="lesson-tab__badge${not study.currentLessonCompleted and not study.previewMode and not isQuizUnlocked ? ' lesson-tab__badge--locked' : ''}">
+                                        ${(study.currentLessonAssignments != null ? study.currentLessonAssignments.size() : 0) + (study.currentLessonQuizzes != null ? study.currentLessonQuizzes.size() : 0)}
+                                    </span>
+                                </button>
                             </c:if>
-                        </h3>
-                        <c:choose>
-                            <c:when test="${empty study.materials}">
-                                <p class="muted">Chưa có tài liệu đính kèm cho bài học này.</p>
-                            </c:when>
-                            <c:otherwise>
-                                <div class="material-list">
-                                    <c:forEach var="material" items="${study.materials}">
-                                        <c:set var="fullMatUrl" value="${material.fileUrl}"/>
-                                        <c:if test="${not fn:startsWith(fullMatUrl, 'http://') and not fn:startsWith(fullMatUrl, 'https://') and not fn:startsWith(fullMatUrl, pageContext.request.contextPath)}">
-                                            <c:set var="fullMatUrl" value="${pageContext.request.contextPath}${fullMatUrl}"/>
+                        </div>
+
+                        <%-- TAB 1: Notes & Materials --%>
+                        <div class="tab-panel active" id="panel-lesson">
+                            <c:if test="${not empty study.lessonContent}">
+                                <div class="lesson-body"><c:out value="${study.lessonContent}"/></div>
+                            </c:if>
+
+                            <c:if test="${empty study.lessonContent and empty study.materials}">
+                                <p style="color:#64748B;font-size:0.88rem;margin:8px 0 16px;">
+                                    Hãy theo dõi trọn vẹn video bài giảng ở trên để nắm vững kiến thức trọng tâm!
+                                </p>
+                            </c:if>
+
+                            <c:if test="${not empty study.materials}">
+                                <div class="materials-section" style="margin-top:20px;">
+                                    <h3 style="display:flex; align-items:center; gap:8px; font-size:.98rem; font-weight:800; color:#0F172A; margin-bottom:14px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                        Tài liệu &amp; Tệp tin đính kèm
+                                        <span style="font-size:.78rem; font-weight:700; background:#EFF6FF; color:#2563EB; padding:2px 8px; border-radius:12px;">
+                                            ${study.materials.size()} tệp
+                                        </span>
+                                    </h3>
+                                    <div class="material-list">
+                                        <c:forEach var="mat" items="${study.materials}">
+                                            <c:set var="fullMatUrl" value="${mat.fileUrl}"/>
+                                            <c:if test="${not empty fullMatUrl and not (fn:startsWith(fullMatUrl, 'http://') or fn:startsWith(fullMatUrl, 'https://'))}">
+                                                <c:set var="fullMatUrl" value="${pageContext.request.contextPath}${fullMatUrl}"/>
+                                            </c:if>
+                                            <div class="material-item" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:12px 16px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:10px; background:#fff;">
+                                                <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                                                    <div class="material-item__icon" style="font-size:1.4rem; flex-shrink:0;">
+                                                        <c:choose>
+                                                            <c:when test="${mat.type eq 'VIDEO'}">🎬</c:when>
+                                                            <c:when test="${mat.type eq 'DOCUMENT'}">📄</c:when>
+                                                            <c:otherwise>🔗</c:otherwise>
+                                                        </c:choose>
+                                                    </div>
+                                                    <div class="material-item__info" style="min-width:0;">
+                                                        <div class="material-item__name" style="font-weight:700; font-size:.9rem; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:480px;"><c:out value="${mat.title}"/></div>
+                                                        <div class="material-item__type" style="margin-top:2px;">
+                                                            <span class="material-pill material-pill--${mat.type.toLowerCase()}" style="font-size:.72rem; padding:1px 6px; border-radius:4px;">
+                                                                <c:choose>
+                                                                    <c:when test="${mat.type eq 'VIDEO'}">Video</c:when>
+                                                                    <c:when test="${mat.type eq 'DOCUMENT'}">Tài liệu</c:when>
+                                                                    <c:otherwise>Liên kết</c:otherwise>
+                                                                </c:choose>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                                                    <c:if test="${not empty fullMatUrl}">
+                                                        <button type="button" class="btn-mat-preview"
+                                                                onclick="openMaterialPreview('<c:out value="${mat.title}" escapeXml="true"/>', '<c:out value="${fullMatUrl}" escapeXml="true"/>', '<c:out value="${mat.type}"/>', '<c:out value="${mat.originalFileName}" escapeXml="true"/>')">
+                                                            👁️ Xem trực tiếp
+                                                        </button>
+                                                        <a class="btn-mat-download"
+                                                           href="<c:out value='${fullMatUrl}'/>" target="_blank" rel="noopener noreferrer">
+                                                            <c:choose>
+                                                                <c:when test="${mat.type eq 'LINK'}">Mở link ↗</c:when>
+                                                                <c:otherwise>⬇️ Tải về</c:otherwise>
+                                                            </c:choose>
+                                                        </a>
+                                                    </c:if>
+                                                </div>
+                                            </div>
+                                        </c:forEach>
+                                    </div>
+                                </div>
+                            </c:if>
+
+                            <div class="study-actions" style="margin-top:24px;">
+                                <c:if test="${not empty study.prevLessonId}">
+                                    <a class="study-btn study-btn--outline"
+                                       href="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.prevLessonId}">
+                                        ← Bài trước
+                                    </a>
+                                </c:if>
+                                <c:if test="${not study.currentLesson.completed and not study.previewMode}">
+                                    <form method="post" style="margin:0;"
+                                          action="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.currentLesson.lessonId}/complete">
+                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                        <button class="study-btn study-btn--success" type="submit">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="white" stroke-width="1.8"/><path d="M8 12l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            Đánh dấu đã học
+                                        </button>
+                                    </form>
+                                </c:if>
+                                <c:if test="${study.currentLesson.completed}">
+                                    <div class="completed-banner" style="margin:0; padding:8px 14px;">
+                                        ✅ Đã hoàn thành bài học
+                                    </div>
+                                </c:if>
+                                <c:if test="${not empty study.nextLessonId}">
+                                    <a class="study-btn study-btn--outline"
+                                       href="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}">
+                                        Bài tiếp →
+                                    </a>
+                                </c:if>
+                            </div>
+                        </div>
+
+                        <%-- TAB 2: Exercises & Quizzes --%>
+                        <c:if test="${hasExercises}">
+                            <div class="tab-panel" id="panel-exercise">
+                                <c:set var="isVideoLesson" value="${study.currentLessonType eq 'VIDEO' or not empty study.currentVideoUrl}"/>
+                                <c:set var="tabQuizUnlocked" value="${study.currentQuizUnlocked or curWatchPct >= 80 or study.previewMode or not isVideoLesson}"/>
+
+                                <c:choose>
+                                    <c:when test="${isVideoLesson and not tabQuizUnlocked and not study.previewMode}">
+                                        <div class="widget-cond-alert widget-cond-alert--locked" id="exerciseTabGate" style="padding: 24px; text-align: center; display: block; margin-bottom: 20px;">
+                                            <div style="font-size: 2.4rem; margin-bottom: 10px;">🔒</div>
+                                            <p style="font-weight: 800; font-size: 1.05rem; margin: 0 0 6px; color:#991B1B;">Bài kiểm tra đang bị khóa</p>
+                                            <p style="font-size: 0.88rem; margin: 0 0 16px; color:#4B5563;">
+                                                Bạn cần xem ít nhất <strong>80%</strong> video bài giảng để mở khóa bài kiểm tra.
+                                                <br><span style="color:#2563EB;font-weight:700;">Tiến độ hiện tại: <span id="gateWatchPct">${curWatchPct}</span>% / 80%</span>
+                                            </p>
+                                            <button class="study-btn study-btn--outline" onclick="switchTab('lesson')">← Quay lại xem video</button>
+                                        </div>
+                                    </c:when>
+
+                                    <c:otherwise>
+                                        <c:if test="${isVideoLesson and tabQuizUnlocked and not study.previewMode}">
+                                            <div class="completed-banner" id="quizUnlockedBanner" style="margin-bottom:16px;">
+                                                🎉 Chúc mừng! Bạn đã mở khóa bài kiểm tra.
+                                            </div>
                                         </c:if>
 
-                                        <article class="material-card">
-                                            <div style="display:flex; align-items:center; gap:12px; flex:1; min-width:240px;">
-                                                <div style="font-size:1.6rem; line-height:1; flex-shrink:0;">
-                                                    <c:choose>
-                                                        <c:when test="${material.type eq 'VIDEO'}">🎬</c:when>
-                                                        <c:when test="${fn:endsWith(fn:toLowerCase(fullMatUrl), '.pdf')}">📕</c:when>
-                                                        <c:when test="${fn:endsWith(fn:toLowerCase(fullMatUrl), '.doc') or fn:endsWith(fn:toLowerCase(fullMatUrl), '.docx')}">📘</c:when>
-                                                        <c:when test="${fn:endsWith(fn:toLowerCase(fullMatUrl), '.xls') or fn:endsWith(fn:toLowerCase(fullMatUrl), '.xlsx')}">📗</c:when>
-                                                        <c:when test="${fn:endsWith(fn:toLowerCase(fullMatUrl), '.ppt') or fn:endsWith(fn:toLowerCase(fullMatUrl), '.pptx')}">📙</c:when>
-                                                        <c:when test="${fn:endsWith(fn:toLowerCase(fullMatUrl), '.png') or fn:endsWith(fn:toLowerCase(fullMatUrl), '.jpg') or fn:endsWith(fn:toLowerCase(fullMatUrl), '.jpeg') or fn:endsWith(fn:toLowerCase(fullMatUrl), '.webp')}">🖼️</c:when>
-                                                        <c:when test="${fn:endsWith(fn:toLowerCase(fullMatUrl), '.zip') or fn:endsWith(fn:toLowerCase(fullMatUrl), '.rar')}">📦</c:when>
-                                                        <c:when test="${material.type eq 'LINK'}">🔗</c:when>
-                                                        <c:otherwise>📄</c:otherwise>
-                                                    </c:choose>
-                                                </div>
-                                                <div style="min-width:0;">
-                                                    <div style="font-weight:700; color:#0F172A; font-size:.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:480px;">
-                                                        <c:out value="${material.title}"/>
-                                                    </div>
-                                                    <div style="font-size:.76rem; color:#64748B; margin-top:2px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                                        <span class="pill pill--neutral" style="font-size:.68rem; padding:1px 7px;">
-                                                            <c:choose>
-                                                                <c:when test="${material.type eq 'VIDEO'}">Video</c:when>
-                                                                <c:when test="${material.type eq 'DOCUMENT'}">Tài liệu</c:when>
-                                                                <c:otherwise>Liên kết</c:otherwise>
-                                                            </c:choose>
-                                                        </span>
-                                                        <c:if test="${not empty material.originalFileName}">
-                                                            <span style="overflow:hidden; text-overflow:ellipsis; max-width:220px; white-space:nowrap;"><c:out value="${material.originalFileName}"/></span>
-                                                        </c:if>
-                                                        <c:if test="${not empty material.sizeBytes and material.sizeBytes > 0}">
-                                                            <span>• <fmt:formatNumber value="${material.sizeBytes / 1024 / 1024}" maxFractionDigits="2"/> MB</span>
-                                                        </c:if>
-                                                    </div>
-                                                </div>
+                                        <%-- Danh sách Quiz của bài học --%>
+                                        <c:if test="${not empty study.currentLessonQuizzes}">
+                                            <div style="font-size:.9rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px;">
+                                                📝 Bài kiểm tra trắc nghiệm (Quiz)
                                             </div>
-
-                                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                                <c:if test="${not empty fullMatUrl}">
-                                                    <!-- Nút 1: Xem trực tiếp trên web -->
-                                                    <button type="button" class="btn-mat-preview"
-                                                            onclick="openMaterialPreview('<c:out value="${material.title}" escapeXml="true"/>', '<c:out value="${fullMatUrl}" escapeXml="true"/>', '<c:out value="${material.type}"/>', '<c:out value="${material.originalFileName}" escapeXml="true"/>')">
-                                                        👁️ Xem trực tiếp
-                                                    </button>
-                                                    <!-- Nút 2: Tải về máy tính -->
-                                                    <a href="<c:out value='${fullMatUrl}'/>" download="<c:out value='${material.title}'/>" target="_blank" rel="noopener noreferrer"
-                                                       class="btn-mat-download">
-                                                        ⬇️ Tải về
+                                            <c:forEach var="qv" items="${study.currentLessonQuizzes}">
+                                                <div style="background:#fff;border:1.5px solid #E2E8F0;border-radius:12px;padding:16px 20px;margin-bottom:14px;box-shadow:0 2px 6px rgba(0,0,0,.03);">
+                                                    <div style="font-weight:800;font-size:1rem;color:#0F172A;margin-bottom:6px;">
+                                                        📝 <c:out value="${qv.title}"/>
+                                                    </div>
+                                                    <div style="font-size:.82rem;color:#64748B;margin-bottom:12px;">
+                                                        ⏱ ${qv.timeLimitMinutes != null ? qv.timeLimitMinutes : 'Không giới hạn'} phút &bull; Tối đa ${qv.maxAttempts} lần
+                                                        <c:if test="${qv.myAttemptCount > 0}"> &bull; <strong>Đã làm ${qv.myAttemptCount} lần</strong></c:if>
+                                                    </div>
+                                                    <a class="study-btn study-btn--primary" href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${qv.quizId}">
+                                                        📝 Vào làm bài
                                                     </a>
-                                                </c:if>
-                                            </div>
-                                        </article>
-                                    </c:forEach>
-                                </div>
-                            </c:otherwise>
-                        </c:choose>
+                                                </div>
+                                            </c:forEach>
+                                        </c:if>
 
-                        <!-- Navigation & Complete Actions -->
-                        <div class="study-actions" style="margin-top:24px;">
+                                        <%-- Danh sách Bài tập tự luận (Assignments) --%>
+                                        <c:if test="${not empty study.currentLessonAssignments}">
+                                            <div style="font-size:.9rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:.5px; margin:20px 0 10px;">
+                                                📋 Bài tập thực hành &amp; Tự luận
+                                            </div>
+                                            <c:forEach var="asgn" items="${study.currentLessonAssignments}">
+                                                <div class="assignment-card">
+                                                    <div class="assignment-card__title">
+                                                        <span>📋 <c:out value="${asgn.title}"/></span>
+                                                        <c:if test="${asgn.hasSubmitted}">
+                                                            <span class="assignment-status-done" style="font-size:.76rem;">Đã nộp bài</span>
+                                                        </c:if>
+                                                    </div>
+                                                    <div class="assignment-card__meta">
+                                                        <span>⭐ Điểm tối đa: <strong>${asgn.maxScore}</strong></span>
+                                                        <c:if test="${not empty asgn.dueDate}">
+                                                            <span>⏰ Hạn: <c:out value="${asgn.dueDate}"/></span>
+                                                        </c:if>
+                                                        <c:if test="${asgn.allowResubmit}">
+                                                            <span>🔄 Nộp lại (${asgn.maxAttempts} lần)</span>
+                                                        </c:if>
+                                                        <c:if test="${asgn.attemptCount > 0}">
+                                                            <span>📤 Đã nộp ${asgn.attemptCount} lần</span>
+                                                        </c:if>
+                                                    </div>
+                                                    <c:if test="${not empty asgn.description}">
+                                                        <div class="assignment-card__desc"><c:out value="${asgn.description}"/></div>
+                                                    </c:if>
+                                                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                                        <c:choose>
+                                                            <c:when test="${asgn.hasSubmitted and not asgn.allowResubmit}">
+                                                                <span class="assignment-status-done">✅ Đã hoàn thành nộp</span>
+                                                                <a class="study-btn study-btn--outline" style="font-size:.83rem;padding:6px 14px;"
+                                                                   href="${pageContext.request.contextPath}/courses/${study.courseId}/assignments/${asgn.assignmentId}/result">
+                                                                    Xem kết quả →
+                                                                </a>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <button class="btn-do-assignment<c:if test='${asgn.hasSubmitted}'> btn-do-assignment--submitted</c:if>"
+                                                                        onclick="toggleSubmitForm('form-${asgn.assignmentId}')">
+                                                                    <c:choose>
+                                                                        <c:when test="${asgn.hasSubmitted}">🔄 Nộp lại bài</c:when>
+                                                                        <c:otherwise>✏️ Làm bài tập</c:otherwise>
+                                                                    </c:choose>
+                                                                </button>
+                                                                <c:if test="${asgn.hasSubmitted}">
+                                                                    <a class="study-btn study-btn--outline" style="font-size:.83rem;padding:6px 14px;"
+                                                                       href="${pageContext.request.contextPath}/courses/${study.courseId}/assignments/${asgn.assignmentId}/result">
+                                                                        Xem kết quả →
+                                                                    </a>
+                                                                </c:if>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </div>
+                                                    <c:if test="${not (asgn.hasSubmitted and not asgn.allowResubmit) and not study.previewMode}">
+                                                        <div class="inline-submit-form" id="form-${asgn.assignmentId}" style="display:none;">
+                                                            <form method="post"
+                                                                  action="${pageContext.request.contextPath}/courses/${study.courseId}/assignments/${asgn.assignmentId}/submit">
+                                                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                                <label for="answer-${asgn.assignmentId}" style="display:block;font-weight:700;font-size:.86rem;margin-bottom:6px;">📝 Nội dung câu trả lời *</label>
+                                                                <textarea id="answer-${asgn.assignmentId}" name="answerText" required
+                                                                          placeholder="Viết nội dung bài làm của bạn vào đây..."></textarea>
+                                                                <label for="file-${asgn.assignmentId}" style="display:block;font-weight:700;font-size:.86rem;margin-bottom:6px;">📎 Đường dẫn file đính kèm (Google Drive / OneDrive - tùy chọn)</label>
+                                                                <input type="url" id="file-${asgn.assignmentId}" name="fileUrl"
+                                                                       style="width:100%;box-sizing:border-box;border:1.5px solid #CBD5E1;border-radius:8px;padding:8px 12px;font-size:.87rem;margin-bottom:12px;"
+                                                                       placeholder="https://drive.google.com/...">
+                                                                <div style="display:flex;gap:10px;">
+                                                                    <button class="btn-do-assignment" type="submit">📤 Xác nhận nộp bài</button>
+                                                                    <button type="button" class="study-btn study-btn--outline"
+                                                                            onclick="toggleSubmitForm('form-${asgn.assignmentId}')">Hủy</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </c:if>
+                                                </div>
+                                            </c:forEach>
+                                        </c:if>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </c:if>
+                    </div>
+                </main>
+
+                <%-- ── COL 3: RIGHT SIDEBAR ── --%>
+                <aside class="study-right-col">
+
+                    <%-- Card 1: Thông tin bài học --%>
+                    <div class="right-widget-card">
+                        <div class="right-widget-head">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                            </svg>
+                            <span>Thông tin bài học</span>
+                        </div>
+                        <div class="widget-row">
+                            <span class="widget-row__label">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                Thời lượng
+                            </span>
+                            <span class="widget-row__val">${study.currentVideoDuration != null ? study.currentVideoDuration : 5} phút</span>
+                        </div>
+                        <div class="widget-row">
+                            <span class="widget-row__label">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 20V10M12 20V4M6 20v-6"/>
+                                </svg>
+                                Trạng thái
+                            </span>
+                            <span class="status-pill-badge" id="rightStatusBadge">
+                                ✔ Đã xem ${curWatchPct}%
+                            </span>
+                        </div>
+
+                        <div class="widget-cond-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                            <span>Điều kiện mở Quiz</span>
+                        </div>
+
+                        <div class="widget-cond-alert ${isQuizUnlocked ? 'widget-cond-alert--unlocked' : 'widget-cond-alert--locked'}" id="rightConditionBox">
+                            <span class="widget-cond-alert__icon" id="rightConditionIcon">${isQuizUnlocked ? '🎉' : '🔒'}</span>
+                            <span id="rightConditionText">
+                                <c:choose>
+                                    <c:when test="${isQuizUnlocked}">
+                                        Đã đủ điều kiện mở khóa bài kiểm tra!
+                                    </c:when>
+                                    <c:otherwise>
+                                        Xem ít nhất 80% video để mở khóa bài kiểm tra
+                                    </c:otherwise>
+                                </c:choose>
+                            </span>
+                        </div>
+                    </div>
+
+                    <%-- Card 2: Motivation & Quiz CTA --%>
+                    <div class="motivation-card">
+                        <div class="motivation-trophy-wrap">
+                            🏆
+                        </div>
+                        <div class="motivation-title" id="rightMotivationTitle">
                             <c:choose>
-                                <c:when test="${study.previewMode}">
-                                    <c:if test="${not empty study.prevLessonId}">
-                                        <a class="button button--outline" href="${pageContext.request.contextPath}/instructor/courses/${study.courseId}/preview/lessons/${study.prevLessonId}">← Bài trước</a>
-                                    </c:if>
-                                    <a class="button button--outline" style="border-color:#2563EB; color:#2563EB;"
-                                       href="${pageContext.request.contextPath}/instructor/courses/${study.courseId}/lessons/${study.currentLesson.lessonId}/edit">
-                                        ✏️ Chỉnh sửa bài học này
-                                    </a>
-                                    <c:if test="${not empty study.nextLessonId}">
-                                        <a class="button button--outline" href="${pageContext.request.contextPath}/instructor/courses/${study.courseId}/preview/lessons/${study.nextLessonId}">Bài tiếp →</a>
-                                    </c:if>
+                                <c:when test="${isQuizUnlocked}">Chúc mừng!</c:when>
+                                <c:otherwise>Cố lên!</c:otherwise>
+                            </c:choose>
+                        </div>
+                        <div class="motivation-desc" id="rightMotivationDesc">
+                            <c:choose>
+                                <c:when test="${isQuizUnlocked}">
+                                    Chúc mừng bạn đã mở khóa bài Quiz! Bạn có thể làm bài ngay bây giờ.
                                 </c:when>
                                 <c:otherwise>
-                                    <c:if test="${not empty study.prevLessonId}">
-                                        <a class="button button--outline" href="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.prevLessonId}">← Bài trước</a>
-                                    </c:if>
-                                    <c:if test="${not study.currentLesson.completed}">
-                                        <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.currentLesson.lessonId}/complete">
-                                            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                            <button class="button button--primary" type="submit">✅ Đánh dấu đã học</button>
-                                        </form>
-                                    </c:if>
-                                    <c:if test="${study.currentLesson.completed and hasExercises}">
-                                        <button class="button button--outline" style="border-color:#2563EB;color:#2563EB;"
-                                                onclick="switchTab('exercise')">
-                                            ✏️ Làm bài tập & Quiz →
-                                        </button>
-                                    </c:if>
-                                    <c:if test="${not empty study.nextLessonId}">
-                                        <a class="button button--outline" href="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}">Bài tiếp →</a>
-                                    </c:if>
+                                    Bạn chỉ cần xem thêm ${80 - curWatchPct > 0 ? (80 - curWatchPct) : 0}% nữa là có thể làm bài Quiz rồi!
                                 </c:otherwise>
                             </c:choose>
                         </div>
 
-                    </div><%-- END panel-lesson --%>
-
-                    <%-- ════ TAB 2: Bài tập & Quiz ════ --%>
-                    <c:if test="${hasExercises}">
-                        <div class="tab-panel" id="panel-exercise">
-
+                        <div class="motivation-action-wrap">
+                            <c:set var="firstQuiz" value="${not empty study.currentLessonQuizzes ? study.currentLessonQuizzes[0] : null}"/>
                             <c:choose>
-                                <%-- Chưa hoàn thành bài học → hiện cảnh báo --%>
-                                <c:when test="${not study.currentLessonCompleted and not study.previewMode}">
-                                    <div class="assignment-gate">
-                                        <div class="assignment-gate__icon">🔒</div>
-                                        <p class="assignment-gate__title">Hãy hoàn thành bài học trước</p>
-                                        <p class="assignment-gate__desc">
-                                            Xem hết nội dung video và văn bản, sau đó nhấn
-                                            <strong>"Đánh dấu đã học"</strong> để mở khóa bài tập này.
-                                        </p>
-                                        <div style="margin-top:14px;">
-                                            <button class="button button--outline" onclick="switchTab('lesson')">
-                                                ← Quay lại bài học
-                                            </button>
-                                        </div>
-                                    </div>
+                                <c:when test="${not empty firstQuiz}">
+                                    <a href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${firstQuiz.quizId}"
+                                       id="rightQuizBtn"
+                                       class="btn-quiz-cta ${isQuizUnlocked ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
+                                       ${isQuizUnlocked ? '' : 'aria-disabled="true" onclick="return handleLockedQuizClick(event);"'}
+                                       data-quiz-url="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${firstQuiz.quizId}">
+                                        <span id="rightQuizBtnIcon">${isQuizUnlocked ? '📝' : '🔒'}</span>
+                                        <span id="rightQuizBtnLabel">${isQuizUnlocked ? 'Làm bài Quiz ngay' : 'Làm bài Quiz'}</span>
+                                    </a>
                                 </c:when>
-
                                 <c:otherwise>
-                                    <c:if test="${study.currentLessonCompleted and not study.previewMode}">
-                                        <div style="background:#ECFDF5;border:1px solid #86EFAC;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:.87rem;font-weight:600;color:#166534;">
-                                            ✅ Bạn đã hoàn thành bài học. Làm bài tập / quiz bên dưới để củng cố kiến thức!
-                                        </div>
-                                    </c:if>
-
-                                    <%-- ── QUIZZES ── --%>
-                                    <c:forEach var="qv" items="${study.currentLessonQuizzes}">
-                                        <div class="assignment-card" style="border-color:#7E22CE20;">
-                                            <div class="assignment-card__title">
-                                                📝 <c:out value="${qv.title}"/>
-                                                <c:if test="${qv.myAttemptCount > 0}">
-                                                    <span class="pill pill--neutral" style="font-size:.72rem;background:#F3E8FF;color:#7E22CE;">Đã làm ${qv.myAttemptCount} lần</span>
-                                                </c:if>
-                                            </div>
-                                            <div class="assignment-card__meta">
-                                                <span>⏱ <c:choose>
-                                                    <c:when test="${qv.timeLimitMinutes != null}">${qv.timeLimitMinutes} phút</c:when>
-                                                    <c:otherwise>Không giới hạn</c:otherwise>
-                                                </c:choose></span>
-                                                <span>🔄 Tối đa ${qv.maxAttempts} lần</span>
-                                                <c:if test="${qv.passingScore != null}">
-                                                    <span>🎯 Qua bài: ${qv.passingScore}%</span>
-                                                </c:if>
-                                            </div>
-                                            <div class="assignment-card__actions">
-                                                <c:choose>
-                                                    <c:when test="${qv.inProgressAttemptId != null}">
-                                                        <a class="btn-do-assignment"
-                                                           href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${qv.quizId}/attempts/${qv.inProgressAttemptId}">
-                                                            ▶ Tiếp tục làm bài
-                                                        </a>
-                                                    </c:when>
-                                                    <c:when test="${qv.myAttemptCount >= qv.maxAttempts}">
-                                                        <span style="color:#94A3B8;font-size:.88rem;font-weight:600;">🔒 Đã hết lượt làm</span>
-                                                        <a class="button button--outline" style="font-size:.83rem;padding:6px 14px;"
-                                                           href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${qv.quizId}">
-                                                            Xem lịch sử →
-                                                        </a>
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        <a class="btn-do-assignment" style="background:#7E22CE;"
-                                                           href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${qv.quizId}">
-                                                            📝 <c:choose>
-                                                                <c:when test="${qv.myAttemptCount > 0}">Làm lại</c:when>
-                                                                <c:otherwise>Vào làm bài</c:otherwise>
-                                                            </c:choose>
-                                                        </a>
-                                                    </c:otherwise>
-                                                </c:choose>
-                                            </div>
-                                        </div>
-                                    </c:forEach>
-
-                                    <%-- ── ASSIGNMENTS ── --%>
-                                    <c:forEach var="asgn" items="${study.currentLessonAssignments}">
-                                        <div class="assignment-card">
-                                            <div class="assignment-card__title">
-                                                📋 <c:out value="${asgn.title}"/>
-                                                <c:if test="${asgn.hasSubmitted}">
-                                                    <span class="pill pill--success" style="font-size:.72rem;">Đã nộp</span>
-                                                </c:if>
-                                            </div>
-                                            <div class="assignment-card__meta">
-                                                <span>⭐ Điểm tối đa: <strong>${asgn.maxScore}</strong></span>
-                                                <c:if test="${not empty asgn.dueDate}">
-                                                    <span>⏰ Hạn: <c:out value="${asgn.dueDate}"/></span>
-                                                </c:if>
-                                                <c:if test="${asgn.allowResubmit}">
-                                                    <span>🔄 Cho phép nộp lại (${asgn.maxAttempts} lần)</span>
-                                                </c:if>
-                                                <c:if test="${asgn.attemptCount > 0}">
-                                                    <span>📤 Đã nộp ${asgn.attemptCount} lần</span>
-                                                </c:if>
-                                            </div>
-                                            <c:if test="${not empty asgn.description}">
-                                                <div class="assignment-card__desc"><c:out value="${asgn.description}"/></div>
-                                            </c:if>
-                                            <div class="assignment-card__actions">
-                                                <c:choose>
-                                                    <c:when test="${asgn.hasSubmitted and not asgn.allowResubmit}">
-                                                        <span class="assignment-status-done">✅ Đã nộp bài</span>
-                                                        <a class="button button--outline" style="font-size:.83rem;padding:6px 14px;"
-                                                           href="${pageContext.request.contextPath}/courses/${study.courseId}/assignments/${asgn.assignmentId}/result">
-                                                            Xem kết quả →
-                                                        </a>
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        <button class="btn-do-assignment<c:if test='${asgn.hasSubmitted}'> btn-do-assignment--submitted</c:if>"
-                                                                onclick="toggleSubmitForm('form-${asgn.assignmentId}')">
-                                                            <c:choose>
-                                                                <c:when test="${asgn.hasSubmitted}">🔄 Nộp lại</c:when>
-                                                                <c:otherwise>✏️ Làm bài ngay</c:otherwise>
-                                                            </c:choose>
-                                                        </button>
-                                                        <c:if test="${asgn.hasSubmitted}">
-                                                            <a class="button button--outline" style="font-size:.83rem;padding:6px 14px;"
-                                                               href="${pageContext.request.contextPath}/courses/${study.courseId}/assignments/${asgn.assignmentId}/result">
-                                                                Xem kết quả →
-                                                            </a>
-                                                        </c:if>
-                                                    </c:otherwise>
-                                                </c:choose>
-                                            </div>
-                                            <c:if test="${not (asgn.hasSubmitted and not asgn.allowResubmit) and not study.previewMode}">
-                                                <div class="inline-submit-form" id="form-${asgn.assignmentId}" style="display:none;">
-                                                    <form method="post"
-                                                          action="${pageContext.request.contextPath}/courses/${study.courseId}/assignments/${asgn.assignmentId}/submit">
-                                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                                        <label for="answer-${asgn.assignmentId}">📝 Nội dung trả lời *</label>
-                                                        <textarea id="answer-${asgn.assignmentId}" name="answerText" required
-                                                                  placeholder="Viết câu trả lời của bạn..."></textarea>
-                                                        <label for="file-${asgn.assignmentId}" style="margin-top:6px;">📎 URL file đính kèm (tùy chọn)</label>
-                                                        <input type="url" id="file-${asgn.assignmentId}" name="fileUrl"
-                                                               style="width:100%;box-sizing:border-box;border:1.5px solid #E2E8F0;border-radius:8px;padding:8px 12px;font-size:.87rem;margin-bottom:10px;"
-                                                               placeholder="https://drive.google.com/...">
-                                                        <div style="display:flex;gap:10px;">
-                                                            <button class="btn-do-assignment" type="submit">📤 Nộp bài</button>
-                                                            <button type="button" class="button button--outline"
-                                                                    onclick="toggleSubmitForm('form-${asgn.assignmentId}')">Hủy</button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </c:if>
-                                        </div>
-                                    </c:forEach>
-
+                                    <button class="btn-quiz-cta btn-quiz-cta--locked" id="rightQuizBtn" disabled>
+                                        <span id="rightQuizBtnIcon">🔒</span>
+                                        <span id="rightQuizBtnLabel">Làm bài Quiz</span>
+                                    </button>
                                 </c:otherwise>
                             </c:choose>
+                        </div>
+                    </div>
 
-                        </div><%-- END panel-exercise --%>
-                    </c:if>
+                </aside>
 
-                </article>
-            </div>
+            </div><%-- END study-grid --%>
         </c:otherwise>
     </c:choose>
+</div>
 
-    <!-- ══ Modal Xem trước tài liệu trực tiếp trên Web ══ -->
-    <div id="materialPreviewModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.75); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:16px;">
-        <div style="background:#fff; border-radius:14px; width:92vw; max-width:1150px; height:88vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,.45);">
-            <!-- Modal Top Bar -->
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid #E2E8F0; background:#F8FAFC; flex-shrink:0;">
-                <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-                    <span id="matModalIcon" style="font-size:1.4rem;">📄</span>
-                    <div style="min-width:0;">
-                        <h3 id="matModalTitle" style="margin:0; font-size:.96rem; font-weight:800; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:560px;">
-                            Tiêu đề tài liệu
-                        </h3>
-                        <div id="matModalSub" style="font-size:.76rem; color:#64748B; margin-top:2px;"></div>
-                    </div>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <a id="matModalDownloadBtn" href="#" download target="_blank"
-                       style="display:inline-flex; align-items:center; gap:6px; padding:7px 14px; font-size:.82rem; font-weight:700; color:#2563EB; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; text-decoration:none;">
-                        ⬇️ Tải về máy
-                    </a>
-                    <button type="button" onclick="toggleMaterialFullscreen()"
-                            style="padding:7px 11px; font-size:.85rem; font-weight:600; color:#475569; background:#fff; border:1px solid #CBD5E1; border-radius:6px; cursor:pointer;" title="Phóng to toàn màn hình">
-                        ⛶
-                    </button>
-                    <button type="button" onclick="closeMaterialPreview()"
-                            style="padding:7px 14px; font-size:.85rem; font-weight:800; color:#DC2626; background:#FEF2F2; border:1px solid #FECACA; border-radius:6px; cursor:pointer;">
-                        ✕ Đóng
-                    </button>
+<!-- ══ Modal Xem trước tài liệu trực tiếp trên Web ══ -->
+<div id="materialPreviewModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.75); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; border-radius:14px; width:92vw; max-width:1150px; height:88vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,.45);">
+        <!-- Modal Top Bar -->
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid #E2E8F0; background:#F8FAFC; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                <span id="matModalIcon" style="font-size:1.4rem;">📄</span>
+                <div style="min-width:0;">
+                    <h3 id="matModalTitle" style="margin:0; font-size:.96rem; font-weight:800; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:560px;">
+                        Tiêu đề tài liệu
+                    </h3>
+                    <div id="matModalSub" style="font-size:.76rem; color:#64748B; margin-top:2px;"></div>
                 </div>
             </div>
-
-            <!-- Modal Viewer Container -->
-            <div id="matModalContent" style="flex:1; background:#0F172A; position:relative; overflow:auto; display:flex; align-items:center; justify-content:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <a id="matModalDownloadBtn" href="#" download target="_blank"
+                   style="display:inline-flex; align-items:center; gap:6px; padding:7px 14px; font-size:.82rem; font-weight:700; color:#2563EB; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; text-decoration:none;">
+                    ⬇️ Tải về máy
+                </a>
+                <button type="button" onclick="toggleMaterialFullscreen()"
+                        style="padding:7px 11px; font-size:.85rem; font-weight:600; color:#475569; background:#fff; border:1px solid #CBD5E1; border-radius:6px; cursor:pointer;" title="Phóng to toàn màn hình">
+                    ⛶
+                </button>
+                <button type="button" onclick="closeMaterialPreview()"
+                        style="padding:7px 14px; font-size:.85rem; font-weight:800; color:#DC2626; background:#FEF2F2; border:1px solid #FECACA; border-radius:6px; cursor:pointer;">
+                    ✕ Đóng
+                </button>
             </div>
         </div>
-    </div>
 
-</main>
+        <!-- Modal Viewer Container -->
+        <div id="matModalContent" style="flex:1; background:#0F172A; position:relative; overflow:auto; display:flex; align-items:center; justify-content:center;">
+        </div>
+    </div>
+</div>
+
 <jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 
 <script>
-// ── Material In-Web Preview ──
+// ── Material In-Web Preview Script ──
 function openMaterialPreview(title, url, type, origName) {
     var modal = document.getElementById('materialPreviewModal');
     var titleElem = document.getElementById('matModalTitle');
@@ -743,19 +880,19 @@ function openMaterialPreview(title, url, type, origName) {
                 '</div>';
             });
     }
-    // Check PowerPoint & other Office formats
+    // Check PowerPoint & other formats
     else if (lowerOrig.match(/\.(pptx?|doc)$/) || lowerUrl.match(/\.(pptx?|doc)$/)) {
         iconElem.textContent = '📙';
         contentElem.innerHTML = '<div style="text-align:center;background:#fff;padding:40px;border-radius:14px;max-width:520px;box-shadow:0 12px 35px rgba(0,0,0,.25);margin:20px;">' +
             '<div style="font-size:3.5rem;margin-bottom:12px;">📑</div>' +
             '<h3 style="margin:0 0 8px;color:#0F172A;font-size:1.2rem;">' + (origName || title) + '</h3>' +
-            '<p style="color:#64748B;font-size:.88rem;line-height:1.6;margin:0 0 24px;">Tệp trình chiếu PowerPoint / Tài liệu cũ. Trình duyệt không hỗ trợ đọc trực tiếp, bạn vui lòng tải về máy để mở bằng PowerPoint / Word.</p>' +
+            '<p style="color:#64748B;font-size:.88rem;line-height:1.6;margin:0 0 24px;">Tệp trình chiếu PowerPoint / Tài liệu cũ. Bạn vui lòng tải về máy để mở bằng phần mềm chuyên dụng.</p>' +
             '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
                 '<a href="' + url + '" download="' + (origName || title) + '" style="background:#2563EB;color:#fff;padding:10px 22px;border-radius:8px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">⬇️ Tải tệp về máy</a>' +
             '</div>' +
         '</div>';
     }
-    // Generic iframe fallback (code, text, html, etc.)
+    // Generic fallback
     else {
         iconElem.textContent = '📄';
         contentElem.innerHTML = '<iframe src="' + url + '" width="100%" height="100%" style="border:none;background:#fff;" title="' + title + '"></iframe>';
@@ -767,9 +904,10 @@ function openMaterialPreview(title, url, type, origName) {
 
 function closeMaterialPreview() {
     var modal = document.getElementById('materialPreviewModal');
-    var contentElem = document.getElementById('matModalContent');
-    if (contentElem) contentElem.innerHTML = '';
-    if (modal) modal.classList.remove('open');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.classList.remove('fullscreen');
+    document.getElementById('matModalContent').innerHTML = '';
     document.body.style.overflow = '';
 }
 
@@ -778,57 +916,25 @@ function toggleMaterialFullscreen() {
     if (modal) modal.classList.toggle('fullscreen');
 }
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeMaterialPreview();
-});
-// ── Tab switching ──
-function switchTab(name) {
-    document.querySelectorAll('.lesson-tab').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
-    var btn = document.getElementById('tab-' + name);
-    var panel = document.getElementById('panel-' + name);
-    if (btn) btn.classList.add('active');
-    if (panel) panel.classList.add('active');
-}
-
-// Auto-switch tab if requested (e.g. after assignment submit)
-(function() {
-    var initial = '<c:out value="${initialTab}"/>';
-    if (initial === 'exercise') {
-        switchTab('exercise');
-    }
-})();
-
-// ── Toggle inline submit form ──
 function toggleSubmitForm(id) {
     var el = document.getElementById(id);
     if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-// ── Video player ──
-(function() {
-    var rawUrl = '<c:out value="${study.currentVideoUrl}"/>';
-    var container = document.getElementById('studyPlayerContainer');
-    var allowSeek = <c:out value="${study.currentAllowSeek}"/>;
-    if (!rawUrl || !container) return;
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMaterialPreview();
+});
 
-    var url = rawUrl.trim();
-    if (url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1) {
-        var videoId = '';
-        if (url.indexOf('watch?v=') !== -1) {
-            videoId = url.split('watch?v=')[1].split('&')[0];
-        } else if (url.indexOf('youtu.be/') !== -1) {
-            videoId = url.split('youtu.be/')[1].split('?')[0];
-        } else {
-            videoId = url;
-        }
-        var embedUrl = videoId.indexOf('http') === 0 ? videoId : 'https://www.youtube.com/embed/' + videoId;
-        container.innerHTML = '<iframe src="' + embedUrl + '" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>';
-    } else {
-        var seekAttr = (!allowSeek) ? ' onseeking="this.currentTime=0;"' : '';
-        container.innerHTML = '<video controls preload="metadata"' + seekAttr + '><source src="' + url + '" type="video/mp4">Trình duyệt không hỗ trợ phát video.</video>';
+// Auto-switch tab if requested
+(function() {
+    var initial = '<c:out value="${initialTab}"/>';
+    if (initial === 'exercise') {
+        if (typeof switchTab === 'function') switchTab('exercise');
     }
 })();
 </script>
+
+<%-- Script riêng cho trang học: video player, anti-seeking, watch progress, auto quiz unlock --%>
+<script src="${pageContext.request.contextPath}/assets/js/study.js?v=1.1"></script>
 </body>
 </html>

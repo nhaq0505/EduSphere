@@ -11,6 +11,7 @@ import com.edusphere.entity.course.Enrollment;
 import com.edusphere.entity.course.Lesson;
 import com.edusphere.entity.course.LessonCompletion;
 import com.edusphere.entity.course.Question;
+import com.edusphere.entity.course.LessonWatchProgress;
 import com.edusphere.entity.course.Quiz;
 import com.edusphere.entity.account.Users;
 import com.edusphere.repository.course.AssignmentRepository;
@@ -18,6 +19,7 @@ import com.edusphere.repository.course.CourseRepository;
 import com.edusphere.repository.course.EnrollmentRepository;
 import com.edusphere.repository.course.LessonCompletionRepository;
 import com.edusphere.repository.course.LessonRepository;
+import com.edusphere.repository.course.LessonWatchProgressRepository;
 import com.edusphere.repository.course.MaterialRepository;
 import com.edusphere.repository.course.QuestionRepository;
 import com.edusphere.repository.course.QuizAttemptRepository;
@@ -34,9 +36,14 @@ import java.time.LocalDateTime;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -56,6 +63,7 @@ public class LearningService {
     private final QuizRepository quizRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final QuestionRepository questionRepository;
+    private final LessonWatchProgressRepository watchProgressRepository;
 
     public LearningService(LessonRepository lessonRepository,
                            EnrollmentRepository enrollmentRepository,
@@ -74,7 +82,7 @@ public class LearningService {
         this(lessonRepository, enrollmentRepository, lessonCompletionRepository, materialRepository, userRepository, learningProgressService, null);
     }
 
-    // Constructor 7-arg — không dùng @Autowired, delegate sang constructor chính
+    // Constructor 7-arg
     public LearningService(LessonRepository lessonRepository,
                            EnrollmentRepository enrollmentRepository,
                            LessonCompletionRepository lessonCompletionRepository,
@@ -83,7 +91,7 @@ public class LearningService {
                            LearningProgressService learningProgressService,
                            CourseRepository courseRepository) {
         this(lessonRepository, enrollmentRepository, lessonCompletionRepository, materialRepository,
-                userRepository, learningProgressService, courseRepository, null, null, null, null, null);
+                userRepository, learningProgressService, courseRepository, null, null, null, null, null, null);
     }
 
     public LearningService(LessonRepository lessonRepository,
@@ -99,7 +107,7 @@ public class LearningService {
                            QuizAttemptRepository quizAttemptRepository) {
         this(lessonRepository, enrollmentRepository, lessonCompletionRepository, materialRepository,
                 userRepository, learningProgressService, courseRepository, assignmentRepository,
-                submissionRepository, quizRepository, quizAttemptRepository, null);
+                submissionRepository, quizRepository, quizAttemptRepository, null, null);
     }
 
     // Constructor chính — Spring dùng cái này để autowire
@@ -115,7 +123,8 @@ public class LearningService {
                            SubmissionRepository submissionRepository,
                            QuizRepository quizRepository,
                            QuizAttemptRepository quizAttemptRepository,
-                           QuestionRepository questionRepository) {
+                           QuestionRepository questionRepository,
+                           LessonWatchProgressRepository watchProgressRepository) {
         this.lessonRepository = lessonRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.lessonCompletionRepository = lessonCompletionRepository;
@@ -128,6 +137,188 @@ public class LearningService {
         this.quizRepository = quizRepository;
         this.quizAttemptRepository = quizAttemptRepository;
         this.questionRepository = questionRepository;
+        this.watchProgressRepository = watchProgressRepository;
+    }
+
+    // ── Watch Progress ─────────────────────────────────────────
+
+    /**
+     * Backward-compatible overload: nhận watchPercent và lastPositionSecs trực tiếp.
+     */
+    @Transactional
+    public void saveWatchProgress(Integer courseId, Integer lessonId, Integer studentId,
+                                  int watchPercent, int lastPositionSecs) {
+        saveWatchProgress(courseId, lessonId, studentId, null, null, lastPositionSecs, null, watchPercent);
+    }
+
+    /**
+     * Lưu tiến độ xem video: nhận khoảng thời gian xem mới [startSec, endSec], gộp vào các khoảng đã xem,
+     * tính lại tổng số giây đã xem duy nhất và cập nhật watch_percent.
+     * Mở khóa Quiz khi đạt >= 80%.
+     */
+    @Transactional
+    public Map<String, Object> saveWatchProgress(Integer courseId, Integer lessonId, Integer studentId,
+                                                Double startSec, Double endSec,
+                                                int lastPositionSecs, Double durationSec,
+                                                int fallbackPercent) {
+        verifyEnrollment(studentId, courseId);
+        Lesson lesson = lessonRepository.findByLessonIdAndCourse_CourseId(lessonId, courseId)
+                .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy bài học."));
+        Users student = userRepository.findById(studentId)
+                .orElseThrow(() -> new CourseActionException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập lại."));
+
+        LessonWatchProgress wp = watchProgressRepository
+                .findByStudent_UserIdAndLesson_LessonId(studentId, lessonId)
+                .orElseGet(() -> {
+                    LessonWatchProgress n = new LessonWatchProgress();
+                    n.setStudent(student);
+                    n.setCourse(lesson.getCourse());
+                    n.setLesson(lesson);
+                    n.setWatchPercent(0);
+                    n.setLastPosition(0);
+                    n.setWatchedSegments("[]");
+                    n.setQuizUnlocked(false);
+                    return n;
+                });
+
+        // 1. Xác định thời lượng video hiệu dụng (giây)
+        int effectiveDuration = 0;
+        if (durationSec != null && durationSec > 0) {
+            effectiveDuration = (int) Math.round(durationSec);
+        } else if (lesson.getVideoDuration() != null && lesson.getVideoDuration() > 0) {
+            effectiveDuration = lesson.getVideoDuration() > 60 ? lesson.getVideoDuration() : lesson.getVideoDuration() * 60;
+        }
+
+        // 2. Parse các khoảng đã xem trước đó
+        List<int[]> intervals = parseIntervals(wp.getWatchedSegments());
+
+        // 3. Nếu có gửi khoảng [startSec, endSec] hợp lệ -> gộp vào danh sách khoảng đã xem
+        if (startSec != null && endSec != null) {
+            int s = (int) Math.floor(Math.max(0, startSec));
+            int e = (int) Math.ceil(Math.max(0, endSec));
+
+            // Nếu biết effectiveDuration, giới hạn không vượt quá độ dài video
+            if (effectiveDuration > 0) {
+                s = Math.min(s, effectiveDuration);
+                e = Math.min(e, effectiveDuration);
+            }
+
+            // Chống gian lận: khoảng xem giữa 2 lần ping (~4-5s) không được vượt quá 15s
+            if (e - s > 15) {
+                e = s + 15;
+                if (effectiveDuration > 0) {
+                    e = Math.min(e, effectiveDuration);
+                }
+            }
+
+            if (e > s) {
+                intervals = mergeIntervals(intervals, s, e);
+            }
+        }
+
+        // 4. Tính tổng số giây đã xem duy nhất (không cộng trùng, không tính pause/buffer)
+        int totalWatchedSecs = calculateTotalWatchedSeconds(intervals);
+
+        // 5. Tính phần trăm tiến độ
+        int newPercent = 0;
+        if (effectiveDuration > 0) {
+            newPercent = Math.min(100, (int) Math.round((totalWatchedSecs * 100.0) / effectiveDuration));
+        } else if (fallbackPercent > 0) {
+            newPercent = Math.min(100, fallbackPercent);
+        }
+
+        int currentPercent = wp.getWatchPercent() != null ? wp.getWatchPercent() : 0;
+        int finalPercent = Math.max(currentPercent, newPercent);
+        wp.setWatchPercent(finalPercent);
+
+        // 6. Cập nhật vị trí dừng gần nhất (chỉ cập nhật giá trị hợp lệ >= 0)
+        wp.setLastPosition(Math.max(0, lastPositionSecs));
+
+        // 7. Lưu lại chuỗi JSON các khoảng đã xem
+        wp.setWatchedSegments(intervalsToJson(intervals));
+
+        // 8. Kiểm tra và cập nhật điều kiện mở khóa Quiz (>= 80%)
+        boolean isUnlocked = Boolean.TRUE.equals(wp.getQuizUnlocked()) || (finalPercent >= 80);
+        if (isUnlocked) {
+            wp.setQuizUnlocked(true);
+        }
+
+        LessonWatchProgress saved = watchProgressRepository.save(wp);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("percent", saved.getWatchPercent());
+        result.put("position", saved.getLastPosition());
+        result.put("quizUnlocked", Boolean.TRUE.equals(saved.getQuizUnlocked()));
+        result.put("totalWatchedSeconds", totalWatchedSecs);
+        result.put("effectiveDuration", effectiveDuration);
+        return result;
+    }
+
+    public static List<int[]> parseIntervals(String json) {
+        List<int[]> result = new ArrayList<>();
+        if (json == null || json.isBlank()) return result;
+        Matcher m = Pattern.compile("\\[\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\]").matcher(json);
+        while (m.find()) {
+            int s = Integer.parseInt(m.group(1));
+            int e = Integer.parseInt(m.group(2));
+            if (e >= s) {
+                result.add(new int[]{s, e});
+            }
+        }
+        return result;
+    }
+
+    public static List<int[]> mergeIntervals(List<int[]> existing, int newStart, int newEnd) {
+        if (newEnd < newStart) return new ArrayList<>(existing != null ? existing : Collections.emptyList());
+        List<int[]> intervals = new ArrayList<>(existing != null ? existing : Collections.emptyList());
+        intervals.add(new int[]{newStart, newEnd});
+        intervals.sort(Comparator.comparingInt(a -> a[0]));
+
+        List<int[]> merged = new ArrayList<>();
+        for (int[] interval : intervals) {
+            if (merged.isEmpty()) {
+                merged.add(new int[]{interval[0], interval[1]});
+            } else {
+                int[] last = merged.get(merged.size() - 1);
+                // Nếu khoảng mới chạm hoặc trùng khoảng trước (cho phép sai số 1s để nối mượt)
+                if (interval[0] <= last[1] + 1) {
+                    last[1] = Math.max(last[1], interval[1]);
+                } else {
+                    merged.add(new int[]{interval[0], interval[1]});
+                }
+            }
+        }
+        return merged;
+    }
+
+    public static int calculateTotalWatchedSeconds(List<int[]> intervals) {
+        if (intervals == null) return 0;
+        int total = 0;
+        for (int[] interval : intervals) {
+            total += Math.max(0, interval[1] - interval[0]);
+        }
+        return total;
+    }
+
+    public static String intervalsToJson(List<int[]> intervals) {
+        if (intervals == null || intervals.isEmpty()) return "[]";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < intervals.size(); i++) {
+            if (i > 0) sb.append(",");
+            int[] interval = intervals.get(i);
+            sb.append("[").append(interval[0]).append(",").append(interval[1]).append("]");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    /** Lấy tiến độ xem video của học viên (trả về -1 nếu chưa xem lần nào). */
+    @Transactional(readOnly = true)
+    public LessonWatchProgress getWatchProgress(Integer lessonId, Integer studentId) {
+        return watchProgressRepository
+                .findByStudent_UserIdAndLesson_LessonId(studentId, lessonId)
+                .orElse(null);
     }
 
     @Transactional
@@ -218,6 +409,17 @@ public class LearningService {
 
         boolean lessonCompleted = completedLessonIds.contains(current.getLessonId());
 
+        // Lấy tiến độ xem video của học viên cho bài học hiện tại
+        LessonWatchProgress wp = watchProgressRepository != null
+                ? watchProgressRepository.findByStudent_UserIdAndLesson_LessonId(studentId, current.getLessonId()).orElse(null)
+                : null;
+        int watchPercent  = wp != null && wp.getWatchPercent() != null ? wp.getWatchPercent()  : -1;
+        int lastPosition  = wp != null && wp.getLastPosition() != null ? wp.getLastPosition()  : 0;
+        boolean quizRequiresVideo = Boolean.TRUE.equals(current.getQuizRequiresVideo());
+        int minWatchPct   = current.getMinWatchPercent() != null && current.getMinWatchPercent() > 0 ? current.getMinWatchPercent() : 80;
+        boolean quizUnlocked = wp != null && (Boolean.TRUE.equals(wp.getQuizUnlocked()) || watchPercent >= 80);
+        String watchedSegments = wp != null && wp.getWatchedSegments() != null ? wp.getWatchedSegments() : "[]";
+
         return new StudyCourseView(
                 course.getCourseId(),
                 course.getTitle(),
@@ -238,7 +440,14 @@ public class LearningService {
                 false,
                 lessonAssignments,
                 lessonCompleted,
-                lessonQuizzes
+                lessonQuizzes,
+                current.getVideoStatus(),
+                watchPercent,
+                lastPosition,
+                quizRequiresVideo,
+                minWatchPct,
+                quizUnlocked,
+                watchedSegments
         );
     }
 
@@ -309,7 +518,11 @@ public class LearningService {
                 current.getVideoUrl(),
                 current.getVideoDuration(),
                 current.getAllowSeek() != null ? current.getAllowSeek() : true,
-                true // previewMode
+                true, // previewMode
+                Collections.emptyList(),
+                false,
+                Collections.emptyList(),
+                current.getVideoStatus() // Bunny video status
         );
     }
 

@@ -346,6 +346,9 @@ public class LessonManagementService {
         lesson.setVideoUrl(trimmed(form.getVideoUrl()));
         lesson.setVideoDuration(form.getVideoDuration());
         lesson.setAllowSeek(form.getAllowSeek() != null ? form.getAllowSeek() : true);
+        lesson.setQuizRequiresVideo(Boolean.TRUE.equals(form.getQuizRequiresVideo()));
+        int minPct = form.getMinWatchPercent() != null ? form.getMinWatchPercent() : 0;
+        lesson.setMinWatchPercent(Math.max(0, Math.min(100, minPct)));
 
         // Advanced Settings
         lesson.setIsPreview(Boolean.TRUE.equals(form.getIsPreview()));

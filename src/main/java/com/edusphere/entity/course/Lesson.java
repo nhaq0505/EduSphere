@@ -52,6 +52,29 @@ public class Lesson {
     @Column(name = "allow_seek")
     private Boolean allowSeek = true;
 
+    /** Bunny Stream Video GUID — null nếu chưa upload lên Bunny */
+    @Column(name = "bunny_video_id", length = 100)
+    private String bunnyVideoId;
+
+    /** Trạng thái xử lý video Bunny: UPLOADING / PROCESSING / READY / FAILED */
+    @Column(name = "video_status", length = 20)
+    private String videoStatus;
+
+    /**
+     * Bắt buộc học viên xem đủ ngưỡng video (minWatchPercent%) mới được làm Quiz.
+     * true = phải xem đủ, false = không bắt buộc.
+     */
+    @Column(name = "quiz_requires_video")
+    private Boolean quizRequiresVideo = false;
+
+    /**
+     * Ngưỡng phần trăm video phải xem tối thiểu (0–100).
+     * 0 = không yêu cầu; 100 = phải xem hết.
+     * Chỉ có hiệu lực khi quizRequiresVideo = true.
+     */
+    @Column(name = "min_watch_percent")
+    private Integer minWatchPercent = 0;
+
     @Column(name = "is_preview")
     private Boolean isPreview = false;
 
