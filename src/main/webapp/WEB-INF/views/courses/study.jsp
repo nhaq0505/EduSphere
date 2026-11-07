@@ -113,7 +113,8 @@
 <jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 
 <c:set var="curWatchPct" value="${study.currentWatchPercent >= 0 ? study.currentWatchPercent : 0}"/>
-<c:set var="isQuizUnlocked" value="${study.currentQuizUnlocked or curWatchPct >= 80}"/>
+<c:set var="hasVideo" value="${not empty study.currentVideoUrl and fn:trim(study.currentVideoUrl) ne ''}"/>
+<c:set var="isQuizUnlocked" value="${not hasVideo or study.currentQuizUnlocked or curWatchPct >= 80}"/>
 
 <div class="study-page-wrapper"
      id="studyApp"
@@ -339,53 +340,92 @@
                             <span>Bài ${study.currentLesson.orderIndex}: <c:out value="${study.currentLesson.title}"/></span>
                         </div>
                         <div class="video-header-badge">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
-                            </svg>
-                            <span>Video bài giảng</span>
+                            <c:choose>
+                                <c:when test="${hasVideo}">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                                    </svg>
+                                    <span>Video bài giảng</span>
+                                </c:when>
+                                <c:otherwise>
+                                    <span>📖 Nội dung bài học</span>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
                     </div>
 
-                    <%-- 16:9 Video container --%>
-                    <div class="video-frame-wrap" id="studyPlayerContainer"></div>
+                    <c:choose>
+                        <c:when test="${hasVideo}">
+                            <%-- 16:9 Video container --%>
+                            <div class="video-frame-wrap" id="studyPlayerContainer"></div>
 
-                    <%-- Watch Progress Card (Circular ring + horizontal bar) --%>
-                    <div class="watch-progress-card">
-                        <div class="watch-circular-meter">
-                            <svg class="circular-chart" viewBox="0 0 36 36">
-                                <path class="circle-bg"
-                                      d="M18 2.0845
-                                         a 15.9155 15.9155 0 0 1 0 31.831
-                                         a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                <path class="circle-fill" id="circularProgressFill"
-                                      stroke-dasharray="${curWatchPct}, 100"
-                                      d="M18 2.0845
-                                         a 15.9155 15.9155 0 0 1 0 31.831
-                                         a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            </svg>
-                            <div class="circular-meter__text" id="circWatchPct">${curWatchPct}%</div>
-                        </div>
-
-                        <div class="watch-progress-details">
-                            <div class="watch-progress-title">Tiến độ xem video</div>
-                            <div class="watch-progress-subtitle ${isQuizUnlocked ? 'unlocked-text' : ''}" id="watchProgressSubtitle">
-                                <c:choose>
-                                    <c:when test="${isQuizUnlocked}">
-                                        🎉 Chúc mừng! Bạn đã mở khóa bài kiểm tra
-                                    </c:when>
-                                    <c:otherwise>
-                                        Bạn cần xem ít nhất 80% video để mở khóa bài kiểm tra
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
-                            <div class="watch-bar-row">
-                                <div class="watch-bar-track">
-                                    <div class="watch-bar-fill" id="watchBarFill" style="width: ${curWatchPct}%;"></div>
+                            <%-- Watch Progress Card (Circular ring + horizontal bar) --%>
+                            <div class="watch-progress-card">
+                                <div class="watch-circular-meter">
+                                    <svg class="circular-chart" viewBox="0 0 36 36">
+                                        <path class="circle-bg"
+                                              d="M18 2.0845
+                                                 a 15.9155 15.9155 0 0 1 0 31.831
+                                                 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                        <path class="circle-fill" id="circularProgressFill"
+                                              stroke-dasharray="${curWatchPct}, 100"
+                                              d="M18 2.0845
+                                                 a 15.9155 15.9155 0 0 1 0 31.831
+                                                 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    </svg>
+                                    <div class="circular-meter__text" id="circWatchPct">${curWatchPct}%</div>
                                 </div>
-                                <span class="watch-bar-badge" id="barPctBadge">${curWatchPct}%</span>
+
+                                <div class="watch-progress-details">
+                                    <div class="watch-progress-title">Tiến độ xem video</div>
+                                    <div class="watch-progress-subtitle ${isQuizUnlocked ? 'unlocked-text' : ''}" id="watchProgressSubtitle">
+                                        <c:choose>
+                                            <c:when test="${isQuizUnlocked}">
+                                                🎉 Chúc mừng! Bạn đã mở khóa bài kiểm tra
+                                            </c:when>
+                                            <c:otherwise>
+                                                Bạn cần xem ít nhất 80% video để mở khóa bài kiểm tra
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </div>
+                                    <div class="watch-bar-row">
+                                        <div class="watch-bar-track">
+                                            <div class="watch-bar-fill" id="watchBarFill" style="width: ${curWatchPct}%;"></div>
+                                        </div>
+                                        <span class="watch-bar-badge" id="barPctBadge">${curWatchPct}%</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </c:when>
+                        <c:otherwise>
+                            <%-- Bài học lý thuyết / không có video: Banner hướng dẫn đọc nội dung & làm Quiz --%>
+                            <div class="reading-lesson-banner" style="background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%); border: 1.5px solid #BFDBFE; border-radius: 16px; padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 14px;">
+                                    <div style="width: 48px; height: 48px; border-radius: 12px; background: #DBEAFE; color: #2563EB; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; flex-shrink: 0;">
+                                        📖
+                                    </div>
+                                    <div>
+                                        <h3 style="margin: 0 0 4px; font-size: 1.02rem; font-weight: 800; color: #1E3A8A;">Bài học lý thuyết / Đọc tài liệu</h3>
+                                        <p style="margin: 0; font-size: 0.88rem; color: #475569;">
+                                            <c:choose>
+                                                <c:when test="${not empty study.currentLessonQuizzes}">
+                                                    Vui lòng xem kỹ nội dung bài học bên dưới, sau đó hoàn thành <strong>bài kiểm tra (Quiz)</strong> để mở bài tiếp theo.
+                                                </c:when>
+                                                <c:otherwise>
+                                                    Hãy đọc kỹ nội dung bài học và tài liệu bên dưới để nắm vững kiến thức trước khi sang bài tiếp theo.
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </p>
+                                    </div>
+                                </div>
+                                <c:if test="${not empty study.currentLessonQuizzes}">
+                                    <a class="study-btn study-btn--primary" href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${study.currentLessonQuizzes[0].quizId}" style="flex-shrink: 0; padding: 9px 18px; font-size: 0.88rem; text-decoration: none; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #1B9AF5, #2563EB); color: #fff;">
+                                        📝 Làm bài Quiz ngay →
+                                    </a>
+                                </c:if>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
 
                     <%-- Lesson content tabs (Notes, Materials, Quizzes & Exercises) --%>
                     <div class="lesson-content-card">
@@ -529,8 +569,8 @@
                         <%-- TAB 2: Exercises & Quizzes --%>
                         <c:if test="${hasExercises}">
                             <div class="tab-panel" id="panel-exercise">
-                                <c:set var="isVideoLesson" value="${study.currentLessonType eq 'VIDEO' or not empty study.currentVideoUrl}"/>
-                                <c:set var="tabQuizUnlocked" value="${study.currentQuizUnlocked or curWatchPct >= 80 or study.previewMode or not isVideoLesson}"/>
+                                <c:set var="isVideoLesson" value="${hasVideo}"/>
+                                <c:set var="tabQuizUnlocked" value="${not isVideoLesson or study.currentQuizUnlocked or curWatchPct >= 80 or study.previewMode}"/>
 
                                 <c:choose>
                                     <c:when test="${isVideoLesson and not tabQuizUnlocked and not study.previewMode}">
@@ -685,7 +725,11 @@
                                 Trạng thái
                             </span>
                             <span class="status-pill-badge" id="rightStatusBadge">
-                                ✔ Đã xem ${curWatchPct}%
+                                <c:choose>
+                                    <c:when test="${hasVideo}">✔ Đã xem ${curWatchPct}%</c:when>
+                                    <c:when test="${study.currentLesson.completed}">✔ Đã hoàn thành</c:when>
+                                    <c:otherwise>📖 Đang đọc nội dung</c:otherwise>
+                                </c:choose>
                             </span>
                         </div>
 
@@ -700,6 +744,9 @@
                             <span class="widget-cond-alert__icon" id="rightConditionIcon">${isQuizUnlocked ? '🎉' : '🔒'}</span>
                             <span id="rightConditionText">
                                 <c:choose>
+                                    <c:when test="${not hasVideo}">
+                                        Bài học đọc nội dung — Bài kiểm tra đã sẵn sàng!
+                                    </c:when>
                                     <c:when test="${isQuizUnlocked}">
                                         Đã đủ điều kiện mở khóa bài kiểm tra!
                                     </c:when>
@@ -724,6 +771,12 @@
                         </div>
                         <div class="motivation-desc" id="rightMotivationDesc">
                             <c:choose>
+                                <c:when test="${not hasVideo and not empty study.currentLessonQuizzes}">
+                                    Chúc mừng bạn! Bài kiểm tra của bài học đã sẵn sàng. Bạn có thể làm bài ngay bây giờ.
+                                </c:when>
+                                <c:when test="${not hasVideo}">
+                                    Bạn chỉ cần đọc hết nội dung bài học là có thể chuyển sang bài tiếp theo!
+                                </c:when>
                                 <c:when test="${isQuizUnlocked}">
                                     Chúc mừng bạn đã mở khóa bài Quiz! Bạn có thể làm bài ngay bây giờ.
                                 </c:when>

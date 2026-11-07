@@ -374,6 +374,23 @@ public class LearningService {
                     .orElse(publishedLessons.get(0));
         }
 
+        // Nếu bài học hiện tại KHÔNG có video và KHÔNG có Quiz PUBLISHED:
+        // Học viên xem nội dung -> tự động ghi nhận hoàn thành bài học để mở bài tiếp theo
+        boolean currentHasVideo = current.getVideoUrl() != null && !current.getVideoUrl().isBlank();
+        boolean currentHasQuiz = quizRepository != null
+                && !quizRepository.findByCourse_CourseIdAndLesson_LessonIdAndStatus(courseId, current.getLessonId(), "PUBLISHED").isEmpty();
+        if (!currentHasVideo && !currentHasQuiz && !completedLessonIds.contains(current.getLessonId())) {
+            try {
+                LessonCompletion lc = new LessonCompletion();
+                lc.setStudent(enrollment.getStudent());
+                lc.setCourse(course);
+                lc.setLesson(current);
+                lc.setCompletedAt(LocalDateTime.now());
+                lessonCompletionRepository.save(lc);
+                completedLessonIds.add(current.getLessonId());
+            } catch (Exception ignored) {}
+        }
+
         int currentIndex = publishedLessons.indexOf(current);
         Integer prevLessonId = currentIndex > 0 ? publishedLessons.get(currentIndex - 1).getLessonId() : null;
         Integer nextLessonId = currentIndex < publishedLessons.size() - 1 ? publishedLessons.get(currentIndex + 1).getLessonId() : null;
@@ -446,9 +463,12 @@ public class LearningService {
                 : null;
         int watchPercent  = wp != null && wp.getWatchPercent() != null ? wp.getWatchPercent()  : -1;
         int lastPosition  = wp != null && wp.getLastPosition() != null ? wp.getLastPosition()  : 0;
-        boolean quizRequiresVideo = Boolean.TRUE.equals(current.getQuizRequiresVideo());
+        boolean hasVideo = current.getVideoUrl() != null && !current.getVideoUrl().isBlank();
+        boolean quizRequiresVideo = hasVideo && Boolean.TRUE.equals(current.getQuizRequiresVideo());
         int minWatchPct   = current.getMinWatchPercent() != null && current.getMinWatchPercent() > 0 ? current.getMinWatchPercent() : 80;
-        boolean quizUnlocked = wp != null && (Boolean.TRUE.equals(wp.getQuizUnlocked()) || watchPercent >= 80);
+        // Nếu bài không có video -> mở khóa Quiz ngay. Nếu có video -> mở khóa khi xem >= minWatchPct
+        boolean quizUnlocked = !hasVideo || !quizRequiresVideo
+                || (wp != null && (Boolean.TRUE.equals(wp.getQuizUnlocked()) || watchPercent >= minWatchPct));
         String watchedSegments = wp != null && wp.getWatchedSegments() != null ? wp.getWatchedSegments() : "[]";
 
         return new StudyCourseView(
@@ -565,46 +585,61 @@ public class LearningService {
         if (lesson == null) return false;
         Integer lessonId = lesson.getLessonId();
         Integer courseId = lesson.getCourse() != null ? lesson.getCourse().getCourseId() : null;
+        boolean hasVideo = lesson.getVideoUrl() != null && !lesson.getVideoUrl().isBlank();
 
-        // 1. Kiểm tra hoàn thành bài học (hoặc video xem >= 80% / minWatchPercent)
+        // 1. Kiểm tra hoàn thành bài học
         boolean lessonCompleted = lessonCompletionRepository != null
                 && lessonCompletionRepository.existsByStudent_UserIdAndLesson_LessonId(studentId, lessonId);
-        if (!lessonCompleted && "VIDEO".equalsIgnoreCase(lesson.getLessonType()) && watchProgressRepository != null) {
+
+        // Với bài có video: học viên có thể hoàn thành bằng cách xem video >= minWatchPct
+        if (!lessonCompleted && hasVideo && watchProgressRepository != null) {
             int minPct = (lesson.getMinWatchPercent() != null && lesson.getMinWatchPercent() > 0) ? lesson.getMinWatchPercent() : 80;
             lessonCompleted = watchProgressRepository.findByStudent_UserIdAndLesson_LessonId(studentId, lessonId)
                     .map(wp -> Boolean.TRUE.equals(wp.getQuizUnlocked()) || (wp.getWatchPercent() != null && wp.getWatchPercent() >= minPct))
                     .orElse(false);
         }
 
-        if (!lessonCompleted) {
-            return false;
+        // Kiểm tra xem bài học có Quiz PUBLISHED hay không
+        List<Quiz> quizzes = (courseId != null && quizRepository != null)
+                ? quizRepository.findByCourse_CourseIdAndLesson_LessonIdAndStatus(courseId, lessonId, "PUBLISHED")
+                : Collections.emptyList();
+        boolean hasQuizzes = quizzes != null && !quizzes.isEmpty();
+
+        // Nếu bài học KHÔNG có video:
+        // - Nếu KHÔNG có Quiz: đã đủ điều kiện qua bài tiếp theo khi xem nội dung
+        // - Nếu CÓ Quiz: học viên cần nộp/đạt Quiz (kiểm tra ở bước 2 dưới đây)
+        if (!hasVideo) {
+            if (!hasQuizzes) {
+                return true;
+            }
+        } else {
+            if (!lessonCompleted) {
+                return false;
+            }
         }
 
         // 2. Nếu bài học có Quiz PUBLISHED -> học viên phải hoàn thành / nộp Quiz
-        if (courseId != null && quizRepository != null && quizAttemptRepository != null) {
-            List<Quiz> quizzes = quizRepository.findByCourse_CourseIdAndLesson_LessonIdAndStatus(courseId, lessonId, "PUBLISHED");
-            if (quizzes != null && !quizzes.isEmpty()) {
-                for (Quiz q : quizzes) {
-                    List<QuizAttempt> attempts = quizAttemptRepository.findByQuiz_QuizIdAndStudent_UserIdOrderByAttemptNumberDesc(q.getQuizId(), studentId);
-                    boolean qPassed = false;
-                    for (QuizAttempt att : attempts) {
-                        if ("SCORED".equals(att.getStatus()) || "SUBMITTED".equals(att.getStatus())) {
-                            if (q.getPassingScore() != null && att.getMaxScore() != null
-                                    && att.getMaxScore().compareTo(BigDecimal.ZERO) > 0 && att.getScore() != null) {
-                                double pct = att.getScore().doubleValue() / att.getMaxScore().doubleValue() * 100.0;
-                                if (pct >= q.getPassingScore().doubleValue()) {
-                                    qPassed = true;
-                                    break;
-                                }
-                            } else {
+        if (hasQuizzes && quizAttemptRepository != null) {
+            for (Quiz q : quizzes) {
+                List<QuizAttempt> attempts = quizAttemptRepository.findByQuiz_QuizIdAndStudent_UserIdOrderByAttemptNumberDesc(q.getQuizId(), studentId);
+                boolean qPassed = false;
+                for (QuizAttempt att : attempts) {
+                    if ("SCORED".equals(att.getStatus()) || "SUBMITTED".equals(att.getStatus())) {
+                        if (q.getPassingScore() != null && att.getMaxScore() != null
+                                && att.getMaxScore().compareTo(BigDecimal.ZERO) > 0 && att.getScore() != null) {
+                            double pct = att.getScore().doubleValue() / att.getMaxScore().doubleValue() * 100.0;
+                            if (pct >= q.getPassingScore().doubleValue()) {
                                 qPassed = true;
                                 break;
                             }
+                        } else {
+                            qPassed = true;
+                            break;
                         }
                     }
-                    if (!qPassed) {
-                        return false;
-                    }
+                }
+                if (!qPassed) {
+                    return false;
                 }
             }
         }
