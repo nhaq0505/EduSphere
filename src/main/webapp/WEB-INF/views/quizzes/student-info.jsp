@@ -82,7 +82,7 @@
                                 <div>
                                     <strong>Lần ${a.attemptNumber}</strong>
                                     <c:if test="${a.submittedAt != null}">
-                                        <span style="font-size:.82rem;color:#64748B;"> · Nộp lúc ${fn:replace(fn:substring(a.submittedAt, 0, 16), 'T', ' ')}</span>
+                                        <span style="font-size:.82rem;color:#64748B;"> · Nộp lúc ${a.formattedSubmittedAt}</span>
                                     </c:if>
                                     <c:if test="${a.resultStatus eq 'PUBLISHED' and a.score != null}">
                                         <div style="font-size:.88rem;font-weight:700;color:#16A34A;margin-top:2px;">

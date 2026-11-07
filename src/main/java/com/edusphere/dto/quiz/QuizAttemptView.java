@@ -24,4 +24,9 @@ public class QuizAttemptView {
     private String resultStatus;
     private LocalDateTime submittedAt;
     private Integer attemptNumber;
+
+    public String getFormattedSubmittedAt() {
+        if (submittedAt == null) return null;
+        return submittedAt.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    }
 }

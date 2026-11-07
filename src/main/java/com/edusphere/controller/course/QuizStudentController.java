@@ -1,5 +1,6 @@
 package com.edusphere.controller.course;
 
+import com.edusphere.entity.course.Course;
 import com.edusphere.entity.course.Lesson;
 import com.edusphere.entity.course.Quiz;
 import com.edusphere.security.CustomUserDetails;
@@ -14,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -57,7 +59,21 @@ public class QuizStudentController {
         int requiredWatchPercent = 80;
         int currentWatchPercent = 0;
         Lesson lesson = quiz.getLesson();
-        if (lesson != null && service.isVideoLesson(lesson)) {
+        Course course = quiz.getCourse();
+        boolean isOwner = course != null && course.getInstructor() != null && Objects.equals(course.getInstructor().getUserId(), user.getUserId());
+        boolean isAdmin = user.getAuthorities() != null && user.getAuthorities().stream().anyMatch(a -> "ROLE_ADMINISTRATOR".equals(a.getAuthority()));
+
+        if (isOwner || isAdmin) {
+            videoRequirementMet = true;
+            if (lesson != null) {
+                var wpOpt = service.getLessonWatchProgress(user.getUserId(), lesson.getLessonId());
+                if (wpOpt.isPresent()) {
+                    currentWatchPercent = wpOpt.get().getWatchPercent() != null ? wpOpt.get().getWatchPercent() : 100;
+                } else {
+                    currentWatchPercent = 100;
+                }
+            }
+        } else if (lesson != null && service.isVideoLesson(lesson)) {
             if (lesson.getMinWatchPercent() != null && lesson.getMinWatchPercent() > 0) {
                 requiredWatchPercent = lesson.getMinWatchPercent();
             }

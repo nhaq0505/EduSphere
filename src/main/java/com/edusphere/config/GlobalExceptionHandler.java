@@ -1,5 +1,7 @@
 package com.edusphere.config;
 
+import com.edusphere.service.course.CourseActionException;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -41,6 +43,24 @@ public class GlobalExceptionHandler {
         response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
         model.addAttribute("errorMessage", msg);
         return "error/403";
+    }
+
+    /**
+     * Nghiệp vụ khóa học không hợp lệ hoặc bị cấm (CourseActionException).
+     */
+    @ExceptionHandler(CourseActionException.class)
+    public Object handleCourseAction(CourseActionException ex,
+                                     HttpServletRequest request,
+                                     HttpServletResponse response,
+                                     Model model) {
+        log.warn("CourseActionException at {}: status={}, message={}", request.getRequestURI(), ex.getStatus(), ex.getMessage());
+        if (expectsJson(request)) {
+            return ResponseEntity.status(ex.getStatus())
+                    .body(Map.of("success", false, "error", ex.getMessage(), "message", ex.getMessage()));
+        }
+        response.setStatus(ex.getStatus().value());
+        model.addAttribute("errorMessage", ex.getMessage());
+        return "courses/action-error";
     }
 
     /**

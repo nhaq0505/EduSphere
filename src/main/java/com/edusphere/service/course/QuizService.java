@@ -9,6 +9,7 @@ import com.edusphere.entity.course.AnswerOption;
 import com.edusphere.entity.course.BankAnswerOption;
 import com.edusphere.entity.course.BankQuestion;
 import com.edusphere.entity.course.Course;
+import com.edusphere.entity.course.Enrollment;
 import com.edusphere.entity.course.Lesson;
 import com.edusphere.entity.course.Question;
 import com.edusphere.entity.course.QuestionBank;
@@ -38,6 +39,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -140,10 +142,7 @@ public class QuizService {
         ownedCourse(courseId, instructorId);
         Quiz q = quizzes.findByQuizIdAndCourse_CourseId(quizId, courseId)
                 .orElseThrow(() -> notFound("Không tìm thấy bài quiz."));
-        if (q.getLesson() != null) {
-            q.getLesson().getLessonId();
-            q.getLesson().getTitle();
-        }
+        initQuiz(q);
         return q;
     }
 
@@ -578,6 +577,7 @@ public class QuizService {
                 .orElseThrow(() -> notFound("Không tìm thấy bài quiz."));
         if (!"PUBLISHED".equals(quiz.getStatus()))
             throw notFound("Bài quiz chưa được công bố.");
+        initQuiz(quiz);
         return quiz;
     }
 
@@ -587,7 +587,14 @@ public class QuizService {
 
         // ── Backend gate: kiểm tra điều kiện xem video tối thiểu 80% để mở khóa Quiz ──
         Lesson quizLesson = quiz.getLesson();
-        if (quizLesson != null && isVideoLesson(quizLesson)) {
+        Course course = quiz.getCourse();
+        boolean isOwner = course != null && course.getInstructor() != null && Objects.equals(course.getInstructor().getUserId(), studentId);
+        Users u = users.findById(studentId).orElse(null);
+        boolean isAdmin = u != null && u.getUserRolesCollection() != null
+                && u.getUserRolesCollection().stream()
+                .anyMatch(ur -> ur.getRoles() != null && "ADMINISTRATOR".equalsIgnoreCase(ur.getRoles().getRoleName()));
+
+        if (!isOwner && !isAdmin && quizLesson != null && isVideoLesson(quizLesson)) {
             int minPct = (quizLesson.getMinWatchPercent() != null && quizLesson.getMinWatchPercent() > 0)
                     ? quizLesson.getMinWatchPercent()
                     : 80;
@@ -874,9 +881,39 @@ public class QuizService {
     }
 
     private void verifyEnrolled(Integer courseId, Integer studentId) {
-        enrollments.findByStudent_UserIdAndCourse_CourseId(studentId, courseId)
+        boolean enrolled = enrollments.findByStudent_UserIdAndCourse_CourseId(studentId, courseId)
                 .filter(e -> "ACTIVE".equals(e.getStatus()) || "COMPLETED".equals(e.getStatus()))
-                .orElseThrow(() -> new CourseActionException(HttpStatus.FORBIDDEN, "Bạn chưa ghi danh khóa học này."));
+                .isPresent();
+        if (enrolled) return;
+
+        Course course = courses.findById(courseId).orElse(null);
+        if (course != null) {
+            boolean isOwner = course.getInstructor() != null && Objects.equals(course.getInstructor().getUserId(), studentId);
+            if (isOwner) return;
+
+            Users u = users.findById(studentId).orElse(null);
+            if (u != null && u.getUserRolesCollection() != null) {
+                boolean isAdmin = u.getUserRolesCollection().stream()
+                        .anyMatch(ur -> ur.getRoles() != null && "ADMINISTRATOR".equalsIgnoreCase(ur.getRoles().getRoleName()));
+                if (isAdmin) return;
+            }
+
+            boolean isFree = course.getPrice() == null || course.getPrice().signum() == 0;
+            if (isFree && u != null) {
+                try {
+                    Enrollment autoEnroll = new Enrollment();
+                    autoEnroll.setCourse(course);
+                    autoEnroll.setStudent(u);
+                    autoEnroll.setStatus("ACTIVE");
+                    autoEnroll.setEnrolledAt(LocalDateTime.now());
+                    enrollments.save(autoEnroll);
+                    return;
+                } catch (Exception ignored) {
+                    return;
+                }
+            }
+        }
+        throw new CourseActionException(HttpStatus.FORBIDDEN, "Bạn chưa ghi danh khóa học này.");
     }
 
     private Users user(Integer id) {
@@ -898,6 +935,18 @@ public class QuizService {
         return new QuizAttemptView(a.getAttemptId(), a.getQuiz().getQuizId(), a.getQuiz().getTitle(),
                 a.getStudent().getFullName(), a.getScore(), a.getMaxScore(),
                 a.getStatus(), a.getResultStatus(), a.getSubmittedAt(), a.getAttemptNumber());
+    }
+
+    /** Initialize tất cả lazy association của Quiz trong khi session còn mở */
+    public void initQuiz(Quiz quiz) {
+        if (quiz == null) return;
+        org.hibernate.Hibernate.initialize(quiz.getCourse());
+        if (quiz.getLesson() != null) {
+            org.hibernate.Hibernate.initialize(quiz.getLesson());
+        }
+        if (quiz.getCreatedBy() != null) {
+            org.hibernate.Hibernate.initialize(quiz.getCreatedBy());
+        }
     }
 
     /** Initialize tất cả lazy association của QuizAttempt trong khi session còn mở */
