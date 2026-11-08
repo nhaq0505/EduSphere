@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/quiz.css?v=2.0">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/quiz.css?v=2.2">
 </head>
 <body style="background:#F8FAFD;">
 
@@ -51,10 +51,19 @@
                 <div id="questionsArea">
                     <c:forEach var="q" items="${questions}" varStatus="st">
                         <div class="quiz-test-qcard" id="qcard-${q.questionId}" data-qid="${q.questionId}">
-                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                                <span class="quiz-qcard__num" style="background:#EFF6FF; color:#1B9AF5; font-size:.88rem; padding:4px 12px; border-radius:8px;">
-                                    Câu hỏi ${st.count}
-                                </span>
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; flex-wrap:wrap;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <span class="quiz-qcard__num" style="background:#EFF6FF; color:#1B9AF5; font-size:.88rem; padding:4px 12px; border-radius:8px;">
+                                        Câu hỏi ${st.count}
+                                    </span>
+                                    <button type="button" class="quiz-flag-btn" id="flagbtn-${q.questionId}" onclick="toggleFlag(${q.questionId})" title="Đánh dấu câu hỏi để xem lại">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                                            <line x1="4" y1="22" x2="4" y2="15"></line>
+                                        </svg>
+                                        <span class="quiz-flag-text">Đánh dấu</span>
+                                    </button>
+                                </div>
                                 <span style="font-size:.86rem; font-weight:700; color:#64748B;">
                                     <fmt:formatNumber value="${q.score}" maxFractionDigits="1"/> điểm
                                 </span>
@@ -166,28 +175,45 @@
                     <div class="quiz-palette-card">
                         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
                             <span style="font-size:.82rem; font-weight:800; color:#64748B; text-transform:uppercase;">Mục lục câu hỏi</span>
-                            <span style="font-size:.82rem; font-weight:700; color:#1B9AF5;">
-                                <span id="answeredCount">0</span> / ${fn:length(questions)}
-                            </span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span id="flaggedBadge" style="display:none; font-size:.74rem; font-weight:700; background:#FEF08A; color:#854D0E; border:1px solid #FDE047; padding:1px 7px; border-radius:999px;">
+                                    🚩 <span id="flaggedCount">0</span>
+                                </span>
+                                <span style="font-size:.82rem; font-weight:700; color:#1B9AF5;">
+                                    <span id="answeredCount">0</span> / ${fn:length(questions)}
+                                </span>
+                            </div>
                         </div>
 
                         <div class="quiz-palette-grid">
                             <c:forEach var="q" items="${questions}" varStatus="st">
                                 <button type="button" class="quiz-palette-btn" id="navbtn-${q.questionId}"
-                                        onclick="scrollToQuestion(${q.questionId})">
+                                        onclick="scrollToQuestion(${q.questionId})" title="Câu hỏi ${st.count}">
                                     ${st.count}
                                 </button>
                             </c:forEach>
                         </div>
 
-                        <div style="margin-top:16px; padding-top:14px; border-top:1px solid #F1F5F9; font-size:.78rem; color:#64748B; display:flex; flex-direction:column; gap:6px;">
+                        <div style="margin-top:16px; padding-top:14px; border-top:1px solid #F1F5F9; font-size:.78rem; color:#64748B; display:flex; flex-direction:column; gap:7px;">
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="display:inline-block; width:12px; height:12px; background:#DCFCE7; border:1.5px solid #86EFAC; border-radius:3px;"></span>
+                                <span style="display:inline-block; width:14px; height:14px; background:#DCFCE7; border:1.5px solid #86EFAC; border-radius:4px; flex-shrink:0;"></span>
                                 <span>Đã trả lời</span>
                             </div>
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="display:inline-block; width:12px; height:12px; background:#F8FAFC; border:1.5px solid #CBD5E1; border-radius:3px;"></span>
+                                <span style="display:inline-block; width:14px; height:14px; background:#F8FAFC; border:1.5px solid #CBD5E1; border-radius:4px; flex-shrink:0;"></span>
                                 <span>Chưa trả lời</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-block; width:14px; height:14px; background:#FEF08A; border:1.5px solid #EAB308; border-radius:4px; position:relative; flex-shrink:0;">
+                                    <span style="position:absolute; top:-6px; right:-5px; font-size:9px; line-height:1;">🚩</span>
+                                </span>
+                                <span>Đã đánh dấu (xem lại)</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-block; width:14px; height:14px; background:#FEF08A; border:2px solid #16A34A; border-radius:4px; position:relative; flex-shrink:0;">
+                                    <span style="position:absolute; top:-6px; right:-5px; font-size:9px; line-height:1;">🚩</span>
+                                </span>
+                                <span>Đã trả lời & Đánh dấu</span>
                             </div>
                         </div>
                     </div>
@@ -206,7 +232,65 @@
 
 <script>
 var totalQuestions = ${fn:length(questions)};
+var attemptId = ${attemptId};
 var answeredSet = new Set();
+var flaggedSet = new Set();
+
+// Khôi phục danh sách câu hỏi đã đánh dấu từ localStorage
+try {
+    var savedFlags = JSON.parse(localStorage.getItem('quiz_flagged_' + attemptId) || '[]');
+    if (Array.isArray(savedFlags)) {
+        savedFlags.forEach(function(qid) {
+            flaggedSet.add(Number(qid));
+        });
+    }
+} catch(e) {}
+
+function applyFlagState(qid) {
+    var isFlagged = flaggedSet.has(qid);
+    var card = document.getElementById('qcard-' + qid);
+    var navBtn = document.getElementById('navbtn-' + qid);
+    var flagBtn = document.getElementById('flagbtn-' + qid);
+
+    if (card) card.classList.toggle('flagged', isFlagged);
+    if (navBtn) navBtn.classList.toggle('flagged', isFlagged);
+    if (flagBtn) {
+        flagBtn.classList.toggle('active', isFlagged);
+        var textEl = flagBtn.querySelector('.quiz-flag-text');
+        if (textEl) textEl.textContent = isFlagged ? 'Đã đánh dấu' : 'Đánh dấu';
+    }
+    updateFlaggedCount();
+}
+
+function toggleFlag(qid) {
+    if (flaggedSet.has(qid)) {
+        flaggedSet.delete(qid);
+    } else {
+        flaggedSet.add(qid);
+    }
+    applyFlagState(qid);
+    try {
+        localStorage.setItem('quiz_flagged_' + attemptId, JSON.stringify(Array.from(flaggedSet)));
+    } catch(e) {}
+}
+
+function updateFlaggedCount() {
+    var count = flaggedSet.size;
+    var badge = document.getElementById('flaggedBadge');
+    var countEl = document.getElementById('flaggedCount');
+    if (badge && countEl) {
+        countEl.textContent = count;
+        badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+}
+
+// Khôi phục trạng thái đánh dấu ngay khi nạp trang
+document.addEventListener('DOMContentLoaded', function() {
+    flaggedSet.forEach(function(qid) {
+        applyFlagState(qid);
+    });
+    updateFlaggedCount();
+});
 
 function checkQuestionAnswered(qid, card) {
     if (!card) card = document.getElementById('qcard-' + qid);
@@ -269,14 +353,22 @@ function confirmSubmit() {
         unanswered.push(d.textContent.trim());
     });
 
+    var flaggedCount = flaggedSet.size;
+    var flaggedMsg = flaggedCount > 0 ? '\n(Lưu ý: Bạn đang có ' + flaggedCount + ' câu hỏi được đánh dấu cần xem lại).' : '';
+
     if (unanswered.length > 0) {
         var warn = document.getElementById('unansweredWarning');
         warn.style.display = 'block';
-        warn.textContent = '⚠️ Bạn còn ' + unanswered.length + ' câu chưa trả lời (Câu số ' + unanswered.join(', ') + '). Những câu này sẽ được tính 0 điểm.';
-        if (!confirm('Bạn còn ' + unanswered.length + ' câu chưa trả lời (Câu số ' + unanswered.join(', ') + '). Bạn có chắc chắn muốn nộp bài?')) return;
+        warn.textContent = '⚠️ Bạn còn ' + unanswered.length + ' câu chưa trả lời (Câu số ' + unanswered.join(', ') + '). Những câu này sẽ được tính 0 điểm.' + (flaggedCount > 0 ? ' Và có ' + flaggedCount + ' câu đang đánh dấu xem lại.' : '');
+        if (!confirm('Bạn còn ' + unanswered.length + ' câu chưa trả lời (Câu số ' + unanswered.join(', ') + ').' + flaggedMsg + '\n\nBạn có chắc chắn muốn nộp bài?')) return;
     } else {
-        if (!confirm('Bạn đã hoàn thành đủ ' + totalQuestions + ' câu hỏi. Nộp bài ngay bây giờ?')) return;
+        if (!confirm('Bạn đã hoàn thành đủ ' + totalQuestions + ' câu hỏi.' + flaggedMsg + '\n\nNộp bài ngay bây giờ?')) return;
     }
+
+    try {
+        localStorage.removeItem('quiz_flagged_' + attemptId);
+    } catch(e) {}
+
     document.getElementById('quizForm').submit();
 }
 

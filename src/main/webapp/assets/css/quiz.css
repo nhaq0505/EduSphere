@@ -607,11 +607,60 @@
     padding: 24px 28px;
     margin-bottom: 20px;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background-color 0.2s;
+    scroll-margin-top: 80px;
 }
 
 .quiz-test-qcard.answered {
     border-color: #86EFAC;
+}
+
+.quiz-test-qcard.flagged {
+    border-left: 5px solid #EAB308;
+    background: #FFFDF5;
+}
+
+/* Flag button inside question card */
+.quiz-flag-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748B;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    line-height: 1.4;
+}
+
+.quiz-flag-btn:hover {
+    background: #FEF9C3;
+    border-color: #FDE047;
+    color: #854D0E;
+}
+
+.quiz-flag-btn svg {
+    transition: transform 0.15s ease, fill 0.15s ease, stroke 0.15s ease;
+    flex-shrink: 0;
+}
+
+.quiz-flag-btn.active {
+    background: #FEF08A;
+    border-color: #EAB308;
+    color: #854D0E;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(234, 179, 8, 0.25);
+}
+
+.quiz-flag-btn.active svg {
+    fill: #EAB308;
+    stroke: #A16207;
+    transform: scale(1.1);
 }
 
 .quiz-opt-select {
@@ -669,6 +718,7 @@
 }
 
 .quiz-palette-btn {
+    position: relative;
     width: 100%;
     aspect-ratio: 1;
     border: 1.5px solid #CBD5E1;
@@ -695,10 +745,35 @@
     color: #15803D;
 }
 
+/* Đánh dấu bằng màu vàng (Flagged) */
+.quiz-palette-btn.flagged {
+    background: #FEF08A !important;
+    border-color: #EAB308 !important;
+    color: #713F12 !important;
+    font-weight: 800;
+}
+
+.quiz-palette-btn.flagged::after {
+    content: '🚩';
+    position: absolute;
+    top: -7px;
+    right: -5px;
+    font-size: 0.65rem;
+    line-height: 1;
+}
+
+/* Vừa trả lời vừa đánh dấu: Nền vàng + Viền xanh lá */
+.quiz-palette-btn.answered.flagged {
+    background: #FEF08A !important;
+    border-color: #16A34A !important;
+    border-width: 2px !important;
+    color: #713F12 !important;
+}
+
 .quiz-palette-btn.current {
     border-color: #1B9AF5;
     background: #EFF6FF;
     color: #1B9AF5;
-    box-shadow: 0 0 0 2px rgba(27, 154, 245, 0.25);
+    box-shadow: 0 0 0 2px rgba(27, 154, 245, 0.4);
 }
 
