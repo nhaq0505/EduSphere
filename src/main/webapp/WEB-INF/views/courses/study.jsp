@@ -114,7 +114,9 @@
 
 <c:set var="curWatchPct" value="${study.currentWatchPercent >= 0 ? study.currentWatchPercent : 0}"/>
 <c:set var="hasVideo" value="${not empty study.currentVideoUrl and fn:trim(study.currentVideoUrl) ne ''}"/>
-<c:set var="isQuizUnlocked" value="${not hasVideo or study.currentQuizUnlocked or curWatchPct >= 80}"/>
+<c:set var="hasLessonQuizzes" value="${not empty study.currentLessonQuizzes}"/>
+<c:set var="isLessonTargetReached" value="${(not hasVideo) or (curWatchPct >= 80) or study.currentLesson.completed or study.currentQuizUnlocked}"/>
+<c:set var="isQuizUnlocked" value="${(not hasVideo) or study.currentQuizUnlocked or (curWatchPct >= 80)}"/>
 
 <div class="study-page-wrapper"
      id="studyApp"
@@ -125,6 +127,8 @@
      data-last-pos="${study.currentLastPosition}"
      data-watch-pct="${curWatchPct}"
      data-quiz-unlocked="${isQuizUnlocked}"
+     data-has-quiz="${hasLessonQuizzes}"
+     data-next-lesson-url="<c:if test='${not empty study.nextLessonId}'>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}</c:if>"
      data-csrf-param="${_csrf.parameterName}"
      data-csrf-token="${_csrf.token}"
      data-context-path="${pageContext.request.contextPath}">
@@ -549,14 +553,14 @@
                                 <c:if test="${not empty study.nextLessonId}">
                                     <c:choose>
                                         <c:when test="${study.nextLessonLocked and not study.previewMode}">
-                                            <button type="button" class="study-btn study-btn--outline"
+                                            <button type="button" class="study-btn study-btn--outline" id="bottomNextLessonBtn"
                                                     onclick="alert('🔒 Bài học tiếp theo đang bị khóa!\nBạn cần hoàn thành bài học hiện tại và làm bài kiểm tra liên quan để mở khóa.');"
                                                     style="opacity: 0.65; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px;">
                                                 <span>🔒 Bài tiếp (Đang khóa)</span>
                                             </button>
                                         </c:when>
                                         <c:otherwise>
-                                            <a class="study-btn study-btn--outline"
+                                            <a class="study-btn study-btn--outline" id="bottomNextLessonBtn"
                                                href="<c:choose><c:when test='${study.previewMode}'>${pageContext.request.contextPath}/instructor/courses/${study.courseId}/preview/lessons/${study.nextLessonId}</c:when><c:otherwise>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}</c:otherwise></c:choose>">
                                                 Bài tiếp →
                                             </a>
@@ -737,77 +741,120 @@
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                             </svg>
-                            <span>Điều kiện mở Quiz</span>
+                            <span id="rightCondTitleLabel">
+                                <c:choose>
+                                    <c:when test="${hasLessonQuizzes}">Điều kiện mở Quiz</c:when>
+                                    <c:otherwise>Điều kiện hoàn thành</c:otherwise>
+                                </c:choose>
+                            </span>
                         </div>
 
-                        <div class="widget-cond-alert ${isQuizUnlocked ? 'widget-cond-alert--unlocked' : 'widget-cond-alert--locked'}" id="rightConditionBox">
-                            <span class="widget-cond-alert__icon" id="rightConditionIcon">${isQuizUnlocked ? '🎉' : '🔒'}</span>
+                        <div class="widget-cond-alert ${isLessonTargetReached ? 'widget-cond-alert--unlocked' : 'widget-cond-alert--locked'}" id="rightConditionBox">
+                            <span class="widget-cond-alert__icon" id="rightConditionIcon">${isLessonTargetReached ? '🎉' : '🔒'}</span>
                             <span id="rightConditionText">
                                 <c:choose>
                                     <c:when test="${not hasVideo}">
-                                        Bài học đọc nội dung — Bài kiểm tra đã sẵn sàng!
+                                        <c:choose>
+                                            <c:when test="${hasLessonQuizzes}">Bài học đọc nội dung — Bài kiểm tra đã sẵn sàng!</c:when>
+                                            <c:otherwise>Bài học đọc nội dung — Đã sẵn sàng qua bài tiếp!</c:otherwise>
+                                        </c:choose>
                                     </c:when>
-                                    <c:when test="${isQuizUnlocked}">
-                                        Đã đủ điều kiện mở khóa bài kiểm tra!
+                                    <c:when test="${isLessonTargetReached}">
+                                        <c:choose>
+                                            <c:when test="${hasLessonQuizzes}">Đã đủ điều kiện mở khóa bài kiểm tra!</c:when>
+                                            <c:otherwise>Đã hoàn thành chỉ tiêu bài học!</c:otherwise>
+                                        </c:choose>
                                     </c:when>
                                     <c:otherwise>
-                                        Xem ít nhất 80% video để mở khóa bài kiểm tra
+                                        <c:choose>
+                                            <c:when test="${hasLessonQuizzes}">Xem ít nhất 80% video để mở khóa bài kiểm tra</c:when>
+                                            <c:otherwise>Xem ít nhất 80% video để hoàn thành bài học</c:otherwise>
+                                        </c:choose>
                                     </c:otherwise>
                                 </c:choose>
                             </span>
                         </div>
                     </div>
 
-                    <%-- Card 2: Motivation & Quiz CTA --%>
+                    <%-- Card 2: Motivation & Quiz/Next Lesson CTA --%>
                     <div class="motivation-card">
                         <div class="motivation-trophy-wrap">
                             🏆
                         </div>
                         <div class="motivation-title" id="rightMotivationTitle">
                             <c:choose>
-                                <c:when test="${isQuizUnlocked}">Chúc mừng!</c:when>
+                                <c:when test="${isLessonTargetReached}">Chúc mừng!</c:when>
                                 <c:otherwise>Cố lên!</c:otherwise>
                             </c:choose>
                         </div>
                         <div class="motivation-desc" id="rightMotivationDesc">
                             <c:choose>
-                                <c:when test="${not hasVideo and not empty study.currentLessonQuizzes}">
-                                    Chúc mừng bạn! Bài kiểm tra của bài học đã sẵn sàng. Bạn có thể làm bài ngay bây giờ.
-                                </c:when>
-                                <c:when test="${not hasVideo}">
-                                    Bạn chỉ cần đọc hết nội dung bài học là có thể chuyển sang bài tiếp theo!
-                                </c:when>
-                                <c:when test="${isQuizUnlocked}">
-                                    Chúc mừng bạn đã mở khóa bài Quiz! Bạn có thể làm bài ngay bây giờ.
+                                <c:when test="${hasLessonQuizzes}">
+                                    <c:choose>
+                                        <c:when test="${isLessonTargetReached}">
+                                            Chúc mừng bạn đã mở khóa bài Quiz! Bạn có thể làm bài ngay bây giờ.
+                                        </c:when>
+                                        <c:otherwise>
+                                            Bạn chỉ cần xem thêm ${80 - curWatchPct > 0 ? (80 - curWatchPct) : 0}% nữa là có thể làm bài Quiz rồi!
+                                        </c:otherwise>
+                                    </c:choose>
                                 </c:when>
                                 <c:otherwise>
-                                    Bạn chỉ cần xem thêm ${80 - curWatchPct > 0 ? (80 - curWatchPct) : 0}% nữa là có thể làm bài Quiz rồi!
+                                    <c:choose>
+                                        <c:when test="${isLessonTargetReached}">
+                                            Chúc mừng bạn đã hoàn thành bài học. Bạn có thể học bài tiếp theo.
+                                        </c:when>
+                                        <c:otherwise>
+                                            Bạn chỉ cần xem thêm ${80 - curWatchPct > 0 ? (80 - curWatchPct) : 0}% nữa là có thể học bài tiếp theo rồi!
+                                        </c:otherwise>
+                                    </c:choose>
                                 </c:otherwise>
                             </c:choose>
                         </div>
 
                         <div class="motivation-action-wrap">
-                            <c:set var="firstQuiz" value="${not empty study.currentLessonQuizzes ? study.currentLessonQuizzes[0] : null}"/>
                             <c:choose>
-                                <c:when test="${not empty firstQuiz}">
+                                <%-- TRƯỜNG HỢP 1: Bài học CÓ Quiz đi kèm --%>
+                                <c:when test="${hasLessonQuizzes}">
+                                    <c:set var="firstQuiz" value="${study.currentLessonQuizzes[0]}"/>
                                     <a href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${firstQuiz.quizId}"
                                        id="rightQuizBtn"
                                        class="btn-quiz-cta ${isQuizUnlocked ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
                                        ${isQuizUnlocked ? '' : 'aria-disabled="true" onclick="return handleLockedQuizClick(event);"'}
-                                       data-quiz-url="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${firstQuiz.quizId}">
+                                       data-has-quiz="true"
+                                       data-target-url="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${firstQuiz.quizId}">
                                         <span id="rightQuizBtnIcon">${isQuizUnlocked ? '📝' : '🔒'}</span>
                                         <span id="rightQuizBtnLabel">${isQuizUnlocked ? 'Làm bài Quiz ngay' : 'Làm bài Quiz'}</span>
                                     </a>
                                 </c:when>
+
+                                <%-- TRƯỜNG HỢP 2: Bài học KHÔNG CÓ Quiz đi kèm -> Nút "Bài tiếp theo" --%>
                                 <c:otherwise>
-                                    <a href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes"
-                                       id="rightQuizBtn"
-                                       class="btn-quiz-cta ${isQuizUnlocked ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
-                                       ${isQuizUnlocked ? '' : 'aria-disabled="true" onclick="return handleLockedQuizClick(event);"'}
-                                       data-quiz-url="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes">
-                                        <span id="rightQuizBtnIcon">${isQuizUnlocked ? '📝' : '🔒'}</span>
-                                        <span id="rightQuizBtnLabel">${isQuizUnlocked ? 'Làm bài Quiz ngay' : 'Làm bài Quiz'}</span>
-                                    </a>
+                                    <c:choose>
+                                        <%-- Có bài tiếp theo trong khóa học --%>
+                                        <c:when test="${not empty study.nextLessonId}">
+                                            <a href="<c:choose><c:when test='${isLessonTargetReached}'>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}</c:when><c:otherwise>javascript:void(0)</c:otherwise></c:choose>"
+                                               id="rightQuizBtn"
+                                               class="btn-quiz-cta ${isLessonTargetReached ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
+                                               ${isLessonTargetReached ? '' : 'aria-disabled="true" onclick="alert(\'🔒 Bạn cần xem ít nhất 80% video để hoàn thành bài học trước khi sang bài tiếp theo.\'); return false;"'}
+                                               data-has-quiz="false"
+                                               data-target-url="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}">
+                                                <span id="rightQuizBtnIcon">${isLessonTargetReached ? '▶' : '🔒'}</span>
+                                                <span id="rightQuizBtnLabel">Bài tiếp theo</span>
+                                            </a>
+                                        </c:when>
+                                        <%-- Bài cuối cùng của khóa học --%>
+                                        <c:otherwise>
+                                            <a href="${pageContext.request.contextPath}/my-courses"
+                                               id="rightQuizBtn"
+                                               class="btn-quiz-cta ${isLessonTargetReached ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
+                                               data-has-quiz="false"
+                                               data-target-url="${pageContext.request.contextPath}/my-courses">
+                                                <span id="rightQuizBtnIcon">🎓</span>
+                                                <span id="rightQuizBtnLabel">Hoàn thành khóa học</span>
+                                            </a>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </c:otherwise>
                             </c:choose>
                         </div>

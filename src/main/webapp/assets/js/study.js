@@ -86,7 +86,13 @@ function updateWatchBar(pct) {
     var motDesc = document.getElementById('rightMotivationDesc');
     if (motDesc && pct < 80) {
         var needed = Math.max(0, 80 - pct);
-        motDesc.textContent = 'Bạn chỉ cần xem thêm ' + needed + '% nữa là có thể làm bài Quiz rồi!';
+        var app = document.getElementById('studyApp');
+        var hasQuiz = app && app.getAttribute('data-has-quiz') === 'true';
+        if (hasQuiz) {
+            motDesc.textContent = 'Bạn chỉ cần xem thêm ' + needed + '% nữa là có thể làm bài Quiz rồi!';
+        } else {
+            motDesc.textContent = 'Bạn chỉ cần xem thêm ' + needed + '% nữa là có thể học bài tiếp theo rồi!';
+        }
     }
 
     var gatePct = document.getElementById('gateWatchPct');
@@ -96,10 +102,18 @@ function updateWatchBar(pct) {
 function unlockQuizUI(pct) {
     updateWatchBar(pct || 80);
 
+    var app = document.getElementById('studyApp');
+    var hasQuiz = app && app.getAttribute('data-has-quiz') === 'true';
+    var nextLessonUrl = app ? app.getAttribute('data-next-lesson-url') : '';
+
     // Tiêu đề phụ dưới video
     var sub = document.getElementById('watchProgressSubtitle');
     if (sub) {
-        sub.textContent = '🎉 Chúc mừng! Bạn đã mở khóa bài kiểm tra';
+        if (hasQuiz) {
+            sub.textContent = '🎉 Chúc mừng! Bạn đã mở khóa bài kiểm tra';
+        } else {
+            sub.textContent = '🎉 Chúc mừng! Bạn đã hoàn thành bài học';
+        }
         sub.classList.add('unlocked-text');
     }
 
@@ -109,13 +123,25 @@ function unlockQuizUI(pct) {
     var condText = document.getElementById('rightConditionText');
     if (condBox) condBox.className = 'widget-cond-alert widget-cond-alert--unlocked';
     if (condIcon) condIcon.textContent = '🎉';
-    if (condText) condText.textContent = 'Đã đủ điều kiện mở khóa bài kiểm tra!';
+    if (condText) {
+        if (hasQuiz) {
+            condText.textContent = 'Đã đủ điều kiện mở khóa bài kiểm tra!';
+        } else {
+            condText.textContent = 'Đã hoàn thành chỉ tiêu bài học!';
+        }
+    }
 
     // Card động viên bên phải
     var motTitle = document.getElementById('rightMotivationTitle');
     var motDesc = document.getElementById('rightMotivationDesc');
     if (motTitle) motTitle.textContent = 'Chúc mừng!';
-    if (motDesc) motDesc.textContent = 'Chúc mừng bạn đã mở khóa bài Quiz! Bạn có thể làm bài ngay bây giờ.';
+    if (motDesc) {
+        if (hasQuiz) {
+            motDesc.textContent = 'Chúc mừng bạn đã mở khóa bài Quiz! Bạn có thể làm bài ngay bây giờ.';
+        } else {
+            motDesc.textContent = 'Chúc mừng bạn đã hoàn thành bài học. Bạn có thể học bài tiếp theo.';
+        }
+    }
 
     // Nút làm bài Quiz CTA bên phải
     var rightBtn = document.getElementById('rightQuizBtn');
@@ -127,13 +153,18 @@ function unlockQuizUI(pct) {
         rightBtn.removeAttribute('disabled');
         rightBtn.removeAttribute('onclick');
         rightBtn.onclick = null;
-        var qUrl = rightBtn.getAttribute('data-quiz-url');
-        if (qUrl) {
-            rightBtn.setAttribute('href', qUrl);
+        var targetUrl = rightBtn.getAttribute('data-target-url') || (hasQuiz ? rightBtn.getAttribute('data-quiz-url') : nextLessonUrl);
+        if (targetUrl) {
+            rightBtn.setAttribute('href', targetUrl);
         }
     }
-    if (rightIcon) rightIcon.textContent = '📝';
-    if (rightLabel) rightLabel.textContent = 'Làm bài Quiz ngay';
+    if (hasQuiz) {
+        if (rightIcon) rightIcon.textContent = '📝';
+        if (rightLabel) rightLabel.textContent = 'Làm bài Quiz ngay';
+    } else {
+        if (rightIcon) rightIcon.textContent = '▶';
+        if (rightLabel) rightLabel.textContent = 'Bài tiếp theo';
+    }
 
     // Đổi biểu tượng ổ khóa ở sidebar trái thành mở khóa
     document.querySelectorAll('.sidebar-lock-badge').forEach(function(el) {
@@ -147,6 +178,20 @@ function unlockQuizUI(pct) {
     var gate = document.getElementById('exerciseTabGate');
     if (gate) {
         gate.outerHTML = '<div class="completed-banner" id="quizUnlockedBanner" style="margin-bottom:16px;">🎉 Chúc mừng! Bạn đã mở khóa bài kiểm tra.</div>';
+    }
+
+    // Mở khóa nút "Bài tiếp →" ở thanh điều hướng dưới nếu không có quiz
+    if (!hasQuiz && nextLessonUrl) {
+        var bottomNextBtn = document.getElementById('bottomNextLessonBtn');
+        if (bottomNextBtn) {
+            bottomNextBtn.className = 'study-btn study-btn--outline';
+            bottomNextBtn.removeAttribute('onclick');
+            bottomNextBtn.onclick = null;
+            bottomNextBtn.style.opacity = '1';
+            bottomNextBtn.style.cursor = 'pointer';
+            bottomNextBtn.setAttribute('href', nextLessonUrl);
+            bottomNextBtn.innerHTML = 'Bài tiếp →';
+        }
     }
 }
 
