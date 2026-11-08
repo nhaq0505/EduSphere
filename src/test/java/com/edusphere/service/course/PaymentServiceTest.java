@@ -141,6 +141,41 @@ class PaymentServiceTest {
         assertThrows(CourseActionException.class, () -> service.verifyOwner(1770000000013L, 8));
     }
 
+    @Test
+    void coursePriceChangeCancelsStaleOrderAndCreatesFreshPayment() {
+        Course course = payment.getCourse();
+        course.setPrice(new BigDecimal("299000")); // Đổi giá từ 199,000 -> 299,000
+        payment.setStatus("INITIATED");
+        payment.setAmount(new BigDecimal("199000"));
+
+        when(payments.findFirstByStudent_UserIdAndCourse_CourseIdAndStatusOrderByCreatedAtDesc(
+                7, 42, "INITIATED")).thenReturn(Optional.of(payment));
+        when(payments.saveAndFlush(any(Payment.class))).thenAnswer(inv -> {
+            Payment p = inv.getArgument(0);
+            if (p.getPaymentId() == null) {
+                p.setPaymentId(99);
+            }
+            return p;
+        });
+
+        PaymentService.Checkout checkout = service.prepare(42, 7);
+
+        assertEquals("CANCELLED", payment.getStatus());
+        assertEquals(99, checkout.paymentId());
+        assertEquals(299000L, checkout.amount());
+    }
+
+    @Test
+    void instructorCannotBuyOwnCourse() {
+        Users instructor = new Users();
+        instructor.setUserId(77);
+        payment.getCourse().setInstructor(instructor);
+
+        CourseActionException ex = assertThrows(CourseActionException.class,
+                () -> service.prepare(42, 77));
+        assertTrue(ex.getMessage().contains("giảng viên"));
+    }
+
     private WebhookData webhook(long amount) {
         WebhookData data = new WebhookData();
         data.setOrderCode(1770000000013L);

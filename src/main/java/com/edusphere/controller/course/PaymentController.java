@@ -25,6 +25,9 @@ import vn.payos.model.v2.paymentRequests.PaymentLinkStatus;
 import vn.payos.model.webhooks.Webhook;
 import vn.payos.model.webhooks.WebhookData;
 
+/**
+ * Controller điều phối luồng thanh toán khóa học qua cổng PayOS (Checkout, Return URL và Webhook).
+ */
 @Controller
 public class PaymentController {
     private final PaymentService payments;
@@ -35,6 +38,9 @@ public class PaymentController {
         this.payOs = payOs;
     }
 
+    /**
+     * Khởi tạo đơn hàng thanh toán cho khóa học và chuyển hướng học viên sang trang QR của PayOS.
+     */
     @PostMapping("/courses/{courseId}/checkout")
     public String checkout(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails user) {
         if (!payOs.isConfigured()) throw new CourseActionException(HttpStatus.SERVICE_UNAVAILABLE,
@@ -45,7 +51,7 @@ public class PaymentController {
         try {
             link = payOs.create(checkout.orderCode(), checkout.amount());
         } catch (RuntimeException ex) {
-            // The create response may have been lost after PayOS accepted the order.
+            // Khôi phục link nếu PayOS đã tạo đơn thành công nhưng phản hồi mạng bị ngắt
             PaymentLink existing;
             try {
                 existing = payOs.get(checkout.orderCode());
@@ -61,6 +67,9 @@ public class PaymentController {
         return "redirect:" + link.getCheckoutUrl();
     }
 
+    /**
+     * Đối soát trạng thái đơn hàng và hiển thị trang kết quả khi học viên từ PayOS quay về hệ thống.
+     */
     @GetMapping("/payments/result")
     public String result(@RequestParam Long orderCode,
                          @AuthenticationPrincipal CustomUserDetails user, Model model) {
@@ -72,6 +81,9 @@ public class PaymentController {
         return "courses/payment-result";
     }
 
+    /**
+     * Nhận thông báo Webhook tự động từ PayOS khi giao dịch chuyển khoản hoàn tất.
+     */
     @ResponseBody
     @PostMapping("/payments/payos/webhook")
     public ResponseEntity<String> webhook(@RequestBody Webhook webhook) {
@@ -89,12 +101,18 @@ public class PaymentController {
         }
     }
 
+    /**
+     * Trả về lỗi 400 nếu gói tin JSON gửi vào Webhook không đúng định dạng.
+     */
     @ResponseBody
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<String> malformedWebhook() {
         return ResponseEntity.badRequest().body("Invalid webhook");
     }
 
+    /**
+     * Hiển thị trang thông báo lỗi thân thiện khi gặp ngoại lệ nghiệp vụ trong quá trình thanh toán.
+     */
     @ExceptionHandler(CourseActionException.class)
     public String paymentError(CourseActionException ex, HttpServletResponse response, Model model) {
         response.setStatus(ex.getStatus().value());

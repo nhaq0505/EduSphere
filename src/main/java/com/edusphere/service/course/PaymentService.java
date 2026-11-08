@@ -17,8 +17,12 @@ import vn.payos.model.webhooks.WebhookData;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * Dịch vụ xử lý thanh toán khóa học qua cổng PayOS và kích hoạt ghi danh (Enrollment).
+ */
 @Service
 public class PaymentService {
     private final PaymentRepository payments;
@@ -34,37 +38,54 @@ public class PaymentService {
         this.users = users;
     }
 
+    /**
+     * Bước 1: Chuẩn bị đơn hàng thanh toán cho học viên.
+     * - Kiểm tra khóa học hợp lệ, học viên chưa mua và không phải là giảng viên sở hữu khóa học.
+     * - Tái sử dụng đơn PENDING/INITIATED nếu cùng mức giá; nếu khóa học đã đổi giá thì tự động hủy đơn cũ và tạo đơn mới.
+     */
     @Transactional
     public Checkout prepare(Integer courseId, Integer studentId) {
         Course course = courses.findLockedById(courseId)
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy khóa học."));
+
         if (!"PUBLISHED".equals(course.getStatus()) || course.getPrice().signum() <= 0)
             throw error(HttpStatus.CONFLICT, "Khóa học này không cần thanh toán.");
         if (!"VND".equals(course.getCurrency()))
             throw error(HttpStatus.CONFLICT, "PayOS chỉ hỗ trợ thanh toán VND.");
-        long amount = amount(course.getPrice());
+        if (course.getInstructor() != null && Objects.equals(course.getInstructor().getUserId(), studentId))
+            throw error(HttpStatus.CONFLICT, "Bạn là giảng viên của khóa học này, không cần thanh toán.");
         if (enrollments.findByStudent_UserIdAndCourse_CourseId(studentId, courseId)
                 .filter(e -> !"DROPPED".equals(e.getStatus())).isPresent())
             throw error(HttpStatus.CONFLICT, "Bạn đã ghi danh khóa học này.");
 
+        long amount = amount(course.getPrice());
+
+        // Nếu có đơn PENDING cũ: cùng giá thì dùng lại link PayOS, khác giá thì hủy đơn cũ để tạo đơn mới
         Payment pending = payments.findFirstByStudent_UserIdAndCourse_CourseIdAndStatusOrderByCreatedAtDesc(
                 studentId, courseId, "PENDING").orElse(null);
-        if (pending != null && pending.getCheckoutUrl() != null
-                && pending.getAmount().compareTo(course.getPrice()) == 0)
-            return new Checkout(pending.getPaymentId(), Long.parseLong(pending.getRequestKey()), amount, pending.getCheckoutUrl());
+        if (pending != null) {
+            if (pending.getCheckoutUrl() != null && pending.getAmount().compareTo(course.getPrice()) == 0) {
+                return new Checkout(pending.getPaymentId(), Long.parseLong(pending.getRequestKey()), amount, pending.getCheckoutUrl());
+            }
+            pending.setStatus("CANCELLED");
+            payments.saveAndFlush(pending);
+        }
 
+        // Nếu có đơn INITIATED cũ: cùng giá thì dùng lại mã đơn, khác giá thì hủy đơn cũ để tạo đơn mới
         Payment initiating = payments.findFirstByStudent_UserIdAndCourse_CourseIdAndStatusOrderByCreatedAtDesc(
                 studentId, courseId, "INITIATED").orElse(null);
         if (initiating != null) {
-            if (initiating.getAmount().compareTo(course.getPrice()) != 0)
-                throw error(HttpStatus.CONFLICT, "Học phí đã thay đổi. Vui lòng liên hệ quản trị viên.");
-            return new Checkout(initiating.getPaymentId(), Long.parseLong(initiating.getRequestKey()), amount, null);
+            if (initiating.getAmount().compareTo(course.getPrice()) == 0) {
+                return new Checkout(initiating.getPaymentId(), Long.parseLong(initiating.getRequestKey()), amount, null);
+            }
+            initiating.setStatus("CANCELLED");
+            payments.saveAndFlush(initiating);
         }
 
+        // Tạo đơn thanh toán mới
         Payment payment = new Payment();
         payment.setStudent(users.getReferenceById(studentId));
         payment.setCourse(course);
-        // Numeric, channel-wide order code; the database unique constraint prevents reuse.
         payment.setRequestKey(Long.toString(System.currentTimeMillis() * 1000
                 + ThreadLocalRandom.current().nextInt(1000)));
         payment.setAmount(course.getPrice());
@@ -72,6 +93,10 @@ public class PaymentService {
         return new Checkout(payment.getPaymentId(), Long.parseLong(payment.getRequestKey()), amount, null);
     }
 
+    /**
+     * Bước 2a: Lưu đường dẫn thanh toán (checkoutUrl) sau khi tạo link trên PayOS thành công,
+     * chuyển trạng thái đơn từ INITIATED sang PENDING.
+     */
     @Transactional
     public void markPending(Integer paymentId, CreatePaymentLinkResponse link) {
         Payment payment = locked(paymentId);
@@ -83,6 +108,9 @@ public class PaymentService {
         if ("INITIATED".equals(payment.getStatus())) payment.setStatus("PENDING");
     }
 
+    /**
+     * Bước 2b: Khôi phục thông tin link PayOS nếu lần gọi tạo link trước đó bị đứt mạng giữa chừng.
+     */
     @Transactional
     public void markRecovered(Integer paymentId, PaymentLink link) {
         Payment payment = locked(paymentId);
@@ -96,6 +124,9 @@ public class PaymentService {
         if ("INITIATED".equals(payment.getStatus())) payment.setStatus("PENDING");
     }
 
+    /**
+     * Bước 3a: Đối soát trạng thái đơn hàng khi học viên từ trang PayOS quay về lại hệ thống (/payments/result).
+     */
     @Transactional
     public Result reconcile(long orderCode, Integer studentId, PaymentLink link) {
         Payment owner = payments.findByRequestKey(Long.toString(orderCode))
@@ -125,6 +156,9 @@ public class PaymentService {
         return new Result(payment.getCourse().getCourseId(), payment.getStatus());
     }
 
+    /**
+     * Kiểm tra quyền sở hữu giao dịch của học viên trước khi hiển thị trang kết quả thanh toán.
+     */
     @Transactional(readOnly = true)
     public void verifyOwner(long orderCode, Integer studentId) {
         Payment payment = payments.findByRequestKey(Long.toString(orderCode))
@@ -133,11 +167,14 @@ public class PaymentService {
             throw error(HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch.");
     }
 
+    /**
+     * Bước 3b: Xử lý thông báo Webhook tự động từ PayOS gửi về khi học viên chuyển khoản thành công.
+     */
     @Transactional
     public void applyVerifiedWebhook(WebhookData data) {
         if (data == null || data.getOrderCode() == null || data.getOrderCode() < 1) return;
         Payment known = payments.findByRequestKey(Long.toString(data.getOrderCode())).orElse(null);
-        if (known == null) return; // PayOS sends a sample event when a webhook is registered.
+        if (known == null) return; // Bỏ qua gói tin test mẫu khi đăng ký webhook trên PayOS
         courses.findLockedById(known.getCourse().getCourseId()).orElseThrow();
         Payment payment = lockedByOrderCode(data.getOrderCode());
         if (!"00".equals(data.getCode()) || data.getAmount() == null
@@ -151,9 +188,11 @@ public class PaymentService {
         complete(payment);
     }
 
+    /**
+     * Hoàn tất đơn thanh toán (chuyển sang SUCCEEDED) và kích hoạt quyền học (Enrollment ACTIVE) cho học viên.
+     */
     private void complete(Payment payment) {
         if ("SUCCEEDED".equals(payment.getStatus())) return;
-        // The caller has locked the course before the payment to serialize enrollment writes.
         Enrollment enrollment = enrollments.findByStudent_UserIdAndCourse_CourseId(
                 payment.getStudent().getUserId(), payment.getCourse().getCourseId()).orElse(null);
         if (enrollment == null) {
@@ -172,16 +211,19 @@ public class PaymentService {
         payment.setCompletedAt(LocalDateTime.now());
     }
 
+    /** Tìm và khóa bản ghi Payment theo ID. */
     private Payment locked(Integer id) {
         return payments.findLockedById(id)
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch."));
     }
 
+    /** Tìm và khóa bản ghi Payment theo mã đơn hàng (orderCode). */
     private Payment lockedByOrderCode(long orderCode) {
         return payments.findLockedByRequestKey(Long.toString(orderCode))
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch."));
     }
 
+    /** Chuyển đổi giá tiền BigDecimal sang số nguyên VND cho PayOS. */
     private long amount(BigDecimal price) {
         try {
             return price.longValueExact();
@@ -190,6 +232,7 @@ public class PaymentService {
         }
     }
 
+    /** Tạo ngoại lệ nghiệp vụ với mã HTTP tương ứng. */
     private CourseActionException error(HttpStatus status, String message) {
         return new CourseActionException(status, message);
     }

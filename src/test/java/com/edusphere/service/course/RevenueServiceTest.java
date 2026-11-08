@@ -164,5 +164,6 @@ class RevenueServiceTest {
         assertEquals("APPROVED", pr.getStatus());
         assertEquals("Đã CK VCB mã 998877", pr.getAdminNote());
         assertNotNull(pr.getProcessedAt());
+        verify(payoutRequestRepository, times(2)).findLockedByIdWithDetails(5);
     }
 }

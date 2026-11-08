@@ -11,6 +11,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 
+/**
+ * Controller quản lý trang Doanh thu & Ví tiền của Giảng viên (/instructor/revenue)
+ * và trang Quản lý Doanh thu & Duyệt rút tiền của Admin (/admin/revenue).
+ */
 @Controller
 public class RevenueController {
 
@@ -22,6 +26,9 @@ public class RevenueController {
 
     // ==================== INSTRUCTOR REVENUE & WALLET ====================
 
+    /**
+     * Hiển thị trang Doanh thu & Ví tiền cho Giảng viên (hỗ trợ lọc giao dịch theo khóa học).
+     */
     @GetMapping("/instructor/revenue")
     public String instructorRevenue(@RequestParam(value = "courseId", required = false) Integer courseId,
                                     @AuthenticationPrincipal CustomUserDetails user,
@@ -32,6 +39,9 @@ public class RevenueController {
         return "courses/instructor-revenue";
     }
 
+    /**
+     * Xử lý khi Giảng viên gửi form yêu cầu rút tiền từ số dư khả dụng về tài khoản ngân hàng.
+     */
     @PostMapping("/instructor/revenue/payouts")
     public String requestPayout(@RequestParam("amount") BigDecimal amount,
                                 @RequestParam("bankName") String bankName,
@@ -55,6 +65,9 @@ public class RevenueController {
 
     // ==================== ADMIN REVENUE & PAYOUT APPROVAL ====================
 
+    /**
+     * Hiển thị trang Tổng quan Doanh thu toàn hệ thống & Danh sách yêu cầu rút tiền cho Admin.
+     */
     @GetMapping("/admin/revenue")
     public String adminRevenue(Model model) {
         RevenueService.AdminRevenueDashboard revenue = revenueService.getAdminRevenue();
@@ -62,6 +75,9 @@ public class RevenueController {
         return "admin/revenue";
     }
 
+    /**
+     * Xử lý khi Admin bấm phê duyệt (xác nhận đã chuyển khoản) cho một yêu cầu rút tiền của Giảng viên.
+     */
     @PostMapping("/admin/revenue/payouts/{payoutId}/approve")
     public String approvePayout(@PathVariable Integer payoutId,
                                 @RequestParam(value = "adminNote", required = false) String adminNote,
@@ -77,6 +93,9 @@ public class RevenueController {
         return "redirect:/admin/revenue";
     }
 
+    /**
+     * Xử lý khi Admin từ chối một yêu cầu rút tiền (hoàn lại số tiền vào số dư khả dụng của Giảng viên).
+     */
     @PostMapping("/admin/revenue/payouts/{payoutId}/reject")
     public String rejectPayout(@PathVariable Integer payoutId,
                                @RequestParam(value = "adminNote", required = false) String adminNote,

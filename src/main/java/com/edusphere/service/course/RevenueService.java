@@ -20,6 +20,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+/**
+ * Dịch vụ quản lý doanh thu khóa học (chia sẻ 80% Giảng viên / 20% Nền tảng),
+ * tính toán số dư khả dụng của giảng viên và xử lý quy trình rút tiền (Payout).
+ */
 @Service
 public class RevenueService {
 
@@ -45,6 +49,9 @@ public class RevenueService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Tính phí nền tảng (20% trên tổng giá bán khóa học, làm tròn đến hàng đơn vị VND).
+     */
     public static BigDecimal calculatePlatformFee(BigDecimal gross) {
         if (gross == null || gross.signum() <= 0) {
             return BigDecimal.ZERO;
@@ -52,6 +59,9 @@ public class RevenueService {
         return gross.multiply(PLATFORM_RATE).setScale(0, RoundingMode.HALF_UP);
     }
 
+    /**
+     * Tính doanh thu thực nhận của giảng viên (80% = Tổng giá bán trừ đi 20% phí nền tảng).
+     */
     public static BigDecimal calculateNetEarnings(BigDecimal gross) {
         if (gross == null || gross.signum() <= 0) {
             return BigDecimal.ZERO;
@@ -59,27 +69,49 @@ public class RevenueService {
         return gross.subtract(calculatePlatformFee(gross));
     }
 
+    /**
+     * Tính nhanh số dư khả dụng hiện tại của giảng viên theo công thức:
+     * Số dư khả dụng = Tổng thực nhận (80% các đơn SUCCEEDED) - Tổng đã rút (APPROVED) - Tổng đang chờ duyệt (PENDING).
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal getAvailableBalance(Integer instructorId) {
+        BigDecimal totalNet = BigDecimal.ZERO;
+        for (Payment p : paymentRepository.findByInstructorIdOrderByDateDesc(instructorId)) {
+            if ("SUCCEEDED".equalsIgnoreCase(p.getStatus())) {
+                totalNet = totalNet.add(calculateNetEarnings(p.getAmount()));
+            }
+        }
+
+        BigDecimal lockedOrWithdrawn = BigDecimal.ZERO;
+        for (PayoutRequest pr : payoutRequestRepository.findByInstructorIdOrderByRequestedAtDesc(instructorId)) {
+            if ("APPROVED".equalsIgnoreCase(pr.getStatus()) || "PENDING".equalsIgnoreCase(pr.getStatus())) {
+                BigDecimal amt = pr.getAmount() != null ? pr.getAmount() : BigDecimal.ZERO;
+                lockedOrWithdrawn = lockedOrWithdrawn.add(amt);
+            }
+        }
+
+        BigDecimal available = totalNet.subtract(lockedOrWithdrawn);
+        return available.signum() < 0 ? BigDecimal.ZERO : available;
+    }
+
+    /**
+     * Tổng hợp bảng điều khiển doanh thu, số dư ví, doanh thu từng khóa học và lịch sử rút tiền cho Giảng viên.
+     */
     @Transactional(readOnly = true)
     public InstructorRevenueDashboard getInstructorRevenue(Integer instructorId, Integer filterCourseId) {
         List<Course> instructorCourses = courseRepository.findByInstructor_UserIdOrderByCreatedAtDesc(instructorId);
         List<Payment> allPayments = paymentRepository.findByInstructorIdOrderByDateDesc(instructorId);
         List<PayoutRequest> payouts = payoutRequestRepository.findByInstructorIdOrderByRequestedAtDesc(instructorId);
 
+        Map<Integer, CourseRevenueRow> courseMap = new LinkedHashMap<>();
+        for (Course c : instructorCourses) {
+            courseMap.put(c.getCourseId(), initCourseRow(c));
+        }
+
         BigDecimal totalGross = BigDecimal.ZERO;
         BigDecimal totalPlatformFee = BigDecimal.ZERO;
         BigDecimal totalNet = BigDecimal.ZERO;
         int succeededCount = 0;
-
-        Map<Integer, CourseRevenueRow> courseMap = new LinkedHashMap<>();
-        for (Course c : instructorCourses) {
-            CourseRevenueRow row = new CourseRevenueRow();
-            row.setCourseId(c.getCourseId());
-            row.setCourseTitle(c.getTitle());
-            row.setCoursePrice(c.getPrice() != null ? c.getPrice() : BigDecimal.ZERO);
-            row.setCourseStatus(c.getStatus());
-            row.setInstructorName(c.getInstructor() != null ? c.getInstructor().getFullName() : "");
-            courseMap.put(c.getCourseId(), row);
-        }
 
         List<SaleTransactionRow> transactionRows = new ArrayList<>();
         for (Payment p : allPayments) {
@@ -92,19 +124,11 @@ public class RevenueService {
                 totalPlatformFee = totalPlatformFee.add(fee);
                 totalNet = totalNet.add(net);
                 succeededCount++;
-
-                CourseRevenueRow cRow = courseMap.get(p.getCourse().getCourseId());
-                if (cRow != null) {
-                    cRow.setSoldCount(cRow.getSoldCount() + 1);
-                    cRow.setGrossAmount(cRow.getGrossAmount().add(amount));
-                    cRow.setPlatformFee(cRow.getPlatformFee().add(fee));
-                    cRow.setNetAmount(cRow.getNetAmount().add(net));
-                }
+                accumulateCourseRevenue(courseMap.get(p.getCourse().getCourseId()), amount, fee, net);
             }
 
             if (filterCourseId == null || Objects.equals(p.getCourse().getCourseId(), filterCourseId)) {
-                SaleTransactionRow tx = toTransactionRow(p, amount, fee, net);
-                transactionRows.add(tx);
+                transactionRows.add(toTransactionRow(p, amount, fee, net));
             }
         }
 
@@ -143,6 +167,11 @@ public class RevenueService {
         return dash;
     }
 
+    /**
+     * Tạo yêu cầu rút tiền mới cho Giảng viên.
+     * - Khóa dòng dữ liệu giảng viên (Pessimistic Lock) để chống gửi trùng 2 lệnh rút tiền cùng lúc (double-click).
+     * - Kiểm tra số tiền rút tối thiểu (50,000đ) và không vượt quá số dư khả dụng.
+     */
     @Transactional
     public PayoutRequest requestPayout(Integer instructorId,
                                        BigDecimal amount,
@@ -150,12 +179,12 @@ public class RevenueService {
                                        String accountNumber,
                                        String accountHolder,
                                        String instructorNote) {
-        Users instructor = userRepository.findById(instructorId)
+        Users instructor = userRepository.findLockedById(instructorId)
+                .or(() -> userRepository.findById(instructorId))
                 .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy tài khoản giảng viên."));
 
         if (amount == null || amount.compareTo(MIN_PAYOUT_VND) < 0) {
-            throw new CourseActionException(HttpStatus.BAD_REQUEST,
-                    "Số tiền rút tối thiểu là 50,000đ.");
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Số tiền rút tối thiểu là 50,000đ.");
         }
         if (bankName == null || bankName.isBlank()) {
             throw new CourseActionException(HttpStatus.BAD_REQUEST, "Vui lòng nhập tên ngân hàng.");
@@ -167,11 +196,11 @@ public class RevenueService {
             throw new CourseActionException(HttpStatus.BAD_REQUEST, "Vui lòng nhập tên chủ tài khoản.");
         }
 
-        InstructorRevenueDashboard current = getInstructorRevenue(instructorId, null);
-        if (amount.compareTo(current.getAvailableBalance()) > 0) {
+        BigDecimal availableBalance = getAvailableBalance(instructorId);
+        if (amount.compareTo(availableBalance) > 0) {
             throw new CourseActionException(HttpStatus.CONFLICT,
                     "Số tiền yêu cầu rút vượt quá số dư khả dụng hiện tại ("
-                            + current.getAvailableBalance().setScale(0, RoundingMode.HALF_UP).toPlainString() + "đ).");
+                            + availableBalance.setScale(0, RoundingMode.HALF_UP).toPlainString() + "đ).");
         }
 
         PayoutRequest pr = new PayoutRequest();
@@ -186,6 +215,9 @@ public class RevenueService {
         return payoutRequestRepository.save(pr);
     }
 
+    /**
+     * Tổng hợp báo cáo doanh thu toàn hệ thống, hoa hồng nền tảng 20% và danh sách yêu cầu rút tiền cho Admin.
+     */
     @Transactional(readOnly = true)
     public AdminRevenueDashboard getAdminRevenue() {
         List<Payment> allPayments = paymentRepository.findAllWithDetailsOrderByDateDesc();
@@ -211,19 +243,8 @@ public class RevenueService {
                 succeededCount++;
 
                 Course c = p.getCourse();
-                CourseRevenueRow cRow = courseMap.computeIfAbsent(c.getCourseId(), id -> {
-                    CourseRevenueRow r = new CourseRevenueRow();
-                    r.setCourseId(c.getCourseId());
-                    r.setCourseTitle(c.getTitle());
-                    r.setCoursePrice(c.getPrice() != null ? c.getPrice() : BigDecimal.ZERO);
-                    r.setCourseStatus(c.getStatus());
-                    r.setInstructorName(c.getInstructor() != null ? c.getInstructor().getFullName() : "");
-                    return r;
-                });
-                cRow.setSoldCount(cRow.getSoldCount() + 1);
-                cRow.setGrossAmount(cRow.getGrossAmount().add(amount));
-                cRow.setPlatformFee(cRow.getPlatformFee().add(fee));
-                cRow.setNetAmount(cRow.getNetAmount().add(net));
+                CourseRevenueRow cRow = courseMap.computeIfAbsent(c.getCourseId(), id -> initCourseRow(c));
+                accumulateCourseRevenue(cRow, amount, fee, net);
             }
 
             txRows.add(toTransactionRow(p, amount, fee, net));
@@ -261,10 +282,13 @@ public class RevenueService {
         return dash;
     }
 
+    /**
+     * Admin phê duyệt yêu cầu rút tiền (chuyển từ PENDING sang APPROVED sau khi chuyển khoản).
+     * Có khóa dòng dữ liệu (Pessimistic Lock) để chống 2 Admin bấm duyệt cùng lúc.
+     */
     @Transactional
     public void approvePayout(Integer payoutId, Integer adminUserId, String adminNote) {
-        PayoutRequest pr = payoutRequestRepository.findByIdWithDetails(payoutId)
-                .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy yêu cầu rút tiền."));
+        PayoutRequest pr = lockPayoutRequest(payoutId);
         if (!"PENDING".equalsIgnoreCase(pr.getStatus())) {
             throw new CourseActionException(HttpStatus.CONFLICT, "Yêu cầu rút tiền này đã được xử lý trước đó.");
         }
@@ -276,10 +300,13 @@ public class RevenueService {
         payoutRequestRepository.save(pr);
     }
 
+    /**
+     * Admin từ chối yêu cầu rút tiền (chuyển từ PENDING sang REJECTED).
+     * Khi bị từ chối, khoản tiền này tự động không còn nằm trong nhóm PENDING nên được hoàn lại vào số dư khả dụng của giảng viên.
+     */
     @Transactional
     public void rejectPayout(Integer payoutId, Integer adminUserId, String adminNote) {
-        PayoutRequest pr = payoutRequestRepository.findByIdWithDetails(payoutId)
-                .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy yêu cầu rút tiền."));
+        PayoutRequest pr = lockPayoutRequest(payoutId);
         if (!"PENDING".equalsIgnoreCase(pr.getStatus())) {
             throw new CourseActionException(HttpStatus.CONFLICT, "Yêu cầu rút tiền này đã được xử lý trước đó.");
         }
@@ -294,6 +321,36 @@ public class RevenueService {
         payoutRequestRepository.save(pr);
     }
 
+    // ==================== CÁC HÀM BỔ TRỢ NỘI BỘ (HELPERS) ====================
+
+    /** Tìm và khóa bản ghi PayoutRequest khi Admin duyệt/từ chối. */
+    private PayoutRequest lockPayoutRequest(Integer payoutId) {
+        return payoutRequestRepository.findLockedByIdWithDetails(payoutId)
+                .or(() -> payoutRequestRepository.findByIdWithDetails(payoutId))
+                .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy yêu cầu rút tiền."));
+    }
+
+    /** Khởi tạo dòng thống kê doanh thu ban đầu cho một khóa học. */
+    private CourseRevenueRow initCourseRow(Course c) {
+        CourseRevenueRow row = new CourseRevenueRow();
+        row.setCourseId(c.getCourseId());
+        row.setCourseTitle(c.getTitle());
+        row.setCoursePrice(c.getPrice() != null ? c.getPrice() : BigDecimal.ZERO);
+        row.setCourseStatus(c.getStatus());
+        row.setInstructorName(c.getInstructor() != null ? c.getInstructor().getFullName() : "");
+        return row;
+    }
+
+    /** Cộng dồn số lượt bán và doanh thu (Gross / Fee 20% / Net 80%) vào dòng khóa học. */
+    private void accumulateCourseRevenue(CourseRevenueRow cRow, BigDecimal amount, BigDecimal fee, BigDecimal net) {
+        if (cRow == null) return;
+        cRow.setSoldCount(cRow.getSoldCount() + 1);
+        cRow.setGrossAmount(cRow.getGrossAmount().add(amount));
+        cRow.setPlatformFee(cRow.getPlatformFee().add(fee));
+        cRow.setNetAmount(cRow.getNetAmount().add(net));
+    }
+
+    /** Chuyển đổi thực thể Payment sang dòng hiển thị lịch sử giao dịch bán khóa học. */
     private SaleTransactionRow toTransactionRow(Payment p, BigDecimal amount, BigDecimal fee, BigDecimal net) {
         SaleTransactionRow row = new SaleTransactionRow();
         row.setPaymentId(p.getPaymentId());
@@ -314,6 +371,7 @@ public class RevenueService {
         return row;
     }
 
+    /** Chuyển đổi thực thể PayoutRequest sang dòng hiển thị lịch sử rút tiền. */
     private PayoutRow toPayoutRow(PayoutRequest pr) {
         PayoutRow row = new PayoutRow();
         row.setPayoutId(pr.getPayoutId());
