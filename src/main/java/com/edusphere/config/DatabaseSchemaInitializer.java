@@ -119,6 +119,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
         try {
             ensureDefaultRoles();
             syncCheckConstraints();
+            syncTrueFalseAnswers();
             ensureDefaultCategories();
             log.info("[DbAutoMigration] Tự động migration schema, CHECK constraints và dữ liệu nền hoàn tất.");
         } catch (Exception ex) {
@@ -224,6 +225,56 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                     ALTER TABLE dbo.payout_requests DROP CONSTRAINT CK_payout_requests_amount;
                 ALTER TABLE dbo.payout_requests WITH CHECK ADD CONSTRAINT CK_payout_requests_amount
                     CHECK (amount > 0);
+            END
+            """);
+    }
+
+    private void syncTrueFalseAnswers() {
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.bank_questions', N'U') IS NOT NULL AND OBJECT_ID(N'dbo.bank_answer_options', N'U') IS NOT NULL
+            BEGIN
+                -- 1. Nếu bank_questions có correct_answer IS NULL nhưng có option is_correct = 1
+                UPDATE bq
+                SET bq.correct_answer = CASE
+                    WHEN UPPER(bao.content) LIKE N'%ĐÚNG%' OR UPPER(bao.content) LIKE N'%TRUE%' OR bao.order_index = 1 THEN N'TRUE'
+                    ELSE N'FALSE'
+                END
+                FROM dbo.bank_questions bq
+                JOIN dbo.bank_answer_options bao ON bq.bank_question_id = bao.bank_question_id
+                WHERE bq.type = N'TRUE_FALSE' AND (bq.correct_answer IS NULL OR bq.correct_answer = N'') AND bao.is_correct = 1;
+
+                -- 2. Chuẩn hóa 'Đúng'/'Sai' sang 'TRUE'/'FALSE' trong bank_questions
+                UPDATE dbo.bank_questions
+                SET correct_answer = N'TRUE'
+                WHERE type = N'TRUE_FALSE' AND (UPPER(correct_answer) = N'ĐÚNG' OR UPPER(correct_answer) = N'TRUE');
+
+                UPDATE dbo.bank_questions
+                SET correct_answer = N'FALSE'
+                WHERE type = N'TRUE_FALSE' AND (UPPER(correct_answer) = N'SAI' OR UPPER(correct_answer) = N'FALSE');
+            END
+            """);
+
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.questions', N'U') IS NOT NULL
+            BEGIN
+                -- 3. Đồng bộ correct_answer từ bank_questions sang questions nếu câu hỏi quiz đang bị null
+                IF OBJECT_ID(N'dbo.bank_questions', N'U') IS NOT NULL
+                BEGIN
+                    UPDATE q
+                    SET q.correct_answer = bq.correct_answer
+                    FROM dbo.questions q
+                    JOIN dbo.bank_questions bq ON q.bank_question_id = bq.bank_question_id
+                    WHERE q.type = N'TRUE_FALSE' AND (q.correct_answer IS NULL OR q.correct_answer = N'') AND bq.correct_answer IS NOT NULL;
+                END
+
+                -- 4. Chuẩn hóa 'Đúng'/'Sai' sang 'TRUE'/'FALSE' trong questions
+                UPDATE dbo.questions
+                SET correct_answer = N'TRUE'
+                WHERE type = N'TRUE_FALSE' AND (UPPER(correct_answer) = N'ĐÚNG' OR UPPER(correct_answer) = N'TRUE');
+
+                UPDATE dbo.questions
+                SET correct_answer = N'FALSE'
+                WHERE type = N'TRUE_FALSE' AND (UPPER(correct_answer) = N'SAI' OR UPPER(correct_answer) = N'FALSE');
             END
             """);
     }

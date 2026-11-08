@@ -190,7 +190,12 @@ public class QuestionBankService {
         q.setDefaultScore(form.getDefaultScore() != null ? form.getDefaultScore() : BigDecimal.valueOf(1.0));
         q.setExplanation(form.getExplanation());
         q.setSampleEssayAnswer(form.getSampleEssayAnswer());
-        q.setCorrectAnswer(form.getCorrectAnswer());
+        if ("TRUE_FALSE".equals(q.getType())) {
+            String tf = QuestionImportService.normalizeTrueFalse(form.getCorrectAnswer());
+            q.setCorrectAnswer(tf != null ? tf : "TRUE");
+        } else {
+            q.setCorrectAnswer(form.getCorrectAnswer());
+        }
         q.setTags(form.getTags());
 
         if (form.getCategoryId() != null && form.getCategoryId() > 0) {
@@ -204,6 +209,34 @@ public class QuestionBankService {
     private void saveOptions(BankQuestion q, BankQuestionForm form) {
         if ("ESSAY".equals(q.getType()) || "SHORT_ANSWER".equals(q.getType())) {
             return; // Câu tự luận không lưu answer_options
+        }
+
+        if ("TRUE_FALSE".equals(q.getType())) {
+            String tf = QuestionImportService.normalizeTrueFalse(q.getCorrectAnswer());
+            if (tf == null) {
+                Integer singleIdx = form.getSingleCorrectIndex();
+                tf = (singleIdx != null && singleIdx == 1) ? "FALSE" : "TRUE";
+            }
+            q.setCorrectAnswer(tf);
+            questionRepository.save(q);
+
+            List<BankAnswerOption> options = new ArrayList<>();
+            BankAnswerOption opt1 = new BankAnswerOption();
+            opt1.setBankQuestion(q);
+            opt1.setContent("Đúng");
+            opt1.setOrderIndex(1);
+            opt1.setCorrect("TRUE".equalsIgnoreCase(tf));
+            options.add(opt1);
+
+            BankAnswerOption opt2 = new BankAnswerOption();
+            opt2.setBankQuestion(q);
+            opt2.setContent("Sai");
+            opt2.setOrderIndex(2);
+            opt2.setCorrect("FALSE".equalsIgnoreCase(tf));
+            options.add(opt2);
+
+            optionRepository.saveAll(options);
+            return;
         }
 
         List<BankAnswerOption> options = new ArrayList<>();
@@ -270,7 +303,21 @@ public class QuestionBankService {
             q.setDefaultScore(dto.getDefaultScore());
             q.setExplanation(dto.getExplanation());
             q.setSampleEssayAnswer(dto.getSampleEssayAnswer());
-            q.setCorrectAnswer(dto.getCorrectAnswer());
+            if ("TRUE_FALSE".equals(dto.getType())) {
+                String tf = QuestionImportService.normalizeTrueFalse(dto.getCorrectAnswer());
+                if (tf == null && dto.getOptions() != null) {
+                    for (ParsedOptionDto opt : dto.getOptions()) {
+                        if (opt.isCorrect()) {
+                            String c = opt.getContent() != null ? opt.getContent().toUpperCase(java.util.Locale.ROOT) : "";
+                            tf = (c.contains("ĐÚNG") || c.contains("TRUE") || opt.getOrderIndex() == 1) ? "TRUE" : "FALSE";
+                            break;
+                        }
+                    }
+                }
+                q.setCorrectAnswer(tf != null ? tf : "TRUE");
+            } else {
+                q.setCorrectAnswer(dto.getCorrectAnswer());
+            }
             q.setImageUrl(dto.getImageUrl());
             q.setVideoUrl(dto.getVideoUrl());
 
@@ -286,13 +333,30 @@ public class QuestionBankService {
             ParsedQuestionDto dto = validQuestions.get(i);
 
             if (!"ESSAY".equals(savedQ.getType()) && !"SHORT_ANSWER".equals(savedQ.getType())) {
-                for (ParsedOptionDto optDto : dto.getOptions()) {
-                    BankAnswerOption opt = new BankAnswerOption();
-                    opt.setBankQuestion(savedQ);
-                    opt.setContent(optDto.getContent());
-                    opt.setCorrect(optDto.isCorrect());
-                    opt.setOrderIndex(optDto.getOrderIndex());
-                    optionsToSave.add(opt);
+                if ("TRUE_FALSE".equals(savedQ.getType()) && (dto.getOptions() == null || dto.getOptions().isEmpty())) {
+                    boolean isTrue = "TRUE".equalsIgnoreCase(savedQ.getCorrectAnswer());
+                    BankAnswerOption opt1 = new BankAnswerOption();
+                    opt1.setBankQuestion(savedQ);
+                    opt1.setContent("Đúng");
+                    opt1.setCorrect(isTrue);
+                    opt1.setOrderIndex(1);
+                    optionsToSave.add(opt1);
+
+                    BankAnswerOption opt2 = new BankAnswerOption();
+                    opt2.setBankQuestion(savedQ);
+                    opt2.setContent("Sai");
+                    opt2.setCorrect(!isTrue);
+                    opt2.setOrderIndex(2);
+                    optionsToSave.add(opt2);
+                } else {
+                    for (ParsedOptionDto optDto : dto.getOptions()) {
+                        BankAnswerOption opt = new BankAnswerOption();
+                        opt.setBankQuestion(savedQ);
+                        opt.setContent(optDto.getContent());
+                        opt.setCorrect(optDto.isCorrect());
+                        opt.setOrderIndex(optDto.getOrderIndex());
+                        optionsToSave.add(opt);
+                    }
                 }
             }
         }

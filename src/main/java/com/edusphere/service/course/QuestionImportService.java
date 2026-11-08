@@ -34,6 +34,59 @@ public class QuestionImportService {
 
     private final FileUploadService fileUploadService;
 
+    public static String normalizeTrueFalse(String val) {
+        if (val == null) return null;
+        String s = val.trim();
+        if (s.isEmpty()) return null;
+        String upper = s.toUpperCase(Locale.ROOT);
+        if (upper.equals("TRUE") || upper.equals("ĐÚNG") || upper.equals("DUNG") || upper.equals("1")
+                || upper.equals("T") || upper.equals("YES") || upper.equals("Y") || upper.equals("A")) {
+            return "TRUE";
+        }
+        if (upper.equals("FALSE") || upper.equals("SAI") || upper.equals("0")
+                || upper.equals("F") || upper.equals("NO") || upper.equals("N") || upper.equals("B")) {
+            return "FALSE";
+        }
+        return upper;
+    }
+
+    private void finalizeParsedQuestion(ParsedQuestionDto q) {
+        if (q == null) return;
+        if (!"ESSAY".equals(q.getType()) && !"SHORT_ANSWER".equals(q.getType()) && q.getOptions().size() == 2) {
+            String opt0 = q.getOptions().get(0).getContent() != null ? q.getOptions().get(0).getContent().trim().toUpperCase(Locale.ROOT) : "";
+            String opt1 = q.getOptions().get(1).getContent() != null ? q.getOptions().get(1).getContent().trim().toUpperCase(Locale.ROOT) : "";
+            if ((opt0.contains("ĐÚNG") || opt0.contains("TRUE")) && (opt1.contains("SAI") || opt1.contains("FALSE"))) {
+                q.setType("TRUE_FALSE");
+            }
+        }
+
+        if ("TRUE_FALSE".equals(q.getType())) {
+            if (q.getOptions().isEmpty()) {
+                String tf = q.getCorrectAnswer() != null ? normalizeTrueFalse(q.getCorrectAnswer()) : "TRUE";
+                q.setCorrectAnswer(tf);
+                addOption(q, "Đúng", "TRUE".equalsIgnoreCase(tf), 1);
+                addOption(q, "Sai", "FALSE".equalsIgnoreCase(tf), 2);
+            } else {
+                if (q.getCorrectAnswer() == null) {
+                    ParsedOptionDto first = q.getOptions().get(0);
+                    if (first.isCorrect()) {
+                        q.setCorrectAnswer("TRUE");
+                    } else if (q.getOptions().size() > 1 && q.getOptions().get(1).isCorrect()) {
+                        q.setCorrectAnswer("FALSE");
+                    } else {
+                        q.setCorrectAnswer("TRUE");
+                        first.setCorrect(true);
+                    }
+                } else {
+                    String tf = normalizeTrueFalse(q.getCorrectAnswer());
+                    q.setCorrectAnswer(tf);
+                    if (!q.getOptions().isEmpty()) q.getOptions().get(0).setCorrect("TRUE".equalsIgnoreCase(tf));
+                    if (q.getOptions().size() > 1) q.getOptions().get(1).setCorrect("FALSE".equalsIgnoreCase(tf));
+                }
+            }
+        }
+    }
+
     public ImportResultDto parseFile(MultipartFile file) {
         String filename = file.getOriginalFilename();
         if (filename == null) {
@@ -101,6 +154,23 @@ public class QuestionImportService {
                     // Câu tự luận: nếu có đáp án gợi ý ở cột tiếp theo
                     if (cols.length > 3) q.setSampleEssayAnswer(cols[3].trim());
                     if (cols.length > 4) q.setExplanation(cols[4].trim());
+                } else if ("TRUE_FALSE".equals(type)) {
+                    String optA = cols.length > 3 && !cols[3].trim().isEmpty() ? cols[3].trim() : "Đúng";
+                    String optB = cols.length > 4 && !cols[4].trim().isEmpty() ? cols[4].trim() : "Sai";
+                    String rawAns = cols.length > 7 ? cols[7].trim() : "A";
+                    String tf = normalizeTrueFalse(rawAns);
+                    if (tf == null) {
+                        String upper = rawAns.toUpperCase(Locale.ROOT);
+                        tf = (upper.contains("B") || upper.contains("SAI") || upper.contains("2") || upper.contains("F")) ? "FALSE" : "TRUE";
+                    }
+                    q.setCorrectAnswer(tf);
+                    addOption(q, optA, "TRUE".equalsIgnoreCase(tf), 1);
+                    addOption(q, optB, "FALSE".equalsIgnoreCase(tf), 2);
+
+                    String explanation = cols.length > 8 ? cols[8].trim() : "";
+                    String imgUrl = cols.length > 9 ? cols[9].trim() : "";
+                    q.setExplanation(explanation);
+                    q.setImageUrl(imgUrl.isEmpty() ? null : imgUrl);
                 } else {
                     // Câu trắc nghiệm: cột 3..6 là A, B, C, D
                     String optA = cols.length > 3 ? cols[3].trim() : "";
@@ -120,6 +190,7 @@ public class QuestionImportService {
                     q.setImageUrl(imgUrl.isEmpty() ? null : imgUrl);
                 }
 
+                finalizeParsedQuestion(q);
                 list.add(q);
             }
         } catch (Exception e) {
@@ -195,6 +266,25 @@ public class QuestionImportService {
                     q.setExplanation(getCellText(row.getCell(4)));
                     String imgUrl = getCellText(row.getCell(5));
                     if (!imgUrl.isEmpty()) q.setImageUrl(imgUrl);
+                } else if ("TRUE_FALSE".equals(type)) {
+                    String optA = getCellText(row.getCell(3));
+                    if (optA.isEmpty()) optA = "Đúng";
+                    String optB = getCellText(row.getCell(4));
+                    if (optB.isEmpty()) optB = "Sai";
+                    String rawAns = getCellText(row.getCell(7));
+                    String tf = normalizeTrueFalse(rawAns);
+                    if (tf == null) {
+                        String upper = rawAns.toUpperCase(Locale.ROOT);
+                        tf = (upper.contains("B") || upper.contains("SAI") || upper.contains("2") || upper.contains("F")) ? "FALSE" : "TRUE";
+                    }
+                    q.setCorrectAnswer(tf);
+                    addOption(q, optA, "TRUE".equalsIgnoreCase(tf), 1);
+                    addOption(q, optB, "FALSE".equalsIgnoreCase(tf), 2);
+
+                    String explanation = getCellText(row.getCell(8));
+                    String imgUrl = getCellText(row.getCell(9));
+                    q.setExplanation(explanation);
+                    q.setImageUrl(imgUrl.isEmpty() ? null : imgUrl);
                 } else {
                     String optA = getCellText(row.getCell(3));
                     String optB = getCellText(row.getCell(4));
@@ -213,6 +303,7 @@ public class QuestionImportService {
                     q.setImageUrl(imgUrl.isEmpty() ? null : imgUrl);
                 }
 
+                finalizeParsedQuestion(q);
                 list.add(q);
             }
         } catch (Exception e) {
@@ -276,6 +367,7 @@ public class QuestionImportService {
                 if (qMatcher.find()) {
                     // Lưu câu trước đó nếu có
                     if (current != null && current.getContent() != null && !current.getContent().isEmpty()) {
+                        finalizeParsedQuestion(current);
                         list.add(current);
                     }
 
@@ -283,10 +375,11 @@ public class QuestionImportService {
                     if (qContent.isEmpty()) qContent = text; // Trường hợp "Câu 1:" ở dòng trên
 
                     boolean isEssay = text.toLowerCase().contains("[tự luận]") || text.toLowerCase().contains("[essay]");
+                    boolean isTf = text.toLowerCase().contains("[đúng sai]") || text.toLowerCase().contains("[true_false]") || text.toLowerCase().contains("[đúng/sai]");
 
                     current = ParsedQuestionDto.builder()
                             .content(qContent)
-                            .type(isEssay ? "ESSAY" : "SINGLE_CHOICE")
+                            .type(isEssay ? "ESSAY" : (isTf ? "TRUE_FALSE" : "SINGLE_CHOICE"))
                             .difficultyLevel(parseDiff(text))
                             .build();
 
@@ -303,14 +396,23 @@ public class QuestionImportService {
                     int order = optLabel.charAt(0) - 'A' + 1;
                     addOption(current, optText, false, order);
                 } else if (ansMatcher.find() && current != null) {
-                    String ansVal = ansMatcher.group(2).trim().toUpperCase();
+                    String ansVal = ansMatcher.group(2).trim();
                     if ("ESSAY".equals(current.getType())) {
-                        current.setSampleEssayAnswer(ansMatcher.group(2).trim());
+                        current.setSampleEssayAnswer(ansVal);
+                    } else if ("TRUE_FALSE".equals(current.getType()) || ansVal.equalsIgnoreCase("Đúng") || ansVal.equalsIgnoreCase("Sai") || ansVal.equalsIgnoreCase("True") || ansVal.equalsIgnoreCase("False")) {
+                        String tf = normalizeTrueFalse(ansVal);
+                        if (tf == null) {
+                            String upper = ansVal.toUpperCase(Locale.ROOT);
+                            tf = (upper.contains("B") || upper.contains("SAI") || upper.contains("2") || upper.contains("F")) ? "FALSE" : "TRUE";
+                        }
+                        current.setType("TRUE_FALSE");
+                        current.setCorrectAnswer(tf);
                     } else {
                         // Cập nhật isCorrect cho các đáp án đã đọc
+                        String upper = ansVal.toUpperCase(Locale.ROOT);
                         for (int i = 0; i < current.getOptions().size(); i++) {
                             char letter = (char) ('A' + i);
-                            if (ansVal.contains(String.valueOf(letter))) {
+                            if (upper.contains(String.valueOf(letter))) {
                                 current.getOptions().get(i).setCorrect(true);
                             }
                         }
@@ -327,6 +429,7 @@ public class QuestionImportService {
 
             // Lưu câu cuối cùng
             if (current != null && current.getContent() != null && !current.getContent().isEmpty()) {
+                finalizeParsedQuestion(current);
                 list.add(current);
             }
         } catch (Exception e) {
