@@ -156,6 +156,20 @@
                         <div class="ins-stat-card__value">${stats.totalLessons}</div>
                     </div>
                 </div>
+
+                <a class="ins-stat-card" href="${pageContext.request.contextPath}/instructor/revenue" style="text-decoration:none; color:inherit; border:1.5px solid #BBF7D0; background:linear-gradient(135deg,#F0FDF4,#DCFCE7);">
+                    <div class="ins-stat-card__icon ins-stat-card__icon--green" style="background:#16A34A; color:#fff;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="ins-stat-card__body">
+                        <div class="ins-stat-card__label" style="color:#166534; font-weight:600;">Thực nhận (80%)</div>
+                        <div class="ins-stat-card__value" style="color:#15803D; font-size:1.25rem;">
+                            <fmt:formatNumber value="${stats.netEarnings}" type="number" maxFractionDigits="0"/>đ
+                        </div>
+                    </div>
+                </a>
             </div>
 
             <%-- ── 3. MAIN CONTENT GRID ──────────────────────── --%>
@@ -369,15 +383,13 @@
                                 </a>
 
                                 <a class="ins-quick-item"
-                                   href="${pageContext.request.contextPath}/instructor/courses">
-                                    <div class="ins-quick-item__icon" style="background:linear-gradient(135deg,#0891B2,#0E7490);">
+                                   href="${pageContext.request.contextPath}/instructor/revenue">
+                                    <div class="ins-quick-item__icon" style="background:linear-gradient(135deg,#16A34A,#15803D);">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                            <line x1="18" y1="20" x2="18" y2="10" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                                            <line x1="12" y1="20" x2="12" y2="4" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                                            <line x1="6" y1="20" x2="6" y2="14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                                            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                         </svg>
                                     </div>
-                                    <span class="ins-quick-item__label">Thống kê khóa học</span>
+                                    <span class="ins-quick-item__label">Doanh thu &amp; Rút tiền</span>
                                 </a>
                             </div>
                         </div>

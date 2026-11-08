@@ -68,6 +68,17 @@
             Ngân hàng câu hỏi
         </a>
 
+        <a class="ins-nav-item" id="nav-revenue" href="${cp}/instructor/revenue">
+            <span class="ins-nav-item__icon">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/>
+                    <circle cx="16.5" cy="14.5" r="1.5" fill="currentColor"/>
+                </svg>
+            </span>
+            Doanh thu &amp; Ví
+        </a>
+
         <span class="ins-nav-label">Tài khoản</span>
 
         <a class="ins-nav-item" id="nav-profile" href="${cp}/profile">
@@ -127,6 +138,10 @@
 
     if (p === '/instructor/dashboard' || p === '/') {
         active = 'nav-dashboard';
+    } else if (p.startsWith('/instructor/revenue')) {
+        active = 'nav-revenue';
+    } else if (p.startsWith('/instructor/question-banks')) {
+        active = 'nav-question-banks';
     } else if (p.startsWith('/instructor/courses/new')) {
         active = 'nav-new-course';
     } else if (p.startsWith('/instructor/courses')) {

@@ -210,6 +210,22 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                     FOREIGN KEY (bank_id) REFERENCES dbo.question_banks(bank_id) ON DELETE SET NULL;
             END
             """);
+
+        // 6. CK_payout_requests_status & CK_payout_requests_amount
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.payout_requests', N'U') IS NOT NULL
+            BEGIN
+                IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_payout_requests_status' AND parent_object_id = OBJECT_ID(N'dbo.payout_requests'))
+                    ALTER TABLE dbo.payout_requests DROP CONSTRAINT CK_payout_requests_status;
+                ALTER TABLE dbo.payout_requests WITH CHECK ADD CONSTRAINT CK_payout_requests_status
+                    CHECK (status IN (N'PENDING', N'APPROVED', N'REJECTED'));
+
+                IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_payout_requests_amount' AND parent_object_id = OBJECT_ID(N'dbo.payout_requests'))
+                    ALTER TABLE dbo.payout_requests DROP CONSTRAINT CK_payout_requests_amount;
+                ALTER TABLE dbo.payout_requests WITH CHECK ADD CONSTRAINT CK_payout_requests_amount
+                    CHECK (amount > 0);
+            END
+            """);
     }
 
     private void ensureDefaultCategories() {

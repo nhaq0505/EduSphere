@@ -15,16 +15,22 @@
     <div class="adm-sidebar__label">Quản lý</div>
 
     <!-- Nav items -->
-    <a class="adm-nav-item ${pageContext.request.servletPath.contains('/admin/users') ? 'adm-nav-item--active' : ''}"
+    <a class="adm-nav-item ${pageContext.request.servletPath.contains('users.jsp') ? 'adm-nav-item--active' : ''}"
        href="${pageContext.request.contextPath}/admin/users">
         <span class="adm-nav-item__icon">👥</span>
         Tài khoản
     </a>
 
-    <a class="adm-nav-item ${pageContext.request.servletPath.contains('/admin/courses') ? 'adm-nav-item--active' : ''}"
+    <a class="adm-nav-item ${pageContext.request.servletPath.contains('course-review') ? 'adm-nav-item--active' : ''}"
        href="${pageContext.request.contextPath}/admin/courses/review">
         <span class="adm-nav-item__icon">✅</span>
         Duyệt khóa học
+    </a>
+
+    <a class="adm-nav-item ${pageContext.request.servletPath.contains('revenue.jsp') ? 'adm-nav-item--active' : ''}"
+       href="${pageContext.request.contextPath}/admin/revenue">
+        <span class="adm-nav-item__icon">💰</span>
+        Doanh thu &amp; Rút tiền
     </a>
 
     <!-- Logout ở cuối -->

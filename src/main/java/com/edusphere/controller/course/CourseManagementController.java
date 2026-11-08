@@ -1,10 +1,12 @@
 package com.edusphere.controller.course;
 
 import com.edusphere.dto.course.CourseForm;
+import com.edusphere.dto.course.InstructorDashboardStats;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
 import com.edusphere.service.course.CourseManagementService;
 import com.edusphere.service.course.LearningService;
+import com.edusphere.service.course.RevenueService;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -26,6 +28,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class CourseManagementController {
     private final CourseManagementService service;
     private final LearningService learningService;
+
+    @Autowired(required = false)
+    private RevenueService revenueService;
 
     public CourseManagementController(CourseManagementService service) {
         this(service, null);
@@ -65,14 +70,24 @@ public class CourseManagementController {
     }
 
     @GetMapping("/instructor/courses")
-    public String instructorCourses(@AuthenticationPrincipal CustomUserDetails user, Model model) {
-        model.addAttribute("courses", service.instructorCourses(user.getUserId()));
+    public String instructorCourses(@RequestParam(value = "q", required = false) String q,
+                                    @AuthenticationPrincipal CustomUserDetails user, Model model) {
+        model.addAttribute("courses", service.instructorCourses(user.getUserId(), q));
+        model.addAttribute("q", q);
         return "courses/instructor-list";
     }
 
     @GetMapping("/instructor/dashboard")
     public String instructorDashboard(@AuthenticationPrincipal CustomUserDetails user, Model model) {
-        model.addAttribute("stats", service.instructorDashboard(user.getUserId()));
+        InstructorDashboardStats stats = service.instructorDashboard(user.getUserId());
+        if (revenueService != null) {
+            var rev = revenueService.getInstructorRevenue(user.getUserId(), null);
+            stats.setGrossRevenue(rev.getGrossRevenue());
+            stats.setNetEarnings(rev.getNetEarnings());
+            stats.setAvailableBalance(rev.getAvailableBalance());
+            stats.setPaidOrdersCount(rev.getPaidOrdersCount());
+        }
+        model.addAttribute("stats", stats);
         return "courses/instructor-dashboard";
     }
 
