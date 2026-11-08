@@ -193,7 +193,7 @@
                         <c:if test="${not isCorrect and not empty a.question and not empty a.question.options}">
                             <div style="margin-top:6px;">
                                 <c:forEach var="opt" items="${a.question.options}">
-                                    <c:if test="${opt.isCorrect}">
+                                    <c:if test="${opt.correct}">
                                         <div class="quiz-opt-result quiz-opt-result--missed">
                                             <span style="font-weight:800; font-size:1.1rem;">✓</span>
                                             <span>Đáp án đúng: <strong><c:out value="${opt.content}" /></strong></span>

@@ -35,6 +35,14 @@ public class BankAnswerOption {
     @Column(name = "is_correct", nullable = false)
     private boolean isCorrect = false;
 
+    public boolean isCorrect() {
+        return isCorrect;
+    }
+
+    public boolean getIsCorrect() {
+        return isCorrect;
+    }
+
     @Column(name = "order_index", nullable = false)
     private Integer orderIndex = 1;
 }
