@@ -40,6 +40,10 @@ public class Quiz {
     @JoinColumn(name = "lesson_id", referencedColumnName = "lesson_id")
     private Lesson lesson;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bank_id", referencedColumnName = "bank_id")
+    private QuestionBank bank;
+
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 

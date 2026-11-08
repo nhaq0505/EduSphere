@@ -5,165 +5,252 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><c:out value="${quiz.title}"/> — EduSphere</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css?v=restore-0bfd0e1-20261014">
-    <style>
-        .qi-hero { background:linear-gradient(135deg,#1E3A5F,#2563EB); color:#fff; border-radius:16px; padding:32px 36px; margin-bottom:24px; }
-        .qi-hero__eyebrow { font-size:.78rem; font-weight:700; opacity:.7; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
-        .qi-hero__title { font-size:1.7rem; font-weight:900; margin:0 0 12px; }
-        .qi-hero__desc { opacity:.85; font-size:.93rem; line-height:1.6; margin:0 0 20px; white-space:pre-wrap; }
-        .qi-meta { display:flex; flex-wrap:wrap; gap:16px; }
-        .qi-meta-item { display:flex; align-items:center; gap:6px; font-size:.85rem; font-weight:600; background:rgba(255,255,255,.12); border-radius:20px; padding:5px 14px; }
-        .qi-layout { display:grid; grid-template-columns:1fr 300px; gap:24px; align-items:start; }
-        @media(max-width:820px){ .qi-layout{ grid-template-columns:1fr; } }
-        .qi-card { background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:22px 24px; margin-bottom:16px; }
-        .qi-card__title { font-size:.78rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:.06em; margin:0 0 14px; }
-        .qi-rules { background:#FFFBEB; border:1px solid #FDE68A; border-radius:10px; padding:16px 18px; font-size:.88rem; color:#78350F; line-height:1.6; white-space:pre-wrap; }
-        .qi-btn-start { width:100%; display:block; text-align:center; background:#2563EB; color:#fff; border:none; border-radius:10px; padding:14px 20px; font-size:1rem; font-weight:800; cursor:pointer; transition:background .15s; }
-        .qi-btn-start:hover { background:#1D4ED8; }
-        .qi-btn-start:disabled { background:#94A3B8; cursor:not-allowed; }
-        .qi-attempt-row { padding:12px 0; border-top:1px solid #F1F5F9; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
-        .qi-attempt-status { padding:3px 10px; border-radius:20px; font-size:.75rem; font-weight:700; }
-        .qi-attempt-status--in-progress { background:#FEF9C3; color:#854D0E; }
-        .qi-attempt-status--scored { background:#DCFCE7; color:#166534; }
-        .qi-attempt-status--submitted { background:#EFF6FF; color:#1D4ED8; }
-        .qi-locked-banner { background:#FEF2F2; border:1.5px solid #FECACA; border-radius:10px; padding:14px 18px; color:#991B1B; font-size:.88rem; font-weight:600; margin-bottom:14px; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/quiz.css?v=2.0">
 </head>
 <body>
 <jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
-<main class="shell">
-    <a class="back-link" href="${pageContext.request.contextPath}/courses/${courseId}/quizzes">← Danh sách bài kiểm tra</a>
 
-    <!-- Hero -->
-    <div class="qi-hero">
-        <p class="qi-hero__eyebrow">📝 Bài kiểm tra</p>
-        <h1 class="qi-hero__title"><c:out value="${quiz.title}"/></h1>
-        <c:if test="${not empty quiz.description}">
-            <p class="qi-hero__desc"><c:out value="${quiz.description}"/></p>
-        </c:if>
-        <div class="qi-meta">
-            <span class="qi-meta-item">
-                ⏱ <c:choose>
-                    <c:when test="${quiz.timeLimitMinutes != null}">${quiz.timeLimitMinutes} phút</c:when>
-                    <c:otherwise>Không giới hạn thời gian</c:otherwise>
-                </c:choose>
-            </span>
-            <span class="qi-meta-item">🔄 Tối đa ${quiz.maxAttempts} lần làm</span>
-            <c:if test="${quiz.dueDate != null}">
-                <span class="qi-meta-item">⏰ Hạn: ${fn:replace(fn:substring(quiz.dueDate, 0, 16), 'T', ' ')}</span>
+<div class="quiz-page-wrap">
+    <main class="quiz-shell">
+        <a class="quiz-back-link" href="${pageContext.request.contextPath}/courses/${courseId}/quizzes">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Danh sách bài kiểm tra
+        </a>
+
+        <!-- Hero -->
+        <div class="quiz-hero quiz-hero--info">
+            <p class="quiz-hero__eyebrow">
+                <span>📝</span> BÀI KIỂM TRA ĐÁNH GIÁ
+            </p>
+            <h1 class="quiz-hero__title"><c:out value="${quiz.title}"/></h1>
+            <c:if test="${not empty quiz.description}">
+                <p class="quiz-hero__desc"><c:out value="${quiz.description}"/></p>
             </c:if>
-            <c:if test="${quiz.passingScore != null}">
-                <span class="qi-meta-item">🎯 Qua bài: ${quiz.passingScore}%</span>
-            </c:if>
+            <div class="quiz-hero__chips">
+                <span class="quiz-hero__chip">
+                    ⏱ <c:choose>
+                        <c:when test="${quiz.timeLimitMinutes != null}">${quiz.timeLimitMinutes} phút</c:when>
+                        <c:otherwise>Không giới hạn thời gian</c:otherwise>
+                    </c:choose>
+                </span>
+                <span class="quiz-hero__chip">🔄 Tối đa ${quiz.maxAttempts} lần làm</span>
+                <c:if test="${quiz.passingScore != null}">
+                    <span class="quiz-hero__chip">🎯 Điểm đạt: ${quiz.passingScore}%</span>
+                </c:if>
+                <c:if test="${quiz.lesson != null}">
+                    <span class="quiz-hero__chip">📖 Bài học: <c:out value="${quiz.lesson.title}"/></span>
+                </c:if>
+            </div>
         </div>
-    </div>
 
-    <c:if test="${not empty success}"><div class="alert alert--success"><c:out value="${success}"/></div></c:if>
+        <c:if test="${not empty success}">
+            <div class="quiz-alert quiz-alert--success">
+                <span>✅</span> <c:out value="${success}"/>
+            </div>
+        </c:if>
 
-    <div class="qi-layout">
-        <div>
-            <!-- Rules -->
-            <c:if test="${not empty quiz.rules}">
-                <div class="qi-card">
-                    <p class="qi-card__title">⚠️ Quy định làm bài</p>
-                    <div class="qi-rules"><c:out value="${quiz.rules}"/></div>
-                </div>
-            </c:if>
+        <div class="quiz-layout">
+            <div>
+                <!-- Rules -->
+                <c:if test="${not empty quiz.rules}">
+                    <div class="quiz-card">
+                        <div class="quiz-card__header">
+                            <h2 class="quiz-card__title">
+                                <span>⚠️</span> QUY ĐỊNH LÀM BÀI
+                            </h2>
+                        </div>
+                        <div class="quiz-rules-box"><c:out value="${quiz.rules}"/></div>
+                    </div>
+                </c:if>
 
-            <!-- History -->
-            <div class="qi-card">
-                <p class="qi-card__title">📋 Lịch sử làm bài của bạn</p>
-                <c:choose>
-                    <c:when test="${empty myAttempts}">
-                        <p class="muted" style="font-size:.88rem;">Bạn chưa làm bài này lần nào.</p>
-                    </c:when>
-                    <c:otherwise>
-                        <c:forEach var="a" items="${myAttempts}">
-                            <div class="qi-attempt-row">
-                                <div>
-                                    <strong>Lần ${a.attemptNumber}</strong>
-                                    <c:if test="${a.submittedAt != null}">
-                                        <span style="font-size:.82rem;color:#64748B;"> · Nộp lúc ${fn:replace(fn:substring(a.submittedAt, 0, 16), 'T', ' ')}</span>
-                                    </c:if>
-                                    <c:if test="${a.resultStatus eq 'PUBLISHED' and a.score != null}">
-                                        <div style="font-size:.88rem;font-weight:700;color:#16A34A;margin-top:2px;">
-                                            Điểm: <fmt:formatNumber value="${a.score}" maxFractionDigits="2"/> / <fmt:formatNumber value="${a.maxScore}" maxFractionDigits="2"/>
-                                        </div>
-                                    </c:if>
+                <!-- History -->
+                <div class="quiz-card">
+                    <div class="quiz-card__header">
+                        <h2 class="quiz-card__title">
+                            <span>📋</span> LỊCH SỬ LÀM BÀI CỦA BẠN
+                        </h2>
+                        <c:if test="${not empty myAttempts}">
+                            <span class="quiz-badge quiz-badge--submitted">${fn:length(myAttempts)} lần đã làm</span>
+                        </c:if>
+                    </div>
+
+                    <c:choose>
+                        <c:when test="${empty myAttempts}">
+                            <div style="text-align:center; padding:32px 16px; color:#64748B;">
+                                <div style="font-size:2.5rem; margin-bottom:8px;">📝</div>
+                                <p style="font-size:.95rem; font-weight:600; margin:0;">Bạn chưa làm bài kiểm tra này lần nào.</p>
+                                <p style="font-size:.85rem; margin-top:4px;">Nhấn vào nút "Bắt đầu làm bài" ở bên phải để làm bài.</p>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <c:forEach var="a" items="${myAttempts}">
+                                <div class="quiz-attempt-item">
+                                    <div>
+                                        <div class="quiz-attempt-num">Lần làm ${a.attemptNumber}</div>
+                                        <c:if test="${a.submittedAt != null}">
+                                            <div class="quiz-attempt-date">
+                                                📅 Nộp lúc ${a.formattedSubmittedAt}
+                                            </div>
+                                        </c:if>
+                                        <c:if test="${a.score != null and a.status ne 'IN_PROGRESS'}">
+                                            <div class="quiz-score-highlight">
+                                                Điểm: <fmt:formatNumber value="${a.score}" maxFractionDigits="2"/> / <fmt:formatNumber value="${a.maxScore}" maxFractionDigits="2"/>
+                                                <c:if test="${a.status eq 'SUBMITTED'}">
+                                                    <span style="font-size:0.75rem; color:#64748B; font-weight:normal; margin-left:4px;">(Trắc nghiệm)</span>
+                                                </c:if>
+                                            </div>
+                                        </c:if>
+                                    </div>
+                                    <div style="display:flex; gap:10px; align-items:center;">
+                                        <c:choose>
+                                            <c:when test="${a.status eq 'IN_PROGRESS'}">
+                                                <span class="quiz-badge quiz-badge--progress">⏳ Đang làm</span>
+                                            </c:when>
+                                            <c:when test="${a.status eq 'SCORED'}">
+                                                <span class="quiz-badge quiz-badge--scored">✅ Đã chấm</span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="quiz-badge quiz-badge--submitted">📝 Chờ chấm tự luận</span>
+                                            </c:otherwise>
+                                        </c:choose>
+
+                                        <c:choose>
+                                            <c:when test="${a.status eq 'IN_PROGRESS'}">
+                                                <a class="quiz-btn quiz-btn--primary" style="padding:6px 14px; font-size:.84rem;"
+                                                   href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${a.attemptId}">
+                                                    Tiếp tục →
+                                                </a>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <a class="quiz-btn quiz-btn--outline" style="padding:6px 14px; font-size:.84rem;"
+                                                   href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${a.attemptId}/result">
+                                                    Xem kết quả →
+                                                </a>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </div>
                                 </div>
-                                <div style="display:flex;gap:8px;align-items:center;">
-                                    <c:choose>
-                                        <c:when test="${a.status eq 'IN_PROGRESS'}">
-                                            <span class="qi-attempt-status qi-attempt-status--in-progress">⏳ Đang làm</span>
-                                        </c:when>
-                                        <c:when test="${a.status eq 'SCORED'}">
-                                            <span class="qi-attempt-status qi-attempt-status--scored">✅ Đã chấm</span>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <span class="qi-attempt-status qi-attempt-status--submitted">📤 Đã nộp</span>
-                                        </c:otherwise>
-                                    </c:choose>
-                                    <c:choose>
-                                        <c:when test="${a.status eq 'IN_PROGRESS'}">
-                                            <a class="button button--outline" style="padding:5px 12px;font-size:.82rem;"
-                                               href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${a.attemptId}">
-                                                Tiếp tục →
-                                            </a>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <a class="button button--outline" style="padding:5px 12px;font-size:.82rem;"
-                                               href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${a.attemptId}/result">
-                                                Xem kết quả →
-                                            </a>
-                                        </c:otherwise>
-                                    </c:choose>
+                            </c:forEach>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </div>
+
+            <!-- Aside: Action Card -->
+            <aside>
+                <div class="quiz-card quiz-card--action">
+                    <div class="quiz-card__header">
+                        <h2 class="quiz-card__title">
+                            <span>🚀</span> BẮT ĐẦU LÀM BÀI
+                        </h2>
+                    </div>
+
+                    <c:set var="attemptCount" value="${fn:length(myAttempts)}"/>
+                    <c:set var="hasInProgress" value="false"/>
+                    <c:forEach var="a" items="${myAttempts}">
+                        <c:if test="${a.status eq 'IN_PROGRESS'}"><c:set var="hasInProgress" value="true"/></c:if>
+                    </c:forEach>
+
+                    <c:choose>
+                        <%-- 1. Chưa đủ điều kiện video 80% --%>
+                        <c:when test="${not videoRequirementMet}">
+                            <div class="quiz-notice-box quiz-notice-box--locked">
+                                <div style="display:flex; align-items:flex-start; gap:8px;">
+                                    <span style="font-size:1.2rem; flex-shrink:0;">🔒</span>
+                                    <div>
+                                        <strong>Yêu cầu xem video</strong>
+                                        <div style="font-size:.84rem; margin-top:2px;">
+                                            Bạn cần xem ít nhất <strong>${requiredWatchPercent}%</strong> video bài học để mở khóa.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="margin-top:10px;">
+                                    <div style="display:flex; justify-content:space-between; font-size:.8rem; font-weight:700;">
+                                        <span>Tiến độ hiện tại:</span>
+                                        <span>${currentWatchPercent}% / ${requiredWatchPercent}%</span>
+                                    </div>
+                                    <div class="quiz-progress-track">
+                                        <div class="quiz-progress-fill" style="width:${currentWatchPercent > 100 ? 100 : currentWatchPercent}%;"></div>
+                                    </div>
                                 </div>
                             </div>
-                        </c:forEach>
-                    </c:otherwise>
-                </c:choose>
-            </div>
-        </div>
-
-        <!-- Aside: Start button -->
-        <aside>
-            <div class="qi-card" style="text-align:center;">
-                <p class="qi-card__title" style="text-align:left;">🚀 Bắt đầu làm bài</p>
-
-                <c:set var="attemptCount" value="${fn:length(myAttempts)}"/>
-                <c:set var="hasInProgress" value="false"/>
-                <c:forEach var="a" items="${myAttempts}">
-                    <c:if test="${a.status eq 'IN_PROGRESS'}"><c:set var="hasInProgress" value="true"/></c:if>
-                </c:forEach>
-
-                <c:choose>
-                    <c:when test="${hasInProgress}">
-                        <div class="qi-locked-banner">⏳ Bạn đang có bài làm chưa hoàn thành. Tiếp tục bài đó trước.</div>
-                    </c:when>
-                    <c:when test="${attemptCount >= quiz.maxAttempts}">
-                        <div class="qi-locked-banner">🔒 Bạn đã dùng hết ${quiz.maxAttempts} lần làm bài.</div>
-                        <button class="qi-btn-start" disabled>Đã hết lượt</button>
-                    </c:when>
-                    <c:otherwise>
-                        <p style="font-size:.85rem;color:#64748B;margin-bottom:16px;">
-                            Còn lại <strong>${quiz.maxAttempts - attemptCount}</strong> / ${quiz.maxAttempts} lần.
-                            <c:if test="${quiz.timeLimitMinutes != null}"><br/>Đồng hồ sẽ bắt đầu ngay khi bạn nhấn.</c:if>
-                        </p>
-                        <form method="post" action="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/start">
-                            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                            <button class="qi-btn-start" type="submit"
-                                    onclick="return confirm('Bắt đầu làm bài? Đồng hồ sẽ chạy ngay lập tức.')">
-                                ▶ Bắt đầu làm bài
+                            <button class="quiz-btn quiz-btn--cta" disabled style="background:#94A3B8; color:#fff; cursor:not-allowed;">
+                                🔒 Bài kiểm tra đang bị khóa
                             </button>
-                        </form>
-                    </c:otherwise>
-                </c:choose>
-            </div>
-        </aside>
-    </div>
-</main>
+                            <c:if test="${quiz.lesson != null}">
+                                <a href="${pageContext.request.contextPath}/courses/${courseId}/lessons/${quiz.lesson.lessonId}"
+                                   class="quiz-btn quiz-btn--primary quiz-btn--cta" style="margin-top:10px;">
+                                    ▶ Quay lại xem video bài học
+                                </a>
+                            </c:if>
+                        </c:when>
+
+                        <%-- 2. Đang có bài chưa hoàn thành --%>
+                        <c:when test="${hasInProgress}">
+                            <div class="quiz-notice-box quiz-notice-box--info">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:1.2rem;">⏳</span>
+                                    <div>
+                                        <strong>Bạn có bài làm dở dang</strong>
+                                        <div style="font-size:.82rem; margin-top:2px;">Vui lòng hoàn thành bài làm trước khi bắt đầu bài mới.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <c:forEach var="a" items="${myAttempts}">
+                                <c:if test="${a.status eq 'IN_PROGRESS'}">
+                                    <a class="quiz-btn quiz-btn--primary quiz-btn--cta"
+                                       href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${a.attemptId}">
+                                        Tiếp tục làm bài (Lần ${a.attemptNumber}) →
+                                    </a>
+                                </c:if>
+                            </c:forEach>
+                        </c:when>
+
+                        <%-- 3. Đã hết lượt làm --%>
+                        <c:when test="${attemptCount >= quiz.maxAttempts}">
+                            <div class="quiz-notice-box quiz-notice-box--locked">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:1.2rem;">🔒</span>
+                                    <div>
+                                        <strong>Đã hết số lượt làm bài</strong>
+                                        <div style="font-size:.82rem; margin-top:2px;">Bạn đã dùng hết ${quiz.maxAttempts} / ${quiz.maxAttempts} lượt làm cho bài kiểm tra này.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="quiz-btn quiz-btn--cta" disabled style="background:#CBD5E1; color:#64748B; cursor:not-allowed;">
+                                Đã hết lượt làm bài
+                            </button>
+                        </c:when>
+
+                        <%-- 4. Đủ điều kiện và sẵn sàng làm bài --%>
+                        <c:otherwise>
+                            <div class="quiz-remaining-badge">
+                                Còn lại <strong>${quiz.maxAttempts - attemptCount}</strong> / ${quiz.maxAttempts} lần làm bài
+                                <c:if test="${quiz.timeLimitMinutes != null}">
+                                    <div style="font-size:.8rem; color:#64748B; margin-top:4px;">⏱ Thời gian làm: ${quiz.timeLimitMinutes} phút</div>
+                                </c:if>
+                            </div>
+                            <form method="post" action="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/start">
+                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                <button class="quiz-btn quiz-btn--primary quiz-btn--cta" type="submit"
+                                        onclick="return confirm('Bắt đầu làm bài ngay? Đồng hồ tính giờ sẽ bắt đầu chạy.')">
+                                    ▶ Bắt đầu làm bài
+                                </button>
+                            </form>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </aside>
+        </div>
+    </main>
+</div>
+
 <jsp:include page="/WEB-INF/views/common/footer.jsp"/>
 </body>
 </html>

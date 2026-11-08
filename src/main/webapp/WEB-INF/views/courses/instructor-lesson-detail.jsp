@@ -11,7 +11,41 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/instructor.css">
+    <!-- Document Viewers for in-browser Word & Excel preview -->
+    <script src="${pageContext.request.contextPath}/assets/js/jszip.min.js"></script>
+    <script src="${pageContext.request.contextPath}/assets/js/docx-preview.js"></script>
+    <script src="${pageContext.request.contextPath}/assets/js/xlsx.full.min.js"></script>
     <style>
+        .mat-spinner {
+            width: 32px; height: 32px; border: 3.5px solid rgba(255,255,255,.2);
+            border-radius: 50%; border-top-color: #3B82F6; animation: matSpin .8s linear infinite;
+        }
+        @keyframes matSpin { to { transform: rotate(360deg); } }
+
+        /* Docx Preview Styling */
+        .docx-wrapper {
+            background: transparent !important; padding: 0 !important;
+        }
+        .docx-wrapper > section.docx {
+            background: #fff !important;
+            box-shadow: 0 4px 24px rgba(0,0,0,.35) !important;
+            margin: 0 auto 24px auto !important;
+            padding: 40px 50px !important;
+            border-radius: 4px !important;
+            max-width: 850px !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Excel Styling */
+        .excel-table-wrapper table {
+            border-collapse: collapse; width: 100%; font-size: .88rem;
+        }
+        .excel-table-wrapper th, .excel-table-wrapper td {
+            border: 1px solid #CBD5E1; padding: 6px 12px; text-align: left;
+        }
+        .excel-table-wrapper tr:first-child td, .excel-table-wrapper th {
+            background: #F1F5F9; font-weight: 700; color: #1E293B;
+        }
         .upload-row {
             display: flex; gap: 8px; align-items: center; margin-top: 4px;
         }
@@ -71,18 +105,110 @@
                     <div class="ins-detail-main__body">
 
                         <!-- Video info if present -->
-                        <c:if test="${lesson.lessonType eq 'VIDEO' and not empty lesson.videoUrl}">
+                        <c:if test="${lesson.lessonType eq 'VIDEO'}">
                             <h2>Video bài giảng</h2>
-                            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:var(--r8); padding:14px 18px; margin-bottom:20px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                                    <div>
-                                        <div style="font-weight:700; color:var(--ink);">URL: <a href="<c:out value='${lesson.videoUrl}'/>" target="_blank" style="color:#2563EB;"><c:out value="${lesson.videoUrl}"/> ↗</a></div>
-                                        <div style="font-size:.82rem; color:#64748B; margin-top:4px;">
-                                            Thời lượng: <strong>${not empty lesson.videoDuration ? lesson.videoDuration : 'Chưa đặt'} phút</strong> · 
-                                            Tua video: <strong>${lesson.allowSeek ? 'Cho phép' : 'Bị khóa'}</strong>
+                            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:var(--r12); padding:18px 20px; margin-bottom:20px;">
+
+                                <%-- Trường hợp 1: Đã có Bunny Video (player URL từ Bunny) --%>
+                                <c:if test="${not empty lesson.videoUrl and fn:startsWith(lesson.videoUrl, 'https://player.mediadelivery.net')}">
+                                    <c:choose>
+                                        <c:when test="${lesson.videoStatus eq 'READY' or empty lesson.videoStatus}">
+                                            <%-- READY — hiển thị player --%>
+                                            <div style="position:relative; padding-bottom:56.25%; height:0; border-radius:8px; overflow:hidden; background:#000; margin-bottom:12px;">
+                                                <iframe src="<c:out value='${lesson.videoUrl}'/>"
+                                                        style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+                                                        allowfullscreen allow="autoplay; encrypted-media"></iframe>
+                                            </div>
+                                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                                                <div style="font-size:.82rem; color:#64748B;">
+                                                    <span style="background:#DCFCE7; color:#15803D; font-weight:700; padding:2px 8px; border-radius:4px; font-size:.75rem;">✅ READY</span>
+                                                    Thời lượng: <strong>${not empty lesson.videoDuration ? lesson.videoDuration : '—'} phút</strong> ·
+                                                    Tua video: <strong>${lesson.allowSeek ? 'Cho phép' : 'Bị khóa'}</strong>
+                                                </div>
+                                            </div>
+                                        </c:when>
+                                        <c:when test="${lesson.videoStatus eq 'PROCESSING' or lesson.videoStatus eq 'UPLOADING'}">
+                                            <%-- PROCESSING / UPLOADING — thông báo chờ --%>
+                                            <div style="background:#EFF6FF; border:1.5px solid #93C5FD; border-radius:8px; padding:20px; text-align:center;" id="processingBanner">
+                                                <div style="font-size:2rem; margin-bottom:8px;">⏳</div>
+                                                <div style="font-weight:700; color:#1D4ED8; font-size:.95rem; margin-bottom:4px;">
+                                                    <c:choose>
+                                                        <c:when test="${lesson.videoStatus eq 'UPLOADING'}">Đang upload video lên Bunny Stream...</c:when>
+                                                        <c:otherwise>Bunny Stream đang xử lý video...</c:otherwise>
+                                                    </c:choose>
+                                                </div>
+                                                <div style="font-size:.83rem; color:#3B82F6;">Quá trình này thường mất 1–5 phút. Trang sẽ tự cập nhật.</div>
+                                            </div>
+                                            <%-- Auto-poll trạng thái --%>
+                                            <script>
+                                            (function() {
+                                                var lessonId = '${lesson.lessonId}';
+                                                var ctx = '${pageContext.request.contextPath}';
+                                                function poll() {
+                                                    fetch(ctx + '/instructor/videos/' + lessonId + '/status')
+                                                        .then(function(r) { return r.json(); })
+                                                        .then(function(d) {
+                                                            if (d.videoStatus === 'READY' || d.videoStatus === 'FAILED') {
+                                                                location.reload();
+                                                            } else {
+                                                                setTimeout(poll, 10000);
+                                                            }
+                                                        })
+                                                        .catch(function() { setTimeout(poll, 15000); });
+                                                }
+                                                setTimeout(poll, 8000);
+                                            })();
+                                            </script>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <%-- FAILED --%>
+                                            <div style="background:#FEF2F2; border:1.5px solid #FCA5A5; border-radius:8px; padding:16px;">
+                                                <div style="font-weight:700; color:#DC2626; margin-bottom:4px;">❌ Xử lý video thất bại</div>
+                                                <div style="font-size:.83rem; color:#EF4444;">Bunny Stream không thể xử lý video này. Hãy thử upload lại bên dưới.</div>
+                                            </div>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </c:if>
+
+                                <%-- Trường hợp 2: Video URL thông thường (YouTube, Vimeo, local) --%>
+                                <c:if test="${not empty lesson.videoUrl and not fn:startsWith(lesson.videoUrl, 'https://player.mediadelivery.net')}">
+                                    <div style="font-weight:700; color:var(--ink); margin-bottom:6px;">
+                                        URL: <a href="<c:out value='${lesson.videoUrl}'/>" target="_blank" style="color:#2563EB;"><c:out value="${lesson.videoUrl}"/> ↗</a>
+                                    </div>
+                                    <div style="font-size:.82rem; color:#64748B;">
+                                        Thời lượng: <strong>${not empty lesson.videoDuration ? lesson.videoDuration : '—'} phút</strong> ·
+                                        Tua video: <strong>${lesson.allowSeek ? 'Cho phép' : 'Bị khóa'}</strong>
+                                    </div>
+                                </c:if>
+
+                                <%-- Trường hợp 3: Chưa có video --%>
+                                <c:if test="${empty lesson.videoUrl}">
+                                    <div style="color:#94A3B8; font-style:italic;">Chưa có video. Upload bên dưới.</div>
+                                </c:if>
+
+                                <%-- Upload video Bunny ngay từ trang này --%>
+                                <c:if test="${editable}">
+                                    <div style="margin-top:16px; padding-top:14px; border-top:1px solid #E2E8F0;">
+                                        <div style="font-size:.84rem; font-weight:700; color:#475569; margin-bottom:8px;">
+                                            ☁️ Upload video lên Bunny Stream
+                                        </div>
+                                        <div class="upload-row">
+                                            <button type="button" class="upload-btn" style="background:#EFF6FF; border-color:#93C5FD; color:#1D4ED8;"
+                                                    onclick="document.getElementById('bunnyVideoInput').click()">
+                                                ☁️ Chọn file video (MP4, WebM, MOV — tối đa 2GB)
+                                            </button>
+                                        </div>
+                                        <input type="file" id="bunnyVideoInput" accept="video/mp4,video/webm,video/quicktime,video/*"
+                                               style="display:none;" onchange="uploadBunnyVideo(this, ${lesson.lessonId})"/>
+                                        <div id="bunnyUploadStatus" class="upload-status" style="margin-top:8px;"></div>
+                                        <div id="bunnyUploadProgress" style="display:none; margin-top:8px;">
+                                            <div style="background:#E2E8F0; border-radius:99px; height:8px; overflow:hidden;">
+                                                <div id="bunnyProgressBar" style="height:100%; background:#2563EB; width:0%; transition:width .3s; border-radius:99px;"></div>
+                                            </div>
+                                            <div id="bunnyProgressText" style="font-size:.75rem; color:#64748B; margin-top:4px;"></div>
                                         </div>
                                     </div>
-                                </div>
+                                </c:if>
                             </div>
                         </c:if>
 
@@ -140,8 +266,13 @@
                                             </div>
                                             <div style="display:flex; align-items:center; gap:8px;">
                                                 <c:if test="${fn:startsWith(mat.fileUrl,'http://') || fn:startsWith(mat.fileUrl,'https://') || fn:startsWith(mat.fileUrl,'/')}">
-                                                    <a class="ins-link-btn" href="${mat.fileUrl}" target="_blank" rel="noopener noreferrer">
-                                                        Mở / Tải ↗
+                                                    <button type="button" class="ins-link-btn" style="color:#2563EB; font-weight:700; background:#EFF6FF; border:1px solid #BFDBFE; padding:5px 12px; border-radius:6px; cursor:pointer;"
+                                                            onclick="openMaterialPreview('<c:out value="${mat.title}" escapeXml="true"/>', '<c:out value="${mat.fileUrl}" escapeXml="true"/>', '<c:out value="${mat.type}"/>', '<c:out value="${mat.originalFileName}" escapeXml="true"/>')">
+                                                        👁️ Xem trên web
+                                                    </button>
+                                                    <a class="ins-link-btn" href="${mat.fileUrl}" download="<c:out value='${mat.title}'/>" target="_blank" rel="noopener noreferrer"
+                                                       style="padding:5px 10px; border:1px solid #CBD5E1; border-radius:6px;">
+                                                        ⬇️ Tải
                                                     </a>
                                                 </c:if>
                                                 <c:if test="${editable}">
@@ -243,6 +374,76 @@
 function insToggleMenu(e){e.stopPropagation();document.getElementById('insUserMenu').classList.toggle('open');}
 document.addEventListener('click',function(){var m=document.getElementById('insUserMenu');if(m)m.classList.remove('open');});
 
+// Upload video lên Bunny Stream từ trang chi tiết bài học
+function uploadBunnyVideo(inputElem, lessonId) {
+    if (!inputElem.files || inputElem.files.length === 0) return;
+    var file = inputElem.files[0];
+    var statusElem   = document.getElementById('bunnyUploadStatus');
+    var progressWrap = document.getElementById('bunnyUploadProgress');
+    var progressBar  = document.getElementById('bunnyProgressBar');
+    var progressText = document.getElementById('bunnyProgressText');
+
+    var allowed = ['mp4','webm','mov','avi','mkv','mpeg','mpg'];
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) {
+        statusElem.className = 'upload-status upload-status--error';
+        statusElem.textContent = '❌ Định dạng không hỗ trợ. Cho phép: MP4, WebM, MOV, AVI, MKV.';
+        return;
+    }
+    if (file.size > 2 * 1024 * 1024 * 1024) {
+        statusElem.className = 'upload-status upload-status--error';
+        statusElem.textContent = '❌ File quá lớn. Giới hạn 2GB.';
+        return;
+    }
+
+    statusElem.className = 'upload-status upload-status--loading';
+    statusElem.textContent = '⏳ Đang upload lên Bunny Stream (' + (file.size/1024/1024).toFixed(1) + ' MB)...';
+    progressWrap.style.display = 'block';
+    progressBar.style.width = '0%';
+
+    var csrfToken = document.querySelector('input[name="${_csrf.parameterName}"]').value;
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('lessonId', lessonId);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '${pageContext.request.contextPath}/instructor/videos/upload', true);
+    xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+
+    xhr.upload.onprogress = function(e) {
+        if (e.lengthComputable) {
+            var pct = Math.round(e.loaded * 100 / e.total);
+            progressBar.style.width = pct + '%';
+            progressText.textContent = pct + '% — ' + (e.loaded/1024/1024).toFixed(1)
+                + ' / ' + (e.total/1024/1024).toFixed(1) + ' MB';
+        }
+    };
+
+    xhr.onload = function() {
+        var data;
+        try { data = JSON.parse(xhr.responseText); } catch(e) { data = {}; }
+        if (data.success) {
+            statusElem.className = 'upload-status upload-status--success';
+            statusElem.textContent = '✅ Upload xong! Bunny đang xử lý. Trang sẽ tự cập nhật sau vài giây...';
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Đang xử lý trên Bunny CDN...';
+            setTimeout(function() { location.reload(); }, 4000);
+        } else {
+            statusElem.className = 'upload-status upload-status--error';
+            statusElem.textContent = '❌ ' + (data.message || 'Upload thất bại');
+            progressWrap.style.display = 'none';
+        }
+    };
+
+    xhr.onerror = function() {
+        statusElem.className = 'upload-status upload-status--error';
+        statusElem.textContent = '❌ Lỗi kết nối khi upload.';
+        progressWrap.style.display = 'none';
+    };
+
+    xhr.send(formData);
+}
+
 function uploadMaterialFile(inputElem) {
     if (!inputElem.files || inputElem.files.length === 0) return;
     var file = inputElem.files[0];
@@ -285,5 +486,181 @@ function uploadMaterialFile(inputElem) {
         statusElem.textContent = '❌ Lỗi kết nối: ' + err.message;
     });
 }
+
+function openMaterialPreview(title, url, type, origName) {
+    var modal = document.getElementById('materialPreviewModal');
+    var titleElem = document.getElementById('matModalTitle');
+    var subElem = document.getElementById('matModalSub');
+    var iconElem = document.getElementById('matModalIcon');
+    var downloadBtn = document.getElementById('matModalDownloadBtn');
+    var contentElem = document.getElementById('matModalContent');
+
+    titleElem.textContent = title;
+    subElem.textContent = origName ? ('Tệp: ' + origName) : url;
+    downloadBtn.href = url;
+    downloadBtn.setAttribute('download', origName || title);
+
+    var lowerUrl = url.toLowerCase();
+    var lowerOrig = (origName || '').toLowerCase();
+
+    if (lowerUrl.indexOf('.pdf') !== -1 || lowerOrig.indexOf('.pdf') !== -1) {
+        iconElem.textContent = '📕';
+        contentElem.innerHTML = '<iframe src="' + url + '#toolbar=1&navpanes=1" width="100%" height="100%" style="border:none;background:#fff;" title="' + title + '"></iframe>';
+    } else if (lowerOrig.indexOf('.docx') !== -1 || lowerUrl.indexOf('.docx') !== -1) {
+        iconElem.textContent = '📘';
+        contentElem.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#fff;gap:12px;">' +
+            '<div class="mat-spinner"></div>' +
+            '<div style="font-size:.95rem;font-weight:600;">⏳ Đang đọc và hiển thị tài liệu Word trực tiếp...</div>' +
+        '</div>';
+
+        fetch(url)
+            .then(function(res) {
+                if (!res.ok) throw new Error('Không thể tải tệp (HTTP ' + res.status + ')');
+                return res.blob();
+            })
+            .then(function(blob) {
+                contentElem.innerHTML = '<div id="docxContainerIns" style="width:100%;height:100%;overflow:auto;background:#525659;padding:24px 10px;box-sizing:border-box;"></div>';
+                var target = document.getElementById('docxContainerIns');
+                if (window.docx && window.docx.renderAsync) {
+                    return window.docx.renderAsync(blob, target, null, {
+                        className: 'docx-preview-paper',
+                        inWrapper: true,
+                        breakPages: true
+                    });
+                } else {
+                    throw new Error('Thư viện hiển thị Word chưa tải xong.');
+                }
+            })
+            .catch(function(err) {
+                contentElem.innerHTML = '<div style="text-align:center;background:#fff;padding:36px;border-radius:12px;max-width:520px;box-shadow:0 12px 30px rgba(0,0,0,.25);margin:20px;">' +
+                    '<div style="font-size:3rem;margin-bottom:12px;">📘</div>' +
+                    '<h3 style="margin:0 0 8px;color:#0F172A;font-size:1.15rem;">' + (origName || title) + '</h3>' +
+                    '<p style="color:#64748B;font-size:.88rem;line-height:1.6;margin:0 0 20px;">' + (err.message || 'Không thể hiển thị xem trước tệp Word') + '</p>' +
+                    '<div style="display:flex;gap:10px;justify-content:center;">' +
+                        '<a href="' + url + '" download="' + (origName || title) + '" style="background:#2563EB;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;">⬇️ Tải tệp về máy</a>' +
+                    '</div>' +
+                '</div>';
+            });
+    } else if (lowerOrig.match(/\.xlsx?$/) || lowerUrl.match(/\.xlsx?$/)) {
+        iconElem.textContent = '📗';
+        contentElem.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#fff;gap:12px;">' +
+            '<div class="mat-spinner"></div>' +
+            '<div style="font-size:.95rem;font-weight:600;">⏳ Đang mở bảng tính Excel...</div>' +
+        '</div>';
+
+        fetch(url)
+            .then(function(res) {
+                if (!res.ok) throw new Error('Không thể tải tệp (HTTP ' + res.status + ')');
+                return res.arrayBuffer();
+            })
+            .then(function(buf) {
+                if (!window.XLSX) throw new Error('Thư viện hiển thị Excel chưa tải xong.');
+                var wb = XLSX.read(buf, { type: 'array' });
+                var sheetName = wb.SheetNames[0];
+                var ws = wb.Sheets[sheetName];
+                var html = XLSX.utils.sheet_to_html(ws, { id: 'excelTable', editable: false });
+                contentElem.innerHTML = '<div style="width:100%;height:100%;overflow:auto;background:#fff;padding:20px;box-sizing:border-box;">' +
+                    '<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;margin-bottom:14px;border-bottom:2px solid #E2E8F0;">' +
+                        '<div style="font-weight:800;font-size:1rem;color:#0F172A;">📊 Sheet: ' + sheetName + '</div>' +
+                        '<div style="font-size:.8rem;color:#64748B;">Tổng cộng ' + wb.SheetNames.length + ' sheet</div>' +
+                    '</div>' +
+                    '<div class="excel-table-wrapper" style="overflow:auto;">' + html + '</div>' +
+                '</div>';
+            })
+            .catch(function(err) {
+                contentElem.innerHTML = '<div style="text-align:center;background:#fff;padding:36px;border-radius:12px;max-width:520px;box-shadow:0 12px 30px rgba(0,0,0,.25);margin:20px;">' +
+                    '<div style="font-size:3rem;margin-bottom:12px;">📗</div>' +
+                    '<h3 style="margin:0 0 8px;color:#0F172A;font-size:1.15rem;">' + (origName || title) + '</h3>' +
+                    '<p style="color:#64748B;font-size:.88rem;line-height:1.6;margin:0 0 20px;">' + (err.message || 'Không thể hiển thị xem trước tệp Excel') + '</p>' +
+                    '<div style="display:flex;gap:10px;justify-content:center;">' +
+                        '<a href="' + url + '" download="' + (origName || title) + '" style="background:#2563EB;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;">⬇️ Tải tệp về máy</a>' +
+                    '</div>' +
+                '</div>';
+            });
+    } else if (lowerUrl.match(/\.(png|jpe?g|gif|webp|svg)(\?.*)?$/) || lowerOrig.match(/\.(png|jpe?g|gif|webp|svg)$/)) {
+        iconElem.textContent = '🖼️';
+        contentElem.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;"><img src="' + url + '" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.5);" alt="' + title + '"/></div>';
+    } else if (type === 'VIDEO' || lowerUrl.match(/\.(mp4|webm|mov)(\?.*)?$/) || lowerUrl.indexOf('youtube.com') !== -1 || lowerUrl.indexOf('youtu.be') !== -1) {
+        iconElem.textContent = '🎬';
+        if (lowerUrl.indexOf('youtube.com') !== -1 || lowerUrl.indexOf('youtu.be') !== -1) {
+            var vId = '';
+            if (lowerUrl.indexOf('watch?v=') !== -1) vId = url.split('watch?v=')[1].split('&')[0];
+            else if (lowerUrl.indexOf('youtu.be/') !== -1) vId = url.split('youtu.be/')[1].split('?')[0];
+            var embed = 'https://www.youtube.com/embed/' + vId;
+            contentElem.innerHTML = '<iframe src="' + embed + '" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>';
+        } else {
+            contentElem.innerHTML = '<video src="' + url + '" controls autoplay style="max-width:100%;max-height:100%;border-radius:8px;"></video>';
+        }
+    } else if (lowerUrl.match(/\.(mp3|wav|ogg)(\?.*)?$/)) {
+        iconElem.textContent = '🎧';
+        contentElem.innerHTML = '<div style="text-align:center;color:#fff;"><div style="font-size:3.5rem;margin-bottom:16px;">🎧</div><div style="font-size:1.1rem;font-weight:700;margin-bottom:14px;">' + title + '</div><audio src="' + url + '" controls autoplay style="width:420px;max-width:90%;"></audio></div>';
+    } else {
+        iconElem.textContent = '📄';
+        contentElem.innerHTML = '<iframe src="' + url + '" width="100%" height="100%" style="border:none;background:#fff;" title="' + title + '"></iframe>';
+    }
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMaterialPreview() {
+    var modal = document.getElementById('materialPreviewModal');
+    var contentElem = document.getElementById('matModalContent');
+    if (contentElem) contentElem.innerHTML = '';
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function toggleMaterialFullscreen() {
+    var modal = document.getElementById('materialPreviewModal');
+    if (modal) {
+        var box = modal.firstElementChild;
+        if (box.style.width === '100vw') {
+            box.style.width = '92vw';
+            box.style.height = '88vh';
+            box.style.maxWidth = '1150px';
+            box.style.borderRadius = '14px';
+        } else {
+            box.style.width = '100vw';
+            box.style.height = '100vh';
+            box.style.maxWidth = '100vw';
+            box.style.borderRadius = '0';
+        }
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMaterialPreview();
+});
 </script>
+
+<!-- Modal Preview -->
+<div id="materialPreviewModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.75); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; border-radius:14px; width:92vw; max-width:1150px; height:88vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,.45); transition:all .2s;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid #E2E8F0; background:#F8FAFC; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                <span id="matModalIcon" style="font-size:1.4rem;">📄</span>
+                <div style="min-width:0;">
+                    <h3 id="matModalTitle" style="margin:0; font-size:.96rem; font-weight:800; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:560px;">Tiêu đề</h3>
+                    <div id="matModalSub" style="font-size:.76rem; color:#64748B; margin-top:2px;"></div>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <a id="matModalDownloadBtn" href="#" download target="_blank"
+                   style="display:inline-flex; align-items:center; gap:6px; padding:7px 14px; font-size:.82rem; font-weight:700; color:#2563EB; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; text-decoration:none;">
+                    ⬇️ Tải về máy
+                </a>
+                <button type="button" onclick="toggleMaterialFullscreen()"
+                        style="padding:7px 11px; font-size:.85rem; font-weight:600; color:#475569; background:#fff; border:1px solid #CBD5E1; border-radius:6px; cursor:pointer;" title="Toàn màn hình">
+                    ⛶
+                </button>
+                <button type="button" onclick="closeMaterialPreview()"
+                        style="padding:7px 14px; font-size:.85rem; font-weight:800; color:#DC2626; background:#FEF2F2; border:1px solid #FECACA; border-radius:6px; cursor:pointer;">
+                    ✕ Đóng
+                </button>
+            </div>
+        </div>
+        <div id="matModalContent" style="flex:1; background:#0F172A; position:relative; overflow:auto; display:flex; align-items:center; justify-content:center;"></div>
+    </div>
+</div>
 </body></html>

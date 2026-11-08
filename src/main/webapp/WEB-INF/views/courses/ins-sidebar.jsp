@@ -57,6 +57,17 @@
             Tạo khóa học mới
         </a>
 
+        <a class="ins-nav-item" id="nav-question-banks" href="${cp}/instructor/question-banks">
+            <span class="ins-nav-item__icon">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 6h16M4 10h16M4 14h10M4 18h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <circle cx="18" cy="16" r="3" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M18 15v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </span>
+            Ngân hàng câu hỏi
+        </a>
+
         <span class="ins-nav-label">Tài khoản</span>
 
         <a class="ins-nav-item" id="nav-profile" href="${cp}/profile">

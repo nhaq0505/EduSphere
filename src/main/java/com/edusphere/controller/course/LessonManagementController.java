@@ -114,6 +114,8 @@ public class LessonManagementController {
         form.setVideoUrl(lesson.getVideoUrl());
         form.setVideoDuration(lesson.getVideoDuration());
         form.setAllowSeek(lesson.getAllowSeek() != null ? lesson.getAllowSeek() : true);
+        form.setQuizRequiresVideo(Boolean.TRUE.equals(lesson.getQuizRequiresVideo()));
+        form.setMinWatchPercent(lesson.getMinWatchPercent() != null ? lesson.getMinWatchPercent() : 0);
         form.setIsPreview(Boolean.TRUE.equals(lesson.getIsPreview()));
         form.setUnlockDaysAfterEnroll(lesson.getUnlockDaysAfterEnroll());
         form.setPrerequisiteLessonId(lesson.getPrerequisiteLesson() != null ? lesson.getPrerequisiteLesson().getLessonId() : null);
@@ -128,6 +130,7 @@ public class LessonManagementController {
         model.addAttribute("lessonId", lessonId);
         model.addAttribute("sections", sectionService.getSectionsWithLessons(courseId, instructor.getUserId()));
         model.addAttribute("existingLessons", candidatePrereqs);
+        model.addAttribute("materials", service.materials(courseId, lessonId, instructor.getUserId()));
         model.addAttribute("maxOrder", allLessons.size());
         model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons/" + lessonId + "/edit");
         return "courses/lesson-form";
@@ -145,6 +148,7 @@ public class LessonManagementController {
             model.addAttribute("lessonId", lessonId);
             model.addAttribute("sections", sectionService.getSectionsWithLessons(courseId, instructor.getUserId()));
             model.addAttribute("existingLessons", service.lessons(courseId, instructor.getUserId()).stream().filter(l -> !l.getLessonId().equals(lessonId)).toList());
+            model.addAttribute("materials", service.materials(courseId, lessonId, instructor.getUserId()));
             model.addAttribute("maxOrder", service.lessons(courseId, instructor.getUserId()).size());
             model.addAttribute("formAction", "/instructor/courses/" + courseId + "/lessons/" + lessonId + "/edit");
             return "courses/lesson-form";

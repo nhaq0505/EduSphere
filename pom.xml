@@ -97,6 +97,13 @@
 
         <!-- ==================== UTILITIES ==================== -->
 
+        <!-- Apache POI: đọc file Excel (.xlsx) và Word (.docx) cho Ngân hàng câu hỏi -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
         <!-- Lombok — giảm boilerplate code -->
         <dependency>
             <groupId>org.projectlombok</groupId>

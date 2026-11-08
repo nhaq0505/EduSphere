@@ -1,5 +1,8 @@
 package com.edusphere.controller.course;
 
+import com.edusphere.entity.course.Course;
+import com.edusphere.entity.course.Lesson;
+import com.edusphere.entity.course.Quiz;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
 import com.edusphere.service.course.QuizService;
@@ -12,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -44,10 +48,48 @@ public class QuizStudentController {
     @GetMapping("/{quizId}")
     public String info(@PathVariable Integer courseId, @PathVariable Integer quizId,
                        @AuthenticationPrincipal CustomUserDetails user, Model model) {
-        model.addAttribute("quiz", service.getQuizForStudent(courseId, quizId, user.getUserId()));
+        Quiz quiz = service.getQuizForStudent(courseId, quizId, user.getUserId());
+        model.addAttribute("quiz", quiz);
         model.addAttribute("myAttempts", service.getMyAttempts(courseId, quizId, user.getUserId()));
         model.addAttribute("courseId", courseId);
         model.addAttribute("quizId", quizId);
+
+        // Kiểm tra điều kiện mở khóa Quiz từ tiến độ xem video (80%)
+        boolean videoRequirementMet = true;
+        int requiredWatchPercent = 80;
+        int currentWatchPercent = 0;
+        Lesson lesson = quiz.getLesson();
+        Course course = quiz.getCourse();
+        boolean isOwner = course != null && course.getInstructor() != null && Objects.equals(course.getInstructor().getUserId(), user.getUserId());
+        boolean isAdmin = user.getAuthorities() != null && user.getAuthorities().stream().anyMatch(a -> "ROLE_ADMINISTRATOR".equals(a.getAuthority()));
+
+        if (isOwner || isAdmin) {
+            videoRequirementMet = true;
+            if (lesson != null) {
+                var wpOpt = service.getLessonWatchProgress(user.getUserId(), lesson.getLessonId());
+                if (wpOpt.isPresent()) {
+                    currentWatchPercent = wpOpt.get().getWatchPercent() != null ? wpOpt.get().getWatchPercent() : 100;
+                } else {
+                    currentWatchPercent = 100;
+                }
+            }
+        } else if (lesson != null && service.isVideoLesson(lesson)) {
+            if (lesson.getMinWatchPercent() != null && lesson.getMinWatchPercent() > 0) {
+                requiredWatchPercent = lesson.getMinWatchPercent();
+            }
+            var wpOpt = service.getLessonWatchProgress(user.getUserId(), lesson.getLessonId());
+            if (wpOpt.isPresent()) {
+                var wp = wpOpt.get();
+                currentWatchPercent = wp.getWatchPercent() != null ? wp.getWatchPercent() : 0;
+                videoRequirementMet = Boolean.TRUE.equals(wp.getQuizUnlocked()) || currentWatchPercent >= requiredWatchPercent;
+            } else {
+                videoRequirementMet = false;
+            }
+        }
+        model.addAttribute("videoRequirementMet", videoRequirementMet);
+        model.addAttribute("requiredWatchPercent", requiredWatchPercent);
+        model.addAttribute("currentWatchPercent", currentWatchPercent);
+
         return "quizzes/student-info";
     }
 

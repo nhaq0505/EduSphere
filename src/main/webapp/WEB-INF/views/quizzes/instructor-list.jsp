@@ -18,13 +18,22 @@
     <div class="ins-main-wrapper">
         <jsp:include page="../courses/ins-header.jsp"/>
         <main class="ins-page">
+            <a class="ins-back-link" href="${pageContext.request.contextPath}/instructor/courses/${courseId}">
+                ← Quay lại Khóa học (Cấu trúc Chương & Bài học)
+            </a>
             <div class="ins-page-head">
                 <div>
                     <span class="ins-page-head__eyebrow">❓ Quiz</span>
                     <h1 class="ins-page-head__title">Quản lý quiz</h1>
                 </div>
-                <a class="ins-btn-primary" style="width:auto;padding:10px 22px"
-                   href="${pageContext.request.contextPath}/instructor/courses/${courseId}/quizzes/new<c:if test="${selectedLessonId != null}">?lessonId=${selectedLessonId}</c:if>">+ Tạo Quiz mới</a>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <a class="ins-btn-outline" style="padding:10px 18px; font-weight:600;"
+                       href="${pageContext.request.contextPath}/instructor/courses/${courseId}">
+                        ← Quay lại Khóa học
+                    </a>
+                    <a class="ins-btn-primary" style="width:auto;padding:10px 22px"
+                       href="${pageContext.request.contextPath}/instructor/courses/${courseId}/quizzes/new<c:if test="${selectedLessonId != null}">?lessonId=${selectedLessonId}</c:if>">+ Tạo Quiz mới</a>
+                </div>
             </div>
 
         <c:if test="${not empty success}"><div class="ins-alert ins-alert--success">✅ <c:out value="${success}"/></div></c:if>
@@ -52,7 +61,6 @@
                                     &nbsp;|&nbsp; Câu hỏi: <strong>${q.questionCount}</strong>
                                     &nbsp;|&nbsp; Tổng điểm: <strong><fmt:formatNumber value="${q.maxScore}" maxFractionDigits="1"/></strong>
                                     <c:if test="${q.timeLimitMinutes != null}">&nbsp;|&nbsp; ${q.timeLimitMinutes} phút</c:if>
-                                    <c:if test="${q.dueDate != null}">&nbsp;|&nbsp; Hạn: ${fn:replace(fn:substring(q.dueDate, 0, 16), 'T', ' ')}</c:if>
                                 </div>
                             </div>
                             <div class="ins-lesson-item__actions">
@@ -92,5 +100,7 @@ document.addEventListener('click', function() {
     var m = document.getElementById('insUserMenu');
     if (m) m.classList.remove('open');
 });
+var navCourses = document.getElementById('nav-courses');
+if (navCourses) navCourses.classList.add('active');
 </script>
 </body></html>

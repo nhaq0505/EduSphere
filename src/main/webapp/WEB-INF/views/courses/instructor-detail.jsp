@@ -133,23 +133,41 @@
 
                 <c:choose>
                     <c:when test="${course.status == 'DRAFT' || course.status == 'REJECTED'}">
-                        <c:if test="${course.readyForSubmit}">
-                            <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/submit" style="margin:0;">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <button class="ins-btn-primary" type="submit" style="padding:9px 18px; font-size:.88rem;">📤 Gửi duyệt cho Admin</button>
-                            </form>
-                        </c:if>
+                        <c:choose>
+                            <c:when test="${course.readyForSubmit}">
+                                <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/submit" style="margin:0;">
+                                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                    <button class="ins-btn-primary" type="submit" style="padding:9px 18px; font-size:.88rem;">📤 Gửi duyệt cho Admin</button>
+                                </form>
+                            </c:when>
+                            <c:otherwise>
+                                <button class="ins-btn-disabled" type="button" onclick="switchTab('publish')"
+                                        title="Bấm để xem các điều kiện còn thiếu trong Checklist"
+                                        style="padding:8px 16px; font-size:.85rem; background:#F1F5F9; color:#64748B; border:1px dashed #CBD5E1; border-radius:8px; cursor:pointer;">
+                                    📤 Gửi duyệt (Chưa đủ điều kiện)
+                                </button>
+                            </c:otherwise>
+                        </c:choose>
                     </c:when>
                     <c:when test="${course.status == 'UPDATING'}">
-                        <c:if test="${course.readyForSubmit}">
-                            <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/submit" style="margin:0;">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <input type="text" name="changeNote" maxlength="500"
-                                       style="border:1.5px solid #FDE68A;border-radius:6px;padding:6px 10px;font-size:.82rem;width:220px;margin-right:6px;"
-                                       placeholder="Chú thích thay đổi (tùy chọn)..."/>
-                                <button class="ins-btn-primary" type="submit" style="padding:9px 18px; font-size:.88rem; background:#D97706;">📤 Gửi duyệt nội dung mới</button>
-                            </form>
-                        </c:if>
+                        <c:choose>
+                            <c:when test="${course.readyForSubmit}">
+                                <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/submit" style="margin:0;">
+                                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                    <input type="text" name="changeNote" maxlength="500"
+                                           style="border:1.5px solid #FDE68A;border-radius:6px;padding:6px 10px;font-size:.82rem;width:220px;margin-right:6px;"
+                                           placeholder="Chú thích thay đổi (tùy chọn)..."/>
+                                    <button class="ins-btn-primary" type="submit" style="padding:9px 18px; font-size:.88rem; background:#D97706;">📤 Gửi duyệt nội dung mới</button>
+                                </form>
+                            </c:when>
+                            <c:otherwise>
+                                <button class="ins-btn-disabled" type="button" onclick="switchTab('publish')"
+                                        title="Bấm để xem các điều kiện còn thiếu trong Checklist"
+                                        style="padding:8px 16px; font-size:.85rem; background:#F1F5F9; color:#64748B; border:1px dashed #CBD5E1; border-radius:8px; cursor:pointer;">
+                                    📤 Gửi duyệt (Chưa đủ điều kiện)
+                                </button>
+                            </c:otherwise>
+                        </c:choose>
                     </c:when>
                     <c:when test="${course.status == 'APPROVED'}">
                         <form method="post" action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/publish" style="margin:0;">
@@ -198,19 +216,21 @@
 
         <!-- ================= TAB 1: CURRICULUM BUILDER (BƯỚC 2, 3, 4) ================= -->
         <div id="tab-curriculum">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:14px;">
                 <div>
-                    <h2 style="margin:0; font-size:1.15rem; font-weight:800;">Chương mục & Danh sách bài học</h2>
-                    <p style="margin:2px 0 0; font-size:.85rem; color:#64748B;">Thiết lập các chương lớn và thêm bài giảng video, bài viết hoặc quiz vào từng chương.</p>
+                    <h2 style="margin:0; font-size:1.15rem; font-weight:800; color:#0F172A;">Chương mục & Danh sách bài học</h2>
+                    <p style="margin:3px 0 0; font-size:.85rem; color:#64748B;">Thiết lập các chương lớn và thêm bài giảng video, bài viết hoặc quiz vào từng chương.</p>
                 </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="ins-btn-primary" style="padding:9px 16px; font-size:.85rem;" onclick="openSectionModal()">
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <a class="ins-btn-outline" style="padding:9px 18px; font-size:.86rem; border-color:#DDD6FE; color:#7E22CE; background:#FAF5FF; text-decoration:none; font-weight:700; box-shadow:0 1px 3px rgba(126,34,206,.08); transition:all .2s ease;"
+                       onmouseover="this.style.background='#F3E8FF'; this.style.borderColor='#C084FC'; this.style.transform='translateY(-1px)';"
+                       onmouseout="this.style.background='#FAF5FF'; this.style.borderColor='#DDD6FE'; this.style.transform='none';"
+                       href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/quizzes">
+                        📝 Quản lý Quiz của khóa
+                    </a>
+                    <button type="button" class="ins-btn-primary" style="padding:9px 20px; font-size:.86rem; font-weight:700; cursor:pointer;" onclick="openSectionModal()">
                         ➕ Thêm chương mới
                     </button>
-                    <a class="ins-btn-outline" style="padding:9px 16px; font-size:.85rem;"
-                       href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons/new">
-                        ➕ Thêm bài học mới
-                    </a>
                 </div>
             </div>
 

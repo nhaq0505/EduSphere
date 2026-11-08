@@ -32,6 +32,12 @@ public class QuestionForm {
 
     private String explanation;
 
+    private String imageUrl;
+
+    private String videoUrl;
+
+    private String sampleEssayAnswer;
+
     /** Nội dung từng lựa chọn (cho SINGLE_CHOICE, MULTIPLE_CHOICE) */
     private List<String> optionContents = new ArrayList<>();
 

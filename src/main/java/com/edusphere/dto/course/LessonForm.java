@@ -28,9 +28,28 @@ public class LessonForm {
     private Integer videoDuration; // Số phút
     private Boolean allowSeek = true;
 
+    /**
+     * Bắt buộc xem video đủ % mới được làm Quiz gắn với bài học này.
+     * Chỉ có nghĩa khi lessonType = VIDEO.
+     */
+    private Boolean quizRequiresVideo = false;
+
+    /**
+     * Ngưỡng % xem video tối thiểu (0–100).
+     * 0 = không yêu cầu; 100 = xem hết.
+     */
+    private Integer minWatchPercent = 0;
+
     // Bước 4: Cấu hình nâng cao
     private Boolean isPreview = false; // Học thử / xem trước
     private Integer unlockDaysAfterEnroll; // Mở sau X ngày (Drip content)
     private Integer prerequisiteLessonId; // Cần học bài này trước
     private String instructorNotes; // Ghi chú riêng cho GV
+
+    // Bước 3.3: Đính kèm tài liệu học tập (Tùy chọn)
+    private String materialTitle;
+    private String materialType; // DOCUMENT, LINK, VIDEO
+    private String materialUrl;
+    private String materialOriginalName;
+    private Long materialSizeBytes;
 }
