@@ -553,10 +553,11 @@ public class QuizService {
     @Transactional
     public void publishAttemptResult(Integer courseId, Integer quizId, Integer attemptId, Integer instructorId) {
         QuizAttempt attempt = getAttemptForInstructor(courseId, quizId, attemptId, instructorId);
+        if ("PUBLISHED".equals(attempt.getResultStatus())) {
+            return;
+        }
         if (!"SCORED".equals(attempt.getStatus()))
             throw conflict("Chỉ công bố được khi bài làm đã chấm xong toàn bộ câu hỏi.");
-        if ("PUBLISHED".equals(attempt.getResultStatus()))
-            throw conflict("Kết quả đã được công bố.");
         attempt.setResultStatus("PUBLISHED");
         attempt.setPublishedBy(user(instructorId));
         attempt.setPublishedAt(LocalDateTime.now());
@@ -778,6 +779,11 @@ public class QuizService {
                 .anyMatch(q -> "SHORT_ANSWER".equals(q.getType()) || "ESSAY".equals(q.getType()));
         if (!hasManual) {
             attempt.setStatus("SCORED");
+            attempt.setResultStatus("PUBLISHED");
+            attempt.setPublishedAt(now);
+        } else {
+            attempt.setStatus("SUBMITTED");
+            attempt.setResultStatus("PARTIALLY_PUBLISHED");
         }
         attempts.save(attempt);
 
@@ -788,8 +794,8 @@ public class QuizService {
                     "QUIZ_SUBMITTED", quiz.getLesson(), null, quiz, "Đã làm bài kiểm tra: " + quiz.getTitle());
         }
 
-        // Tự động ghi nhận hoàn thành bài học khi học viên hoàn thành/đạt bài Quiz gắn với bài học
-        if (lessonCompletions != null && attempt.getQuiz() != null && attempt.getQuiz().getLesson() != null) {
+        // Tự động ghi nhận hoàn thành bài học khi học viên hoàn thành/đạt bài Quiz gắn với bài học (với quiz trắc nghiệm)
+        if (!hasManual && lessonCompletions != null && attempt.getQuiz() != null && attempt.getQuiz().getLesson() != null) {
             Lesson quizLesson = attempt.getQuiz().getLesson();
             boolean passedQuiz = true;
             if (attempt.getQuiz().getPassingScore() != null && attempt.getMaxScore() != null
@@ -860,7 +866,33 @@ public class QuizService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         attempt.setScore(total);
         boolean allGraded = allAnswers.stream().noneMatch(a -> a.getAwardedScore() == null);
-        if (allGraded) attempt.setStatus("SCORED");
+        if (allGraded) {
+            attempt.setStatus("SCORED");
+            attempt.setResultStatus("PUBLISHED");
+            attempt.setPublishedAt(LocalDateTime.now());
+        }
+        attempts.save(attempt);
+
+        // Khi giảng viên chấm xong toàn bộ câu tự luận và học viên đạt điểm yêu cầu -> tự động ghi nhận hoàn thành bài học (nếu có gắn lesson)
+        if (allGraded && lessonCompletions != null && attempt.getQuiz() != null && attempt.getQuiz().getLesson() != null) {
+            Lesson quizLesson = attempt.getQuiz().getLesson();
+            boolean passedQuiz = true;
+            if (attempt.getQuiz().getPassingScore() != null && attempt.getMaxScore() != null
+                    && attempt.getMaxScore().compareTo(BigDecimal.ZERO) > 0 && attempt.getScore() != null) {
+                double pct = attempt.getScore().doubleValue() / attempt.getMaxScore().doubleValue() * 100.0;
+                passedQuiz = pct >= attempt.getQuiz().getPassingScore().doubleValue();
+            }
+            if (passedQuiz && !lessonCompletions.existsByStudent_UserIdAndLesson_LessonId(attempt.getStudent().getUserId(), quizLesson.getLessonId())) {
+                try {
+                    LessonCompletion lc = new LessonCompletion();
+                    lc.setStudent(attempt.getStudent());
+                    lc.setCourse(attempt.getQuiz().getCourse());
+                    lc.setLesson(quizLesson);
+                    lc.setCompletedAt(LocalDateTime.now());
+                    lessonCompletions.save(lc);
+                } catch (Exception ignored) {}
+            }
+        }
     }
 
     private void applyForm(Quiz quiz, QuizForm form) {

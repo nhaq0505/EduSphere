@@ -98,9 +98,12 @@
                                                 📅 Nộp lúc ${a.formattedSubmittedAt}
                                             </div>
                                         </c:if>
-                                        <c:if test="${a.resultStatus eq 'PUBLISHED' and a.score != null}">
+                                        <c:if test="${a.score != null and a.status ne 'IN_PROGRESS'}">
                                             <div class="quiz-score-highlight">
                                                 Điểm: <fmt:formatNumber value="${a.score}" maxFractionDigits="2"/> / <fmt:formatNumber value="${a.maxScore}" maxFractionDigits="2"/>
+                                                <c:if test="${a.status eq 'SUBMITTED'}">
+                                                    <span style="font-size:0.75rem; color:#64748B; font-weight:normal; margin-left:4px;">(Trắc nghiệm)</span>
+                                                </c:if>
                                             </div>
                                         </c:if>
                                     </div>
@@ -113,7 +116,7 @@
                                                 <span class="quiz-badge quiz-badge--scored">✅ Đã chấm</span>
                                             </c:when>
                                             <c:otherwise>
-                                                <span class="quiz-badge quiz-badge--submitted">📤 Đã nộp</span>
+                                                <span class="quiz-badge quiz-badge--submitted">📝 Chờ chấm tự luận</span>
                                             </c:otherwise>
                                         </c:choose>
 

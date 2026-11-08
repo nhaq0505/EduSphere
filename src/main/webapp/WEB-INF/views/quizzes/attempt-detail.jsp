@@ -39,10 +39,16 @@
         <p>Điểm hiện tại:
             <strong><c:choose><c:when test="${attempt.score != null}"><fmt:formatNumber value="${attempt.score}" maxFractionDigits="2"/></c:when><c:otherwise>—</c:otherwise></c:choose>
             / <fmt:formatNumber value="${attempt.maxScore}" maxFractionDigits="2"/></strong>
-            · Kết quả: <strong>${attempt.resultStatus eq 'PUBLISHED' ? 'Đã công bố' : 'Chưa công bố'}</strong>
+            · Kết quả: <strong>
+                <c:choose>
+                    <c:when test="${attempt.resultStatus eq 'PUBLISHED'}">✅ Đã công bố</c:when>
+                    <c:when test="${attempt.resultStatus eq 'PARTIALLY_PUBLISHED'}">📝 Đã công bố trắc nghiệm (Chờ chấm tự luận)</c:when>
+                    <c:otherwise>Chưa công bố</c:otherwise>
+                </c:choose>
+            </strong>
         </p>
         <c:if test="${attempt.status eq 'SUBMITTED'}">
-            <div class="ins-alert">Còn câu trả lời ngắn / tự luận chưa chấm. Chấm hết để có thể công bố.</div>
+            <div class="ins-alert">Còn câu hỏi tự luận chưa chấm. Sau khi chấm hết các câu tự luận, kết quả bài làm sẽ tự động được hoàn tất và công bố.</div>
         </c:if>
 
         <div class="ins-lesson-list">
