@@ -15,6 +15,12 @@ public interface QuestionRepository extends JpaRepository<Question, Integer> {
 
     long countByQuiz_QuizId(Integer quizId);
 
+    @Query("SELECT q.bankQuestion.bankQuestionId FROM Question q WHERE q.quiz.quizId = :quizId AND q.bankQuestion IS NOT NULL")
+    List<Integer> findExistingBankQuestionIdsByQuizId(@Param("quizId") Integer quizId);
+
+    @Query("SELECT COALESCE(MAX(q.orderIndex), 0) FROM Question q WHERE q.quiz.quizId = :quizId")
+    Integer findMaxOrderIndexByQuizId(@Param("quizId") Integer quizId);
+
     @Modifying
     @Query("UPDATE Question q SET q.bankQuestion = null WHERE q.bankQuestion.bankQuestionId = :bankQuestionId")
     void detachBankQuestion(@Param("bankQuestionId") Integer bankQuestionId);

@@ -224,14 +224,14 @@
                         <label style="font-weight:700;color:#1e293b;display:block;margin-bottom:8px">Đáp án đúng:</label>
                         <div style="display:flex;gap:24px">
                             <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                                <input type="radio" name="tfCorrect" value="Đúng" onchange="setTfVal(this.value)"
-                                       <c:if test="${questionForm.correctAnswer eq 'Đúng'}">checked</c:if>/>
-                                Đúng
+                                <input type="radio" name="tfCorrect" value="TRUE" onchange="setTfVal(this.value)"
+                                       <c:if test="${empty questionForm.correctAnswer or questionForm.correctAnswer eq 'TRUE' or questionForm.correctAnswer eq 'true' or questionForm.correctAnswer eq 'Đúng'}">checked</c:if>/>
+                                Đúng (True)
                             </label>
                             <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                                <input type="radio" name="tfCorrect" value="Sai" onchange="setTfVal(this.value)"
-                                       <c:if test="${questionForm.correctAnswer eq 'Sai'}">checked</c:if>/>
-                                Sai
+                                <input type="radio" name="tfCorrect" value="FALSE" onchange="setTfVal(this.value)"
+                                       <c:if test="${questionForm.correctAnswer eq 'FALSE' or questionForm.correctAnswer eq 'false' or questionForm.correctAnswer eq 'Sai'}">checked</c:if>/>
+                                Sai (False)
                             </label>
                         </div>
                     </div>
@@ -313,6 +313,8 @@
             document.getElementById('choiceNotice').innerText = 'Chọn các đáp án đúng bằng ô vuông';
         } else if (type === 'TRUE_FALSE') {
             tfSec.style.display = 'block';
+            var checkedTf = document.querySelector('input[name="tfCorrect"]:checked');
+            if (checkedTf) setTfVal(checkedTf.value);
         } else if (type === 'ESSAY') {
             essaySec.style.display = 'block';
         } else if (type === 'SHORT_ANSWER') {

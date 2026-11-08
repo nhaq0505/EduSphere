@@ -807,6 +807,14 @@ function zoomImage(src) {
 function closeZoomModal() {
     document.getElementById('imageZoomModal').style.display = 'none';
 }
+var existingBankQuestionIds = [
+    <c:forEach var="q" items="${questions}">
+        <c:if test="${not empty q.bankQuestion}">
+            ${q.bankQuestion.bankQuestionId},
+        </c:if>
+    </c:forEach>
+];
+
 function loadBankQuestionsForPicker(bankId) {
     var cont = document.getElementById('pickerQuestionsContainer');
     if (!bankId) {
@@ -824,15 +832,17 @@ function loadBankQuestionsForPicker(bankId) {
             }
             var html = '';
             data.forEach((q, i) => {
+                var isAlreadyInQuiz = existingBankQuestionIds.includes(q.id);
                 var typeLabel = q.type === 'SINGLE_CHOICE' ? 'Trắc nghiệm đơn' : (q.type === 'MULTIPLE_CHOICE' ? 'Nhiều đáp án' : (q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : (q.type === 'ESSAY' ? 'Tự luận' : q.type)));
-                html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;">' +
-                    '<input type="checkbox" name="bankQuestionIds" value="' + q.id + '" style="margin-top:4px;accent-color:#0284c7;" onchange="updatePickedCount()"/>' +
+                html += '<div style="background:' + (isAlreadyInQuiz ? '#f8fafc' : '#fff') + ';border:1px solid ' + (isAlreadyInQuiz ? '#cbd5e1' : '#e2e8f0') + ';border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;' + (isAlreadyInQuiz ? 'opacity:0.75;' : '') + '">' +
+                    '<input type="checkbox" name="bankQuestionIds" value="' + q.id + '" ' + (isAlreadyInQuiz ? 'disabled title="Câu hỏi này đã có trong đề thi"' : 'onchange="updatePickedCount()"') + ' style="margin-top:4px;accent-color:#0284c7;cursor:' + (isAlreadyInQuiz ? 'not-allowed' : 'pointer') + ';"/>' +
                     '<div style="flex:1;">' +
-                        '<div style="font-weight:600;font-size:0.9rem;color:#1e293b;line-height:1.4;">#' + (i+1) + '. ' + escapeHtml(q.content) + '</div>' +
-                        '<div style="display:flex;gap:8px;margin-top:6px;font-size:0.75rem;color:#64748b;">' +
+                        '<div style="font-weight:600;font-size:0.9rem;color:' + (isAlreadyInQuiz ? '#64748b' : '#1e293b') + ';line-height:1.4;">#' + (i+1) + '. ' + escapeHtml(q.content) + '</div>' +
+                        '<div style="display:flex;gap:8px;margin-top:6px;font-size:0.75rem;color:#64748b;align-items:center;">' +
                             '<span style="background:#e0e7ff;color:#4338ca;padding:1px 6px;border-radius:4px;font-weight:700;">' + typeLabel + '</span>' +
                             '<span style="background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:4px;">' + (q.difficulty || 'MEDIUM') + '</span>' +
                             '<span>' + (q.score || 1) + ' điểm</span>' +
+                            (isAlreadyInQuiz ? '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:700;margin-left:auto;">Đã có trong đề</span>' : '') +
                         '</div>' +
                     '</div>' +
                 '</div>';
@@ -845,7 +855,7 @@ function loadBankQuestionsForPicker(bankId) {
         });
 }
 function selectAllPickerQuestions(checked) {
-    document.querySelectorAll('#pickerQuestionsContainer input[type=checkbox]').forEach(cb => cb.checked = checked);
+    document.querySelectorAll('#pickerQuestionsContainer input[type=checkbox]:not([disabled])').forEach(cb => cb.checked = checked);
     updatePickedCount();
 }
 function updatePickedCount() {

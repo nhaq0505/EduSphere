@@ -38,6 +38,7 @@ import com.edusphere.repository.course.QuizRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -193,15 +194,19 @@ public class QuizService {
         if (form.getScore() == null || form.getScore().compareTo(BigDecimal.ZERO) <= 0) {
             throw new CourseActionException(HttpStatus.BAD_REQUEST, "Điểm câu hỏi phải lớn hơn 0.");
         }
-        long nextIndex = questions.countByQuiz_QuizId(quizId) + 1;
+        int nextIndex = questions.findMaxOrderIndexByQuizId(quizId) + 1;
 
         Question q = new Question();
         q.setQuiz(quiz);
         q.setContent(form.getContent().trim());
         q.setType(form.getType());
         q.setScore(form.getScore());
-        q.setOrderIndex((int) nextIndex);
-        q.setCorrectAnswer(form.getCorrectAnswer());
+        q.setOrderIndex(nextIndex);
+        if ("TRUE_FALSE".equals(form.getType())) {
+            q.setCorrectAnswer(QuestionImportService.normalizeTrueFalse(form.getCorrectAnswer()));
+        } else {
+            q.setCorrectAnswer(form.getCorrectAnswer());
+        }
         q.setExplanation(form.getExplanation());
         q.setImageUrl(form.getImageUrl() != null && !form.getImageUrl().isBlank() ? form.getImageUrl().trim() : null);
         q.setVideoUrl(form.getVideoUrl() != null && !form.getVideoUrl().isBlank() ? form.getVideoUrl().trim() : null);
@@ -247,7 +252,11 @@ public class QuizService {
         q.setContent(form.getContent().trim());
         q.setType(form.getType());
         q.setScore(form.getScore());
-        q.setCorrectAnswer(form.getCorrectAnswer());
+        if ("TRUE_FALSE".equals(form.getType())) {
+            q.setCorrectAnswer(QuestionImportService.normalizeTrueFalse(form.getCorrectAnswer()));
+        } else {
+            q.setCorrectAnswer(form.getCorrectAnswer());
+        }
         q.setExplanation(form.getExplanation());
         q.setImageUrl(form.getImageUrl() != null && !form.getImageUrl().isBlank() ? form.getImageUrl().trim() : null);
         q.setVideoUrl(form.getVideoUrl() != null && !form.getVideoUrl().isBlank() ? form.getVideoUrl().trim() : null);
@@ -359,47 +368,39 @@ public class QuizService {
             clearQuizQuestions(quizId);
         }
 
+        List<Integer> existingBqIds = replaceExisting ? List.of() : questions.findExistingBankQuestionIdsByQuizId(quizId);
+
         List<BankQuestion> sampled;
         if (categoryId != null && categoryId > 0) {
-            sampled = bankQuestions.findRandomByBankAndCategory(bankId, categoryId, count);
+            if (existingBqIds.isEmpty()) {
+                sampled = bankQuestions.findRandomByBankAndCategory(bankId, categoryId, count);
+            } else {
+                sampled = bankQuestions.findRandomByBankAndCategoryExcludingIds(bankId, categoryId, existingBqIds, count);
+            }
         } else {
-            sampled = bankQuestions.findRandomByBank(bankId, count);
+            if (existingBqIds.isEmpty()) {
+                sampled = bankQuestions.findRandomByBank(bankId, count);
+            } else {
+                sampled = bankQuestions.findRandomByBankExcludingIds(bankId, existingBqIds, count);
+            }
         }
 
         if (sampled.isEmpty()) {
-            throw conflict("Ngân hàng câu hỏi không có câu hỏi nào để bốc ngẫu nhiên.");
+            throw conflict("Ngân hàng câu hỏi không còn câu hỏi mới nào (chưa có trong bài quiz) để bốc.");
         }
 
-        int currentCount = (int) questions.countByQuiz_QuizId(quizId);
+        int currentOrder = questions.findMaxOrderIndexByQuizId(quizId);
         for (BankQuestion bq : sampled) {
-            currentCount++;
+            currentOrder++;
             Question q = new Question();
             q.setQuiz(quiz);
             q.setBankQuestion(bq);
             q.setContent(bq.getContent());
             q.setType(bq.getType());
             q.setScore(bq.getDefaultScore() != null ? bq.getDefaultScore() : (defaultScore != null ? defaultScore : BigDecimal.ONE));
-            q.setOrderIndex(currentCount);
-            q.setCorrectAnswer(bq.getCorrectAnswer());
-            q.setExplanation(bq.getExplanation());
-            q.setImageUrl(bq.getImageUrl());
-            q.setVideoUrl(bq.getVideoUrl());
-            q.setSampleEssayAnswer(bq.getSampleEssayAnswer());
-            Question savedQ = questions.save(q);
+            q.setOrderIndex(currentOrder);
 
-            if (Set.of("SINGLE_CHOICE", "MULTIPLE_CHOICE").contains(bq.getType())) {
-                List<BankAnswerOption> bOptions = bq.getOptions();
-                if (bOptions != null && !bOptions.isEmpty()) {
-                    for (BankAnswerOption bo : bOptions) {
-                        AnswerOption opt = new AnswerOption();
-                        opt.setQuestion(savedQ);
-                        opt.setContent(bo.getContent());
-                        opt.setCorrect(bo.isCorrect());
-                        opt.setOrderIndex(bo.getOrderIndex());
-                        answerOptions.save(opt);
-                    }
-                }
-            }
+            copyCorrectAnswerAndOptionsFromBank(bq, q);
         }
 
         quiz.setBank(bank);
@@ -419,45 +420,92 @@ public class QuizService {
 
         if (bankQuestionIds == null || bankQuestionIds.isEmpty()) return 0;
 
-        int currentCount = (int) questions.countByQuiz_QuizId(quizId);
+        List<Integer> existingBqIds = questions.findExistingBankQuestionIdsByQuizId(quizId);
+        Set<Integer> existingSet = new HashSet<>(existingBqIds);
+
+        int currentOrder = questions.findMaxOrderIndexByQuizId(quizId);
         int added = 0;
         for (Integer bqId : bankQuestionIds) {
+            if (bqId == null || existingSet.contains(bqId)) {
+                continue; // Bỏ qua câu hỏi đã có sẵn trong đề thi hoặc bị trùng lặp
+            }
             BankQuestion bq = bankQuestions.findByBankQuestionIdAndBank_BankId(bqId, bankId).orElse(null);
             if (bq == null) continue;
 
-            currentCount++;
+            currentOrder++;
             added++;
+            existingSet.add(bqId);
+
             Question q = new Question();
             q.setQuiz(quiz);
             q.setBankQuestion(bq);
             q.setContent(bq.getContent());
             q.setType(bq.getType());
             q.setScore(bq.getDefaultScore() != null ? bq.getDefaultScore() : BigDecimal.ONE);
-            q.setOrderIndex(currentCount);
-            q.setCorrectAnswer(bq.getCorrectAnswer());
-            q.setExplanation(bq.getExplanation());
-            q.setImageUrl(bq.getImageUrl());
-            q.setVideoUrl(bq.getVideoUrl());
-            q.setSampleEssayAnswer(bq.getSampleEssayAnswer());
-            Question savedQ = questions.save(q);
+            q.setOrderIndex(currentOrder);
 
-            if (Set.of("SINGLE_CHOICE", "MULTIPLE_CHOICE").contains(bq.getType())) {
-                List<BankAnswerOption> bOptions = bq.getOptions();
-                if (bOptions != null && !bOptions.isEmpty()) {
-                    for (BankAnswerOption bo : bOptions) {
-                        AnswerOption opt = new AnswerOption();
-                        opt.setQuestion(savedQ);
-                        opt.setContent(bo.getContent());
-                        opt.setCorrect(bo.isCorrect());
-                        opt.setOrderIndex(bo.getOrderIndex());
-                        answerOptions.save(opt);
-                    }
-                }
-            }
+            copyCorrectAnswerAndOptionsFromBank(bq, q);
         }
+
+        if (added == 0) {
+            throw conflict("Tất cả các câu hỏi được chọn đều đã tồn tại trong bài quiz này.");
+        }
+
         quiz.setBank(bank);
         quizzes.save(quiz);
         return added;
+    }
+
+    private void copyCorrectAnswerAndOptionsFromBank(BankQuestion bq, Question q) {
+        if ("TRUE_FALSE".equals(bq.getType())) {
+            String tf = QuestionImportService.normalizeTrueFalse(bq.getCorrectAnswer());
+            if (tf == null && bq.getOptions() != null) {
+                for (BankAnswerOption bo : bq.getOptions()) {
+                    if (bo.isCorrect()) {
+                        String c = bo.getContent() != null ? bo.getContent().trim().toUpperCase(java.util.Locale.ROOT) : "";
+                        tf = (c.contains("ĐÚNG") || c.contains("TRUE") || bo.getOrderIndex() == 1) ? "TRUE" : "FALSE";
+                        break;
+                    }
+                }
+            }
+            q.setCorrectAnswer(tf != null ? tf : "TRUE");
+        } else {
+            q.setCorrectAnswer(bq.getCorrectAnswer());
+        }
+        q.setExplanation(bq.getExplanation());
+        q.setImageUrl(bq.getImageUrl());
+        q.setVideoUrl(bq.getVideoUrl());
+        q.setSampleEssayAnswer(bq.getSampleEssayAnswer());
+        Question savedQ = questions.save(q);
+
+        if (Set.of("SINGLE_CHOICE", "MULTIPLE_CHOICE", "TRUE_FALSE").contains(bq.getType())) {
+            List<BankAnswerOption> bOptions = bq.getOptions();
+            if (bOptions != null && !bOptions.isEmpty()) {
+                for (BankAnswerOption bo : bOptions) {
+                    AnswerOption opt = new AnswerOption();
+                    opt.setQuestion(savedQ);
+                    opt.setContent(bo.getContent());
+                    opt.setCorrect(bo.isCorrect());
+                    opt.setOrderIndex(bo.getOrderIndex());
+                    answerOptions.save(opt);
+                }
+            } else if ("TRUE_FALSE".equals(bq.getType())) {
+                boolean isTrue = "TRUE".equalsIgnoreCase(savedQ.getCorrectAnswer());
+                AnswerOption opt1 = new AnswerOption();
+                opt1.setQuestion(savedQ);
+                opt1.setContent("Đúng");
+                opt1.setCorrect(isTrue);
+                opt1.setOrderIndex(1);
+                answerOptions.save(opt1);
+
+                AnswerOption opt2 = new AnswerOption();
+                opt2.setQuestion(savedQ);
+                opt2.setContent("Sai");
+                opt2.setCorrect(!isTrue);
+                opt2.setOrderIndex(2);
+                answerOptions.save(opt2);
+            }
+        }
     }
 
     @Transactional
@@ -854,7 +902,9 @@ public class QuizService {
                 case "TRUE_FALSE" -> {
                     String ans = studentAnswers.isEmpty() ? null : studentAnswers.get(0);
                     qa.setAnswerText(ans);
-                    boolean correct3 = ans != null && ans.equalsIgnoreCase(q.getCorrectAnswer());
+                    String expected = QuestionImportService.normalizeTrueFalse(q.getCorrectAnswer());
+                    String actual = QuestionImportService.normalizeTrueFalse(ans);
+                    boolean correct3 = actual != null && expected != null && actual.equalsIgnoreCase(expected);
                     qa.setAwardedScore(correct3 ? q.getScore() : BigDecimal.ZERO);
                     if (correct3) totalScore = totalScore.add(q.getScore());
                     answers.save(qa);

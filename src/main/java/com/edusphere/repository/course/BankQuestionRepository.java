@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,8 +31,14 @@ public interface BankQuestionRepository extends JpaRepository<BankQuestion, Inte
     @Query(value = "SELECT TOP (:count) * FROM bank_questions WHERE bank_id = :bankId ORDER BY NEWID()", nativeQuery = true)
     List<BankQuestion> findRandomByBank(@Param("bankId") Integer bankId, @Param("count") int count);
 
+    @Query(value = "SELECT TOP (:count) * FROM bank_questions WHERE bank_id = :bankId AND bank_question_id NOT IN (:excludedIds) ORDER BY NEWID()", nativeQuery = true)
+    List<BankQuestion> findRandomByBankExcludingIds(@Param("bankId") Integer bankId, @Param("excludedIds") Collection<Integer> excludedIds, @Param("count") int count);
+
     @Query(value = "SELECT TOP (:count) * FROM bank_questions WHERE bank_id = :bankId AND category_id = :categoryId ORDER BY NEWID()", nativeQuery = true)
     List<BankQuestion> findRandomByBankAndCategory(@Param("bankId") Integer bankId, @Param("categoryId") Integer categoryId, @Param("count") int count);
+
+    @Query(value = "SELECT TOP (:count) * FROM bank_questions WHERE bank_id = :bankId AND category_id = :categoryId AND bank_question_id NOT IN (:excludedIds) ORDER BY NEWID()", nativeQuery = true)
+    List<BankQuestion> findRandomByBankAndCategoryExcludingIds(@Param("bankId") Integer bankId, @Param("categoryId") Integer categoryId, @Param("excludedIds") Collection<Integer> excludedIds, @Param("count") int count);
 
     @Query(value = "SELECT TOP (:count) * FROM bank_questions WHERE bank_id = :bankId AND difficulty_level = :difficulty ORDER BY NEWID()", nativeQuery = true)
     List<BankQuestion> findRandomByBankAndDifficulty(@Param("bankId") Integer bankId, @Param("difficulty") String difficulty, @Param("count") int count);
