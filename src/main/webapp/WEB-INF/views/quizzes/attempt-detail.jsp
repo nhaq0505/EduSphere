@@ -41,8 +41,8 @@
             / <fmt:formatNumber value="${attempt.maxScore}" maxFractionDigits="2"/></strong>
             · Kết quả: <strong>
                 <c:choose>
-                    <c:when test="${attempt.resultStatus eq 'PUBLISHED'}">✅ Đã công bố</c:when>
-                    <c:when test="${attempt.resultStatus eq 'PARTIALLY_PUBLISHED'}">📝 Đã công bố trắc nghiệm (Chờ chấm tự luận)</c:when>
+                    <c:when test="${attempt.status eq 'SCORED' or attempt.resultStatus eq 'PUBLISHED'}">✅ Đã công bố</c:when>
+                    <c:when test="${attempt.status eq 'SUBMITTED'}">📝 Đã công bố trắc nghiệm (Chờ chấm tự luận)</c:when>
                     <c:otherwise>Chưa công bố</c:otherwise>
                 </c:choose>
             </strong>

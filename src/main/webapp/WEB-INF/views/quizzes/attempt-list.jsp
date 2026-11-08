@@ -46,9 +46,9 @@
                             <td style="padding:10px 14px"><c:choose><c:when test="${a.score != null}"><fmt:formatNumber value="${a.score}" maxFractionDigits="2"/> / <fmt:formatNumber value="${a.maxScore}" maxFractionDigits="2"/></c:when><c:otherwise>—</c:otherwise></c:choose></td>
                             <td style="padding:10px 14px">
                                 <c:choose>
-                                    <c:when test="${a.resultStatus eq 'PUBLISHED'}"><span style="color:#10B981;font-weight:600;">✅ Đã công bố</span></c:when>
-                                    <c:when test="${a.resultStatus eq 'PARTIALLY_PUBLISHED'}"><span style="color:#2563EB;font-weight:600;">📝 Chờ chấm tự luận</span></c:when>
-                                    <c:otherwise>${a.status} · Chưa công bố</c:otherwise>
+                                    <c:when test="${a.status eq 'SCORED' or a.resultStatus eq 'PUBLISHED'}"><span style="color:#10B981;font-weight:600;">✅ Đã công bố</span></c:when>
+                                    <c:when test="${a.status eq 'SUBMITTED'}"><span style="color:#2563EB;font-weight:600;">📝 Chờ chấm tự luận</span></c:when>
+                                    <c:otherwise>${a.status} · Chưa nộp</c:otherwise>
                                 </c:choose>
                             </td>
                             <td style="padding:10px 14px">

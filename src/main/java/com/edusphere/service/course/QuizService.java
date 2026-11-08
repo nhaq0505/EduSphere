@@ -560,7 +560,12 @@ public class QuizService {
             throw conflict("Chỉ công bố được khi bài làm đã chấm xong toàn bộ câu hỏi.");
         attempt.setResultStatus("PUBLISHED");
         attempt.setPublishedBy(user(instructorId));
-        attempt.setPublishedAt(LocalDateTime.now());
+        LocalDateTime pAt = LocalDateTime.now();
+        if (attempt.getSubmittedAt() != null && pAt.isBefore(attempt.getSubmittedAt())) {
+            pAt = attempt.getSubmittedAt();
+        }
+        attempt.setPublishedAt(pAt);
+        attempts.save(attempt);
     }
 
     // ===================== STUDENT OPERATIONS =====================
@@ -777,21 +782,33 @@ public class QuizService {
         // Check if all questions are auto-graded
         boolean hasManual = qList.stream()
                 .anyMatch(q -> "SHORT_ANSWER".equals(q.getType()) || "ESSAY".equals(q.getType()));
-        if (!hasManual) {
+        Users publisher = resolvePublisher(attempt);
+
+        if (!hasManual && publisher != null) {
             attempt.setStatus("SCORED");
             attempt.setResultStatus("PUBLISHED");
             attempt.setPublishedAt(now);
+            attempt.setPublishedBy(publisher);
+        } else if (!hasManual) {
+            attempt.setStatus("SCORED");
+            attempt.setResultStatus("UNPUBLISHED");
+            attempt.setPublishedAt(null);
+            attempt.setPublishedBy(null);
         } else {
             attempt.setStatus("SUBMITTED");
-            attempt.setResultStatus("PARTIALLY_PUBLISHED");
+            attempt.setResultStatus("UNPUBLISHED");
+            attempt.setPublishedAt(null);
+            attempt.setPublishedBy(null);
         }
         attempts.save(attempt);
 
         // Ghi lại lịch sử hoạt động nộp bài quiz (UC38)
         if (learningProgressService != null) {
-            Quiz quiz = attempt.getQuiz();
-            learningProgressService.recordActivity(attempt.getStudent(), quiz.getCourse(),
-                    "QUIZ_SUBMITTED", quiz.getLesson(), null, quiz, "Đã làm bài kiểm tra: " + quiz.getTitle());
+            try {
+                Quiz quiz = attempt.getQuiz();
+                learningProgressService.recordActivity(attempt.getStudent(), quiz.getCourse(),
+                        "QUIZ", null, null, quiz, "Đã làm bài kiểm tra: " + quiz.getTitle());
+            } catch (Exception ignored) {}
         }
 
         // Tự động ghi nhận hoàn thành bài học khi học viên hoàn thành/đạt bài Quiz gắn với bài học (với quiz trắc nghiệm)
@@ -868,8 +885,18 @@ public class QuizService {
         boolean allGraded = allAnswers.stream().noneMatch(a -> a.getAwardedScore() == null);
         if (allGraded) {
             attempt.setStatus("SCORED");
-            attempt.setResultStatus("PUBLISHED");
-            attempt.setPublishedAt(LocalDateTime.now());
+            Users publisher = resolvePublisher(attempt);
+            if (publisher != null) {
+                attempt.setResultStatus("PUBLISHED");
+                LocalDateTime pAt = LocalDateTime.now();
+                if (attempt.getSubmittedAt() != null && pAt.isBefore(attempt.getSubmittedAt())) {
+                    pAt = attempt.getSubmittedAt();
+                }
+                attempt.setPublishedAt(pAt);
+                attempt.setPublishedBy(publisher);
+            } else {
+                attempt.setResultStatus("UNPUBLISHED");
+            }
         }
         attempts.save(attempt);
 
@@ -1005,15 +1032,40 @@ public class QuizService {
 
     /** Initialize tất cả lazy association của QuizAttempt trong khi session còn mở */
     private void initAttempt(QuizAttempt a) {
+        if (a == null) return;
         org.hibernate.Hibernate.initialize(a.getQuiz());
         org.hibernate.Hibernate.initialize(a.getStudent());
         org.hibernate.Hibernate.initialize(a.getCourse());
+        if (a.getCourse() != null) {
+            org.hibernate.Hibernate.initialize(a.getCourse().getInstructor());
+        }
         if (a.getQuiz() != null) {
+            org.hibernate.Hibernate.initialize(a.getQuiz().getCourse());
+            if (a.getQuiz().getCourse() != null) {
+                org.hibernate.Hibernate.initialize(a.getQuiz().getCourse().getInstructor());
+            }
+            if (a.getQuiz().getCreatedBy() != null) {
+                org.hibernate.Hibernate.initialize(a.getQuiz().getCreatedBy());
+            }
             org.hibernate.Hibernate.initialize(a.getQuiz().getLesson());
         }
         if (a.getPublishedBy() != null) {
             org.hibernate.Hibernate.initialize(a.getPublishedBy());
         }
+    }
+
+    private Users resolvePublisher(QuizAttempt a) {
+        if (a == null) return null;
+        if (a.getQuiz() != null && a.getQuiz().getCreatedBy() != null) {
+            return a.getQuiz().getCreatedBy();
+        }
+        if (a.getCourse() != null && a.getCourse().getInstructor() != null) {
+            return a.getCourse().getInstructor();
+        }
+        if (a.getQuiz() != null && a.getQuiz().getCourse() != null && a.getQuiz().getCourse().getInstructor() != null) {
+            return a.getQuiz().getCourse().getInstructor();
+        }
+        return null;
     }
 
     private CourseActionException notFound(String msg) {

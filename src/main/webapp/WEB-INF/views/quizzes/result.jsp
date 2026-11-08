@@ -40,7 +40,7 @@
                     <c:set var="pendingManualCount" value="${pendingManualCount + 1}"/>
                 </c:if>
             </c:forEach>
-            <c:set var="hasPendingManual" value="${pendingManualCount > 0}"/>
+            <c:set var="hasPendingManual" value="${pendingManualCount > 0 or attempt.status eq 'SUBMITTED'}"/>
 
             <c:choose>
                 <%-- Trường hợp A: Còn câu tự luận đang chờ giảng viên chấm --%>
