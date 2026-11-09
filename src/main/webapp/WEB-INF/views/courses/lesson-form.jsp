@@ -432,12 +432,7 @@ function uploadLessonVideo(inputElem) {
         return;
     }
 
-    var lessonId = '${lessonId}'; // có thể rỗng khi tạo mới
-    if (!lessonId || lessonId === '') {
-        statusElem.className = 'upload-status upload-status--error';
-        statusElem.textContent = '⚠️ Vui lòng lưu bài học trước, sau đó tải video từ trang chi tiết bài học.';
-        return;
-    }
+    var lessonId = '${lessonId}'; // có thể rỗng khi tạo mới bài học
 
     statusElem.className = 'upload-status upload-status--loading';
     statusElem.textContent = '⏳ Đang upload lên Bunny Stream (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)...';
@@ -448,7 +443,9 @@ function uploadLessonVideo(inputElem) {
     var csrfToken = document.querySelector('input[name="${_csrf.parameterName}"]').value;
     var formData = new FormData();
     formData.append('file', file);
-    formData.append('lessonId', lessonId);
+    if (lessonId && lessonId !== '') {
+        formData.append('lessonId', lessonId);
+    }
     formData.append('title', document.getElementById('title').value || file.name);
 
     // Dùng XMLHttpRequest để hiển thị progress
@@ -469,12 +466,15 @@ function uploadLessonVideo(inputElem) {
         try { data = JSON.parse(xhr.responseText); } catch(e) { data = {}; }
         if (data.success) {
             document.getElementById('videoUrl').value = data.playerUrl || '';
+            if (typeof setType === 'function') {
+                setType('VIDEO');
+            }
             statusElem.className = 'upload-status upload-status--success';
-            statusElem.textContent = '✅ Upload xong! Bunny đang xử lý video, vui lòng chờ vài phút trước khi xuất bản.';
+            statusElem.textContent = '✅ Upload xong! Bunny đang xử lý video, bạn có thể bấm Lưu bài học ngay.';
             progressBar.style.width = '100%';
             progressText.textContent = 'Hoàn tất — đang xử lý trên Bunny CDN';
-            // Tự động poll trạng thái sau 10s
-            setTimeout(function() { pollVideoStatus(lessonId, statusElem); }, 10000);
+            // Tự động poll trạng thái sau 10s (theo lessonId hoặc bunnyVideoId)
+            setTimeout(function() { pollVideoStatus(lessonId, data.bunnyVideoId, statusElem); }, 10000);
         } else {
             statusElem.className = 'upload-status upload-status--error';
             statusElem.textContent = '❌ ' + (data.message || 'Upload thất bại');
@@ -492,9 +492,12 @@ function uploadLessonVideo(inputElem) {
 }
 
 // Poll trạng thái video từ Bunny sau khi upload
-function pollVideoStatus(lessonId, statusElem) {
-    if (!lessonId) return;
-    fetch('${pageContext.request.contextPath}/instructor/videos/' + lessonId + '/status', {
+function pollVideoStatus(lessonId, bunnyVideoId, statusElem) {
+    var statusUrl = lessonId
+        ? ('${pageContext.request.contextPath}/instructor/videos/' + lessonId + '/status')
+        : (bunnyVideoId ? ('${pageContext.request.contextPath}/instructor/videos/guid/' + bunnyVideoId + '/status') : null);
+    if (!statusUrl) return;
+    fetch(statusUrl, {
         headers: { 'Accept': 'application/json' }
     })
     .then(function(r) { return r.json(); })
@@ -508,7 +511,7 @@ function pollVideoStatus(lessonId, statusElem) {
         } else {
             statusElem.textContent = '⏳ Video đang xử lý trên Bunny CDN... Kiểm tra lại sau vài phút.';
             // Poll lại sau 15s
-            setTimeout(function() { pollVideoStatus(lessonId, statusElem); }, 15000);
+            setTimeout(function() { pollVideoStatus(lessonId, bunnyVideoId, statusElem); }, 15000);
         }
     })
     .catch(function() {

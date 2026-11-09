@@ -66,6 +66,9 @@ public class LearningService {
     private final QuestionRepository questionRepository;
     private final LessonWatchProgressRepository watchProgressRepository;
 
+    @Autowired(required = false)
+    private BunnyStreamService bunnyStreamService;
+
     public LearningService(LessonRepository lessonRepository,
                            EnrollmentRepository enrollmentRepository,
                            LessonCompletionRepository lessonCompletionRepository,
@@ -508,6 +511,9 @@ public class LearningService {
         boolean lessonCompleted = completedLessonIds.contains(current.getLessonId());
         boolean isPreviewMode = (enrollment == null) || Boolean.TRUE.equals(current.getIsPreview());
 
+        // Tự động đồng bộ trạng thái video từ Bunny nếu đang PROCESSING (hữu ích khi chạy local không có Webhook)
+        syncBunnyVideoStatusIfNeeded(current);
+
         // Lấy tiến độ xem video của học viên cho bài học hiện tại
         LessonWatchProgress wp = watchProgressRepository != null
                 ? watchProgressRepository.findByStudent_UserIdAndLesson_LessonId(studentId, current.getLessonId()).orElse(null)
@@ -553,6 +559,40 @@ public class LearningService {
         );
     }
 
+    /**
+     * Tự động kiểm tra trạng thái video trên Bunny Stream nếu bài học đang ở trạng thái PROCESSING/UPLOADING,
+     * giúp cập nhật lên READY ngay khi học viên hoặc giảng viên mở bài học mà không cần phụ thuộc vào Webhook.
+     */
+    private void syncBunnyVideoStatusIfNeeded(Lesson lesson) {
+        if (lesson == null || bunnyStreamService == null || !bunnyStreamService.isConfigured()) {
+            return;
+        }
+        String guid = lesson.getBunnyVideoId();
+        if ((guid == null || guid.isBlank()) && lesson.getVideoUrl() != null
+                && lesson.getVideoUrl().contains("player.mediadelivery.net/embed/")) {
+            int lastSlash = lesson.getVideoUrl().lastIndexOf('/');
+            if (lastSlash >= 0 && lastSlash < lesson.getVideoUrl().length() - 1) {
+                guid = lesson.getVideoUrl().substring(lastSlash + 1).trim();
+                int qIdx = guid.indexOf('?');
+                if (qIdx > 0) guid = guid.substring(0, qIdx);
+                lesson.setBunnyVideoId(guid);
+            }
+        }
+        if (guid == null || guid.isBlank()) {
+            return;
+        }
+        String status = lesson.getVideoStatus();
+        if (status == null || "PROCESSING".equalsIgnoreCase(status)
+                || "UPLOADING".equalsIgnoreCase(status) || "NONE".equalsIgnoreCase(status)) {
+            String latestStatus = bunnyStreamService.getVideoStatus(guid);
+            if (latestStatus != null && !latestStatus.equals(status)) {
+                lesson.setVideoStatus(latestStatus);
+                lesson.setUpdatedAt(LocalDateTime.now());
+                lessonRepository.save(lesson);
+            }
+        }
+    }
+
     private boolean isLessonUnlocked(Lesson l, Set<Integer> completedLessonIds, Enrollment enrollment) {
         if (Boolean.TRUE.equals(l.getIsPreview())) {
             return true;
@@ -569,7 +609,7 @@ public class LearningService {
         return true;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public StudyCourseView getStudyContextForPreview(Integer courseId, Integer lessonId, Integer instructorId) {
         Course course = courseRepository != null ? courseRepository.findById(courseId)
                 .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy khóa học."))
@@ -595,6 +635,8 @@ public class LearningService {
         } else {
             current = allLessons.get(0);
         }
+
+        syncBunnyVideoStatusIfNeeded(current);
 
         int currentIndex = allLessons.indexOf(current);
         Integer prevLessonId = currentIndex > 0 ? allLessons.get(currentIndex - 1).getLessonId() : null;

@@ -364,7 +364,28 @@ public class LessonManagementService {
             type = "ARTICLE";
         }
         lesson.setLessonType(type);
-        lesson.setVideoUrl(trimmed(form.getVideoUrl()));
+        String videoUrl = trimmed(form.getVideoUrl());
+        lesson.setVideoUrl(videoUrl);
+        if (videoUrl != null && videoUrl.contains("player.mediadelivery.net/embed/")) {
+            int lastSlash = videoUrl.lastIndexOf('/');
+            if (lastSlash >= 0 && lastSlash < videoUrl.length() - 1) {
+                String extractedGuid = videoUrl.substring(lastSlash + 1).trim();
+                int qIdx = extractedGuid.indexOf('?');
+                if (qIdx > 0) extractedGuid = extractedGuid.substring(0, qIdx);
+                if (!extractedGuid.isEmpty() && !Objects.equals(lesson.getBunnyVideoId(), extractedGuid)) {
+                    lesson.setBunnyVideoId(extractedGuid);
+                    if (lesson.getVideoStatus() == null || "NONE".equalsIgnoreCase(lesson.getVideoStatus())) {
+                        lesson.setVideoStatus("PROCESSING");
+                    }
+                }
+            }
+        } else if (videoUrl != null) {
+            lesson.setBunnyVideoId(null);
+            lesson.setVideoStatus("READY");
+        } else {
+            lesson.setBunnyVideoId(null);
+            lesson.setVideoStatus("NONE");
+        }
         lesson.setVideoDuration(form.getVideoDuration());
         lesson.setAllowSeek(form.getAllowSeek() != null ? form.getAllowSeek() : true);
         lesson.setQuizRequiresVideo(Boolean.TRUE.equals(form.getQuizRequiresVideo()));

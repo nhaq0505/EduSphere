@@ -65,18 +65,16 @@ public class VideoUploadController {
     /**
      * POST /instructor/videos/upload
      *
-     * Nhận file video từ giảng viên, upload lên Bunny Stream, lưu GUID vào DB.
-     *
-     * @param lessonId  ID bài học cần gắn video
-     * @param title     Tiêu đề video (optional, default = tên bài học)
-     * @param file      File video MP4/WebM/MOV
-     * @param user      Giảng viên đang đăng nhập
+     * Nhận file video từ giảng viên, upload lên Bunny Stream.
+     * - Nếu đã có lessonId (sửa bài học): lưu trực tiếp GUID và trạng thái PROCESSING vào DB.
+     * - Nếu chưa có lessonId (đang tạo bài học mới): trả về playerUrl và bunnyVideoId để điền vào form,
+     *   khi giảng viên bấm "Lưu bài học" sẽ lưu đồng bộ vào DB.
      */
     @PostMapping("/upload")
     @ResponseBody
     @Transactional
     public ResponseEntity<Map<String, Object>> uploadVideo(
-            @RequestParam("lessonId") Integer lessonId,
+            @RequestParam(value = "lessonId", required = false) Integer lessonId,
             @RequestParam(value = "title", required = false) String title,
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal CustomUserDetails user) {
@@ -115,30 +113,33 @@ public class VideoUploadController {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(resp);
         }
 
-        // TC07: Giảng viên không sở hữu bài học
-        Lesson lesson = lessonRepository.findById(lessonId)
-                .orElse(null);
-        if (lesson == null) {
-            resp.put("success", false);
-            resp.put("message", "Không tìm thấy bài học.");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(resp);
-        }
-        if (!lesson.getCourse().getInstructor().getUserId().equals(user.getUserId())) {
-            resp.put("success", false);
-            resp.put("message", "Bạn không có quyền upload video cho bài học này.");
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(resp);
+        // Nếu có lessonId thì kiểm tra bài học tồn tại và quyền sở hữu của giảng viên
+        Lesson lesson = null;
+        if (lessonId != null) {
+            lesson = lessonRepository.findById(lessonId).orElse(null);
+            if (lesson == null) {
+                resp.put("success", false);
+                resp.put("message", "Không tìm thấy bài học.");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(resp);
+            }
+            if (!lesson.getCourse().getInstructor().getUserId().equals(user.getUserId())) {
+                resp.put("success", false);
+                resp.put("message", "Bạn không có quyền upload video cho bài học này.");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(resp);
+            }
         }
 
         try {
             // Xác định tiêu đề video
             String videoTitle = (title != null && !title.isBlank())
                     ? title.trim()
-                    : lesson.getTitle();
+                    : (lesson != null ? lesson.getTitle() : originalName);
 
-            // Đánh dấu bài học đang upload
-            lesson.setVideoStatus("UPLOADING");
-            lesson.setUpdatedAt(LocalDateTime.now());
-            lessonRepository.save(lesson);
+            if (lesson != null) {
+                lesson.setVideoStatus("UPLOADING");
+                lesson.setUpdatedAt(LocalDateTime.now());
+                lessonRepository.save(lesson);
+            }
 
             // Bước 1: Tạo video entry trên Bunny → nhận GUID
             String videoGuid = bunnyService.createVideo(videoTitle);
@@ -146,39 +147,63 @@ public class VideoUploadController {
             // Bước 2: Upload file lên Bunny (streaming, không buffer toàn bộ RAM)
             bunnyService.uploadVideo(videoGuid, file);
 
-            // Bước 3: Lưu GUID + trạng thái PROCESSING vào DB
-            lesson.setBunnyVideoId(videoGuid);
-            lesson.setVideoUrl(bunnyService.buildPlayerUrl(videoGuid)); // lưu URL player để tương thích ngược
-            lesson.setVideoStatus("PROCESSING");
-            lesson.setLessonType("VIDEO");
-            lesson.setUpdatedAt(LocalDateTime.now());
-            lessonRepository.save(lesson);
+            String playerUrl = bunnyService.buildPlayerUrl(videoGuid);
+
+            // Bước 3: Nếu đã có bài học trong DB thì lưu GUID + trạng thái PROCESSING ngay
+            if (lesson != null) {
+                lesson.setBunnyVideoId(videoGuid);
+                lesson.setVideoUrl(playerUrl);
+                lesson.setVideoStatus("PROCESSING");
+                lesson.setLessonType("VIDEO");
+                lesson.setUpdatedAt(LocalDateTime.now());
+                lessonRepository.save(lesson);
+            }
 
             resp.put("success", true);
             resp.put("bunnyVideoId", videoGuid);
-            resp.put("playerUrl", bunnyService.buildPlayerUrl(videoGuid));
+            resp.put("playerUrl", playerUrl);
             resp.put("videoStatus", "PROCESSING");
-            resp.put("message", "Upload thành công! Video đang được Bunny xử lý, vui lòng chờ vài phút.");
+            resp.put("message", "Upload thành công! Video đang được Bunny xử lý, bạn có thể lưu bài học ngay.");
             return ResponseEntity.ok(resp);
 
         } catch (CourseActionException ex) {
-            // Đặt lại trạng thái FAILED nếu upload thất bại
-            lesson.setVideoStatus("FAILED");
-            lesson.setUpdatedAt(LocalDateTime.now());
-            lessonRepository.save(lesson);
-
+            if (lesson != null) {
+                lesson.setVideoStatus("FAILED");
+                lesson.setUpdatedAt(LocalDateTime.now());
+                lessonRepository.save(lesson);
+            }
             resp.put("success", false);
             resp.put("message", ex.getMessage());
             return ResponseEntity.status(ex.getStatus()).body(resp);
         } catch (Exception ex) {
-            lesson.setVideoStatus("FAILED");
-            lesson.setUpdatedAt(LocalDateTime.now());
-            lessonRepository.save(lesson);
-
+            if (lesson != null) {
+                lesson.setVideoStatus("FAILED");
+                lesson.setUpdatedAt(LocalDateTime.now());
+                lessonRepository.save(lesson);
+            }
             resp.put("success", false);
             resp.put("message", "Đã xảy ra lỗi khi upload video: " + ex.getMessage());
             return ResponseEntity.internalServerError().body(resp);
         }
+    }
+
+    /**
+     * GET /instructor/videos/guid/{videoGuid}/status
+     *
+     * Kiểm tra trạng thái xử lý video trực tiếp trên Bunny theo videoGuid
+     * (dùng khi giảng viên vừa upload video ở màn hình Tạo bài học mới chưa có lessonId).
+     */
+    @GetMapping("/guid/{videoGuid}/status")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getVideoStatusByGuid(@PathVariable String videoGuid) {
+        Map<String, Object> resp = new HashMap<>();
+        String status = bunnyService.isConfigured() ? bunnyService.getVideoStatus(videoGuid) : "PROCESSING";
+        resp.put("success", true);
+        resp.put("videoStatus", status);
+        resp.put("bunnyVideoId", videoGuid);
+        resp.put("playerUrl", bunnyService.buildPlayerUrl(videoGuid));
+        resp.put("hasVideo", true);
+        return ResponseEntity.ok(resp);
     }
 
     // ─────────────────────────────────────────────────────────
