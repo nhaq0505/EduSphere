@@ -43,6 +43,9 @@ public final class StudyCourseView {
     private final String  currentWatchedSegments;
     private final List<StudySectionView> sections;
 
+    private Integer courseCredits = 3;
+    private Integer certificateId;
+
     // ── Constructor đầy đủ nhất có sections ──────────────────────
 
     public StudyCourseView(
@@ -284,6 +287,12 @@ public final class StudyCourseView {
     public boolean getCurrentQuizUnlocked()          { return currentQuizUnlocked; }
     public String  getCurrentWatchedSegments()       { return currentWatchedSegments; }
     public List<StudySectionView> getSections()      { return sections; }
+
+    public Integer getCourseCredits()                { return courseCredits != null && courseCredits > 0 ? courseCredits : 3; }
+    public void    setCourseCredits(Integer credits) { this.courseCredits = credits != null && credits > 0 ? credits : 3; }
+    public Integer getCertificateId()                { return certificateId; }
+    public void    setCertificateId(Integer id)      { this.certificateId = id; }
+    public boolean isCourseCompleted()               { return totalCount > 0 && completedCount >= totalCount; }
 
     // ── Pre-grouping logic (tính toán sẵn ở backend, JSP không cần làm logic phức tạp) ──
 

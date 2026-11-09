@@ -3,7 +3,6 @@ package com.edusphere.config;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -109,6 +108,26 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         ALTER TABLE dbo.questions ADD sample_essay_answer NVARCHAR(MAX) NULL;
                 END
                 """);
+
+            jdbcTemplate.execute("""
+                IF OBJECT_ID(N'dbo.courses', N'U') IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('dbo.courses', 'credits') IS NULL
+                        ALTER TABLE dbo.courses ADD credits INT NOT NULL CONSTRAINT DF_courses_credits DEFAULT 3;
+                END
+                """);
+
+            jdbcTemplate.execute("""
+                IF OBJECT_ID(N'dbo.certificates', N'U') IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('dbo.certificates', 'credits_earned') IS NULL
+                        ALTER TABLE dbo.certificates ADD credits_earned INT NULL CONSTRAINT DF_certificates_credits DEFAULT 3;
+                    IF COL_LENGTH('dbo.certificates', 'grade_percent') IS NULL
+                        ALTER TABLE dbo.certificates ADD grade_percent DECIMAL(5,2) NULL CONSTRAINT DF_certificates_grade DEFAULT 100.00;
+                    IF COL_LENGTH('dbo.certificates', 'total_hours') IS NULL
+                        ALTER TABLE dbo.certificates ADD total_hours INT NULL CONSTRAINT DF_certificates_hours DEFAULT 18;
+                END
+                """);
         } catch (Exception ex) {
             log.debug("[DbAutoMigration] Bỏ qua bước pre-Hibernate migration: {}", ex.getMessage());
         }
@@ -175,7 +194,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
             END
             """);
 
-        // 4. CK_learning_history_type: hỗ trợ đầy đủ 9 loại hoạt động học tập
+        // 4. CK_learning_history_type: hỗ trợ đầy đủ các loại hoạt động học tập & nhận chứng chỉ
         jdbcTemplate.execute("""
             IF OBJECT_ID(N'dbo.learning_history', N'U') IS NOT NULL
             BEGIN
@@ -186,7 +205,8 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         N'LESSON', N'LESSON_COMPLETED',
                         N'ASSIGNMENT', N'ASSIGNMENT_SUBMITTED',
                         N'QUIZ', N'QUIZ_SUBMITTED',
-                        N'COURSE_ENROLLED', N'COURSE_COMPLETED', N'COURSE_ACCESSED'
+                        N'COURSE_ENROLLED', N'COURSE_COMPLETED', N'COURSE_ACCESSED',
+                        N'CERTIFICATE_EARNED'
                     ));
             END
             """);
@@ -225,6 +245,19 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                     ALTER TABLE dbo.payout_requests DROP CONSTRAINT CK_payout_requests_amount;
                 ALTER TABLE dbo.payout_requests WITH CHECK ADD CONSTRAINT CK_payout_requests_amount
                     CHECK (amount > 0);
+            END
+            """);
+
+        // 7. Đồng bộ bảng dbo.certificates nếu đã tồn tại từ trước
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.certificates', N'U') IS NOT NULL
+            BEGIN
+                IF COL_LENGTH('dbo.certificates', 'credits_earned') IS NULL
+                    ALTER TABLE dbo.certificates ADD credits_earned INT NULL CONSTRAINT DF_certificates_credits2 DEFAULT 3;
+                IF COL_LENGTH('dbo.certificates', 'grade_percent') IS NULL
+                    ALTER TABLE dbo.certificates ADD grade_percent DECIMAL(5,2) NULL CONSTRAINT DF_certificates_grade2 DEFAULT 100.00;
+                IF COL_LENGTH('dbo.certificates', 'total_hours') IS NULL
+                    ALTER TABLE dbo.certificates ADD total_hours INT NULL CONSTRAINT DF_certificates_hours2 DEFAULT 18;
             END
             """);
     }

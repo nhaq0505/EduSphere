@@ -331,6 +331,21 @@
                            style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:#FAF5FF; border:1.5px solid #D8B4FE; color:#7E22CE; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
                             <span>❓</span> Danh sách Quiz của khóa học
                         </a>
+                        <c:choose>
+                            <c:when test="${study.courseCompleted}">
+                                <a href="${pageContext.request.contextPath}/courses/${study.courseId}/certificate"
+                                   style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:linear-gradient(135deg,#0056d2,#1d4ed8); color:#ffffff; font-weight:700; text-decoration:none; border-radius:10px; box-shadow:0 4px 12px rgba(0,86,210,.25);">
+                                    <span>🎓</span> Xem Chứng chỉ &amp; ${study.courseCredits} Tín chỉ
+                                </a>
+                            </c:when>
+                            <c:otherwise>
+                                <div style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:6px; font-size:.78rem; padding:8px 12px; background:#F8FAFC; border:1px dashed #CBD5E1; color:#475569; font-weight:600; border-radius:10px;">
+                                    <span>🎓</span> Hoàn thành 100% để nhận <strong>${study.courseCredits} tín chỉ</strong>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
+                        <a style="display:none">
+                        </a>
                         <div style="display:flex; gap:8px;">
                             <a href="${pageContext.request.contextPath}/courses/${study.courseId}/assignments"
                                style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; font-size:.82rem; padding:9px 10px; background:#EFF6FF; border:1.5px solid #BFDBFE; color:#2563EB; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
@@ -709,6 +724,223 @@
                             </div>
                         </c:if>
                     </div>
+                    <%-- ══ Banner Nhận Tín Chỉ & Chứng Chỉ khi hoàn thành khóa học ══ --%>
+                    <c:if test="${(study.courseCompleted or courseCompleted) and not study.previewMode}">
+                        <div style="margin-top:20px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1.5px solid #60a5fa;border-radius:16px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-shadow:0 4px 16px rgba(37,99,235,.08);">
+                            <div style="display:flex;align-items:center;gap:14px;">
+                                <div style="width:52px;height:52px;border-radius:14px;background:#0056d2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.75rem;flex-shrink:0;">
+                                    🎓
+                                </div>
+                                <div>
+                                    <div style="font-size:1.05rem;font-weight:800;color:#1e3a8a;margin-bottom:3px;">
+                                        Chúc mừng bạn đã hoàn thành khóa học! (+${study.courseCredits} Tín chỉ)
+                                    </div>
+                                    <div style="font-size:.86rem;color:#334155;">
+                                        Chứng chỉ điện tử và <strong>${study.courseCredits} tín chỉ tích lũy</strong> của bạn đã sẵn sàng trong Kho tín chỉ.
+                                    </div>
+                                </div>
+                            </div>
+                            <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/certificate/claim" style="margin:0;">
+                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                <button type="submit"
+                                        style="background:#0056d2;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,86,210,.25);">
+                                    🏅 Xem Chứng chỉ &amp; Nhận ${study.courseCredits} Tín chỉ →
+                                </button>
+                            </form>
+                        </div>
+                    </c:if>
+
+                    <%-- ══ HỎI ĐÁP & BÌNH LUẬN BÀI GIẢNG (Phong cách VietJack) ══ --%>
+                    <c:if test="${not empty study.currentLesson}">
+                        <section id="comments-section" style="margin-top:24px;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 2px 10px rgba(15,23,42,.04);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e2e8f0;">
+                                <div>
+                                    <div style="font-size:.75rem;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">
+                                        HỎI ĐÁP &amp; THẢO LUẬN BÀI HỌC
+                                    </div>
+                                    <h3 style="margin:0;font-size:1.15rem;font-weight:800;color:#0f172a;">
+                                        💬 Bình luận dưới bài giảng (${not empty lessonCommentCount ? lessonCommentCount : 0})
+                                    </h3>
+                                </div>
+                                <div style="display:flex;gap:8px;">
+                                    <a href="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.currentLesson.lessonId}?sort=newest#comments-section"
+                                       style="font-size:.8rem;font-weight:600;padding:5px 12px;border-radius:999px;text-decoration:none;${empty commentSort or commentSort == 'newest' ? 'background:#2563eb;color:#fff;' : 'background:#f1f5f9;color:#475569;'}">
+                                        Mới nhất
+                                    </a>
+                                    <a href="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.currentLesson.lessonId}?sort=popular#comments-section"
+                                       style="font-size:.8rem;font-weight:600;padding:5px 12px;border-radius:999px;text-decoration:none;${commentSort == 'popular' ? 'background:#2563eb;color:#fff;' : 'background:#f1f5f9;color:#475569;'}">
+                                        Nổi bật
+                                    </a>
+                                </div>
+                            </div>
+
+                            <c:if test="${not empty commentSuccess}">
+                                <div style="background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:.86rem;font-weight:600;">
+                                    ✅ <c:out value="${commentSuccess}"/>
+                                </div>
+                            </c:if>
+                            <c:if test="${not empty commentError}">
+                                <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:.86rem;font-weight:600;">
+                                    ⚠️ <c:out value="${commentError}"/>
+                                </div>
+                            </c:if>
+
+                            <%-- Form đặt câu hỏi / bình luận dưới bài giảng --%>
+                            <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments"
+                                  style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:14px 16px;margin-bottom:22px;">
+                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
+                                <textarea name="content" required maxlength="3000"
+                                          style="width:100%;box-sizing:border-box;border:none;background:transparent;outline:none;resize:vertical;min-height:68px;font-family:inherit;font-size:.9rem;color:#0f172a;line-height:1.5;"
+                                          placeholder="Bạn có câu hỏi hoặc phần nào chưa rõ trong bài giảng &quot;${fn:escapeXml(study.currentLesson.title)}&quot;? Hãy bình luận tại đây để Giảng viên và các bạn cùng giải đáp nhé..."></textarea>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;flex-wrap:wrap;gap:8px;">
+                                    <span style="font-size:.76rem;color:#64748b;">💡 Đặt câu hỏi rõ ràng giúp Giảng viên hỗ trợ bạn nhanh nhất.</span>
+                                    <button type="submit"
+                                            style="background:#2563eb;color:#ffffff;border:none;border-radius:8px;padding:8px 18px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+                                        💬 Gửi câu hỏi / Bình luận
+                                    </button>
+                                </div>
+                            </form>
+
+                            <%-- Danh sách bình luận bài học --%>
+                            <c:choose>
+                                <c:when test="${empty lessonComments}">
+                                    <div style="text-align:center;padding:24px 12px;color:#64748b;font-size:.9rem;">
+                                        Chưa có câu hỏi hay bình luận nào ở bài giảng này. Hãy đặt câu hỏi đầu tiên nếu bạn cần hỗ trợ!
+                                    </div>
+                                </c:when>
+                                <c:otherwise>
+                                    <div style="display:flex;flex-direction:column;gap:14px;">
+                                        <c:forEach var="cmt" items="${lessonComments}">
+                                            <div id="comment-${cmt.commentId}"
+                                                 style="border:1px solid ${cmt.pinned ? '#fde68a' : '#e2e8f0'};background:${cmt.pinned ? '#fffbeb' : '#ffffff'};border-radius:12px;padding:14px 16px;">
+                                                <c:if test="${cmt.pinned}">
+                                                    <div style="font-size:.74rem;font-weight:700;color:#b45309;margin-bottom:6px;">
+                                                        📌 Câu trả lời / Bình luận được ghim bởi Giảng viên
+                                                    </div>
+                                                </c:if>
+                                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                                    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1e40af);color:#fff;font-weight:700;font-size:.88rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                                        <c:out value="${cmt.authorInitials}"/>
+                                                    </div>
+                                                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;">
+                                                        <span style="font-size:.9rem;font-weight:700;color:#0f172a;"><c:out value="${cmt.authorName}"/></span>
+                                                        <span style="font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:999px;${cmt.courseInstructor ? 'background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;' : 'background:#f1f5f9;color:#475569;'}">
+                                                            <c:out value="${cmt.authorRoleBadge}"/>
+                                                        </span>
+                                                        <span style="font-size:.76rem;color:#94a3b8;">• <c:out value="${cmt.relativeTimeLabel}"/></span>
+                                                    </div>
+                                                </div>
+
+                                                <div style="font-size:.9rem;line-height:1.55;color:#1e293b;white-space:pre-line;margin:4px 0 10px 46px;"><c:out value="${cmt.content}"/></div>
+
+                                                <div style="display:flex;align-items:center;gap:14px;margin-left:46px;flex-wrap:wrap;">
+                                                    <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments/${cmt.commentId}/like" style="display:inline;">
+                                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                        <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
+                                                        <button type="submit" style="background:none;border:none;padding:0;font-family:inherit;font-size:.78rem;font-weight:${cmt.likedByMe ? '700' : '600'};color:${cmt.likedByMe ? '#2563eb' : '#64748b'};cursor:pointer;">
+                                                            👍 Thích (<c:out value="${cmt.likeCount}"/>)
+                                                        </button>
+                                                    </form>
+
+                                                    <button type="button" onclick="toggleLessonReply(${cmt.commentId})"
+                                                            style="background:none;border:none;padding:0;font-family:inherit;font-size:.78rem;font-weight:600;color:#64748b;cursor:pointer;">
+                                                        💬 Trả lời (<c:out value="${fn:length(cmt.replies)}"/>)
+                                                    </button>
+
+                                                    <c:if test="${cmt.canPin}">
+                                                        <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments/${cmt.commentId}/pin" style="display:inline;">
+                                                            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                            <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
+                                                            <button type="submit" style="background:none;border:none;padding:0;font-family:inherit;font-size:.78rem;font-weight:600;color:#64748b;cursor:pointer;">
+                                                                📌 <c:out value="${cmt.pinned ? 'Bỏ ghim' : 'Ghim'}"/>
+                                                            </button>
+                                                        </form>
+                                                    </c:if>
+
+                                                    <c:if test="${cmt.canDelete}">
+                                                        <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments/${cmt.commentId}/delete"
+                                                              style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa bình luận này?');">
+                                                            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                            <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
+                                                            <button type="submit" style="background:none;border:none;padding:0;font-family:inherit;font-size:.78rem;font-weight:600;color:#dc2626;cursor:pointer;">
+                                                                🗑️ Xóa
+                                                            </button>
+                                                        </form>
+                                                    </c:if>
+                                                </div>
+
+                                                <%-- Form trả lời inline --%>
+                                                <div id="lesson-reply-${cmt.commentId}" style="display:none;margin-left:46px;margin-top:10px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;">
+                                                    <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments">
+                                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                        <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
+                                                        <input type="hidden" name="parentCommentId" value="${cmt.commentId}">
+                                                        <textarea name="content" required maxlength="3000"
+                                                                  style="width:100%;box-sizing:border-box;border:none;background:transparent;outline:none;resize:vertical;min-height:52px;font-family:inherit;font-size:.86rem;color:#0f172a;"
+                                                                  placeholder="Trả lời bình luận của ${fn:escapeXml(cmt.authorName)}..."></textarea>
+                                                        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+                                                            <button type="button" onclick="toggleLessonReply(${cmt.commentId})"
+                                                                    style="background:none;border:none;font-size:.8rem;color:#64748b;cursor:pointer;font-weight:600;">Hủy</button>
+                                                            <button type="submit"
+                                                                    style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.8rem;font-weight:700;cursor:pointer;">Gửi phản hồi</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+
+                                                <%-- Danh sách phản hồi (Replies) --%>
+                                                <c:if test="${not empty cmt.replies}">
+                                                    <div style="margin-left:46px;margin-top:10px;padding-left:14px;border-left:2.5px solid #cbd5e1;display:flex;flex-direction:column;gap:10px;">
+                                                        <c:forEach var="rep" items="${cmt.replies}">
+                                                            <div id="comment-${rep.commentId}" style="background:#f8fafc;border-radius:10px;padding:10px 12px;">
+                                                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                                                                    <div style="width:28px;height:28px;border-radius:50%;background:#1e40af;color:#fff;font-weight:700;font-size:.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                                                        <c:out value="${rep.authorInitials}"/>
+                                                                    </div>
+                                                                    <span style="font-size:.84rem;font-weight:700;color:#0f172a;"><c:out value="${rep.authorName}"/></span>
+                                                                    <span style="font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:999px;${rep.courseInstructor ? 'background:#dbeafe;color:#1d4ed8;' : 'background:#e2e8f0;color:#475569;'}">
+                                                                        <c:out value="${rep.authorRoleBadge}"/>
+                                                                    </span>
+                                                                    <span style="font-size:.74rem;color:#94a3b8;">• <c:out value="${rep.relativeTimeLabel}"/></span>
+                                                                </div>
+                                                                <div style="font-size:.86rem;line-height:1.5;color:#1e293b;white-space:pre-line;margin:2px 0 6px 36px;"><c:out value="${rep.content}"/></div>
+                                                                <div style="display:flex;align-items:center;gap:12px;margin-left:36px;">
+                                                                    <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments/${rep.commentId}/like" style="display:inline;">
+                                                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                                        <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
+                                                                        <button type="submit" style="background:none;border:none;padding:0;font-family:inherit;font-size:.76rem;font-weight:${rep.likedByMe ? '700' : '600'};color:${rep.likedByMe ? '#2563eb' : '#64748b'};cursor:pointer;">
+                                                                            👍 Thích (<c:out value="${rep.likeCount}"/>)
+                                                                        </button>
+                                                                    </form>
+                                                                    <c:if test="${rep.canDelete}">
+                                                                        <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments/${rep.commentId}/delete"
+                                                                              style="display:inline;" onsubmit="return confirm('Xóa phản hồi này?');">
+                                                                            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                                            <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
+                                                                            <button type="submit" style="background:none;border:none;padding:0;font-family:inherit;font-size:.76rem;font-weight:600;color:#dc2626;cursor:pointer;">
+                                                                                🗑️ Xóa
+                                                                            </button>
+                                                                        </form>
+                                                                    </c:if>
+                                                                </div>
+                                                            </div>
+                                                        </c:forEach>
+                                                    </div>
+                                                </c:if>
+                                            </div>
+                                        </c:forEach>
+                                    </div>
+                                </c:otherwise>
+                            </c:choose>
+                        </section>
+                        <script>
+                        function toggleLessonReply(cid) {
+                            var el = document.getElementById('lesson-reply-' + cid);
+                            if (!el) return;
+                            el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+                        }
+                        </script>
+                    </c:if>
                 </main>
 
                 <%-- ── COL 3: RIGHT SIDEBAR ── --%>
@@ -855,13 +1087,13 @@
                                         </c:when>
                                         <%-- Bài cuối cùng của khóa học --%>
                                         <c:otherwise>
-                                            <a href="${pageContext.request.contextPath}/my-courses"
+                                            <a href="${pageContext.request.contextPath}/courses/${study.courseId}/certificate"
                                                id="rightQuizBtn"
                                                class="btn-quiz-cta ${isLessonTargetReached ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
                                                data-has-quiz="false"
-                                               data-target-url="${pageContext.request.contextPath}/my-courses">
+                                               data-target-url="${pageContext.request.contextPath}/courses/${study.courseId}/certificate">
                                                 <span id="rightQuizBtnIcon">🎓</span>
-                                                <span id="rightQuizBtnLabel">Hoàn thành khóa học</span>
+                                                <span id="rightQuizBtnLabel">Nhận Chứng chỉ &amp; ${study.courseCredits} Tín chỉ</span>
                                             </a>
                                         </c:otherwise>
                                     </c:choose>

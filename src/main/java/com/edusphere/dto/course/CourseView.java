@@ -18,9 +18,16 @@ public class CourseView {
     private final String thumbnailUrl;
     private final BigDecimal price;
     private final String currency;
+    private final Integer credits;
 
     public CourseView(Integer courseId, String title, String description, String categoryName,
                       String instructorName, String levelLabel, String thumbnailUrl, BigDecimal price, String currency) {
+        this(courseId, title, description, categoryName, instructorName, levelLabel, thumbnailUrl, price, currency, 3);
+    }
+
+    public CourseView(Integer courseId, String title, String description, String categoryName,
+                      String instructorName, String levelLabel, String thumbnailUrl, BigDecimal price, String currency,
+                      Integer credits) {
         this.courseId = courseId;
         this.title = title;
         this.description = description;
@@ -32,6 +39,7 @@ public class CourseView {
         this.thumbnailUrl = thumbnailUrl;
         this.price = price;
         this.currency = currency;
+        this.credits = credits != null && credits > 0 ? credits : 3;
     }
 
     public boolean isFree() {

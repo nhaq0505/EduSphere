@@ -334,6 +334,7 @@ public class LearningProgressService {
             case "QUIZ_SUBMITTED" -> "Làm bài kiểm tra";
             case "COURSE_ENROLLED" -> "Ghi danh khóa học";
             case "COURSE_COMPLETED" -> "Hoàn thành khóa học";
+            case "CERTIFICATE_EARNED" -> "Nhận chứng chỉ & tín chỉ";
             default -> type;
         };
     }

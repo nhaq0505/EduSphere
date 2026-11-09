@@ -72,6 +72,9 @@ public class QuizService {
     private final LessonCompletionRepository lessonCompletions;
     private final LessonWatchProgressRepository watchProgress;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private CertificateService certificateService;
+
     public QuizService(QuizRepository quizzes, QuestionRepository questions,
                        AnswerOptionRepository answerOptions, QuizAttemptRepository attempts,
                        QuizAnswerRepository answers, QuizAnswerOptionRepository answerOptionLinks,
@@ -973,6 +976,9 @@ public class QuizService {
                     lc.setLesson(quizLesson);
                     lc.setCompletedAt(now);
                     lessonCompletions.save(lc);
+                    if (certificateService != null && attempt.getQuiz().getCourse() != null && attempt.getStudent() != null) {
+                        certificateService.issueCertificateIfEligible(attempt.getStudent().getUserId(), attempt.getQuiz().getCourse().getCourseId());
+                    }
                 } catch (Exception ignored) {}
             }
         }
@@ -1062,6 +1068,9 @@ public class QuizService {
                     lc.setLesson(quizLesson);
                     lc.setCompletedAt(LocalDateTime.now());
                     lessonCompletions.save(lc);
+                    if (certificateService != null && attempt.getQuiz().getCourse() != null && attempt.getStudent() != null) {
+                        certificateService.issueCertificateIfEligible(attempt.getStudent().getUserId(), attempt.getQuiz().getCourse().getCourseId());
+                    }
                 } catch (Exception ignored) {}
             }
         }

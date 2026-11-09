@@ -69,6 +69,9 @@ public class LearningService {
     @Autowired(required = false)
     private BunnyStreamService bunnyStreamService;
 
+    @Autowired(required = false)
+    private CertificateService certificateService;
+
     public LearningService(LessonRepository lessonRepository,
                            EnrollmentRepository enrollmentRepository,
                            LessonCompletionRepository lessonCompletionRepository,
@@ -261,6 +264,9 @@ public class LearningService {
                     lc.setLesson(lesson);
                     lc.setCompletedAt(LocalDateTime.now());
                     lessonCompletionRepository.save(lc);
+                    if (certificateService != null) {
+                        certificateService.issueCertificateIfEligible(studentId, courseId);
+                    }
                 } catch (Exception ignored) {}
             }
         }
@@ -387,9 +393,10 @@ public class LearningService {
         if (publishedLessons.isEmpty()) {
             String title = course != null ? course.getTitle() : "Khóa học";
             String insName = course != null && course.getInstructor() != null ? course.getInstructor().getFullName() : "";
-            return new StudyCourseView(courseId, title, insName,
+            StudyCourseView studyView = new StudyCourseView(courseId, title, insName,
                     Collections.emptyList(), null, null, Collections.emptyList(), null, null, 0, 0, 0,
                     "ARTICLE", null, null, true, false);
+            return studyView;
         }
 
         Set<Integer> completedLessonIds = (studentId != null)
@@ -528,7 +535,7 @@ public class LearningService {
                 || (wp != null && (Boolean.TRUE.equals(wp.getQuizUnlocked()) || watchPercent >= minWatchPct));
         String watchedSegments = wp != null && wp.getWatchedSegments() != null ? wp.getWatchedSegments() : "[]";
 
-        return new StudyCourseView(
+        StudyCourseView studyView = new StudyCourseView(
                 course != null ? course.getCourseId() : courseId,
                 course != null ? course.getTitle() : "Khóa học",
                 course != null && course.getInstructor() != null ? course.getInstructor().getFullName() : "",
@@ -555,8 +562,19 @@ public class LearningService {
                 quizRequiresVideo,
                 minWatchPct,
                 quizUnlocked,
-                watchedSegments
-        );
+                watchedSegments);
+
+        if (course != null && course.getCredits() != null) {
+            studyView.setCourseCredits(course.getCredits());
+        }
+        if (certificateService != null && studentId != null && totalCount > 0 && completedCount >= totalCount) {
+            try {
+                certificateService.issueCertificateIfEligible(studentId, courseId)
+                        .ifPresent(cert -> studyView.setCertificateId(cert.getCertificateId()));
+            } catch (Exception ignored) {}
+        }
+        return studyView;
+
     }
 
     /**
@@ -621,9 +639,10 @@ public class LearningService {
 
         List<Lesson> allLessons = lessonRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
         if (allLessons.isEmpty()) {
-            return new StudyCourseView(courseId, course.getTitle(), course.getInstructor().getFullName(),
+            StudyCourseView studyView = new StudyCourseView(courseId, course.getTitle(), course.getInstructor().getFullName(),
                     Collections.emptyList(), null, null, Collections.emptyList(), null, null, 0, 0, 0,
                     "ARTICLE", null, null, true, true);
+            return studyView;
         }
 
         Lesson current;
@@ -661,7 +680,7 @@ public class LearningService {
                         safeUrl(m.getFileUrl()), m.getOriginalFileName(), m.getSizeBytes()))
                 .toList();
 
-        return new StudyCourseView(
+        StudyCourseView studyView = new StudyCourseView(
                 course.getCourseId(),
                 course.getTitle(),
                 course.getInstructor().getFullName(),
@@ -682,8 +701,13 @@ public class LearningService {
                 Collections.emptyList(),
                 false,
                 Collections.emptyList(),
-                current.getVideoStatus() // Bunny video status
-        );
+                current.getVideoStatus()); // Bunny video status
+
+        if (course.getCredits() != null) {
+            studyView.setCourseCredits(course.getCredits());
+        }
+        return studyView;
+
     }
 
     /**
@@ -828,6 +852,11 @@ public class LearningService {
             if (learningProgressService != null) {
                 learningProgressService.recordActivity(enrollment.getStudent(), enrollment.getCourse(),
                         "COURSE_COMPLETED", null, null, null, "Đã hoàn thành tất cả các bài học trong khóa học!");
+            }
+            if (certificateService != null) {
+                try {
+                    certificateService.issueCertificateIfEligible(studentId, courseId);
+                } catch (Exception ignored) {}
             }
         }
 

@@ -3,10 +3,13 @@ package com.edusphere.controller.course;
 import com.edusphere.dto.course.CourseView;
 import com.edusphere.repository.course.EnrollmentRepository;
 import com.edusphere.security.CustomUserDetails;
+import com.edusphere.service.course.CertificateService;
+import com.edusphere.service.course.CourseCommentService;
 import com.edusphere.service.course.CourseDiscoveryService;
 
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -20,6 +23,12 @@ public class CourseDiscoveryController {
 
     private final CourseDiscoveryService courseDiscoveryService;
     private final EnrollmentRepository enrollmentRepository;
+
+    @Autowired(required = false)
+    private CourseCommentService courseCommentService;
+
+    @Autowired(required = false)
+    private CertificateService certificateService;
 
     public CourseDiscoveryController(CourseDiscoveryService courseDiscoveryService,
                                      EnrollmentRepository enrollmentRepository) {
@@ -44,8 +53,15 @@ public class CourseDiscoveryController {
         return "courses/list";
     }
 
+    public String detail(Integer courseId, CustomUserDetails user,
+                         Model model, HttpServletResponse response) {
+        return detail(courseId, "newest", user, model, response);
+    }
+
     @GetMapping("/courses/{courseId}")
-    public String detail(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails user,
+    public String detail(@PathVariable Integer courseId,
+                         @RequestParam(value = "sort", defaultValue = "newest") String sort,
+                         @AuthenticationPrincipal CustomUserDetails user,
                          Model model, HttpServletResponse response) {
         return courseDiscoveryService.findPublishedCourse(courseId)
                 .map(course -> {
@@ -60,6 +76,17 @@ public class CourseDiscoveryController {
 
                     model.addAttribute("student", loggedIn);
                     model.addAttribute("enrolled", enrolled);
+
+                    if (courseCommentService != null) {
+                        Integer currentUserId = loggedIn ? user.getUserId() : null;
+                        model.addAttribute("courseComments", courseCommentService.getCourseComments(courseId, currentUserId, sort));
+                        model.addAttribute("ratingSummary", courseCommentService.getCourseRatingSummary(courseId));
+                        model.addAttribute("commentSort", sort);
+                    }
+                    if (certificateService != null && loggedIn && enrolled) {
+                        certificateService.findExistingCertificate(user.getUserId(), courseId)
+                                .ifPresent(cert -> model.addAttribute("myCertificateId", cert.getCertificateId()));
+                    }
                     return "courses/detail";
                 })
                 .orElseGet(() -> {

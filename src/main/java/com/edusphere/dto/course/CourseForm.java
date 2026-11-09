@@ -1,6 +1,8 @@
 package com.edusphere.dto.course;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -26,6 +28,10 @@ public class CourseForm {
     @NotNull(message = "Vui lòng nhập học phí")
     @DecimalMin(value = "0.00", message = "Học phí không được âm")
     private BigDecimal price = BigDecimal.ZERO;
+
+    @Min(value = 1, message = "Số tín chỉ tối thiểu là 1")
+    @Max(value = 30, message = "Số tín chỉ tối đa là 30")
+    private Integer credits = 3;
 
     // Bước 1: Thông tin nâng cao
     private String thumbnailUrl;

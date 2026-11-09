@@ -146,6 +146,13 @@
                         <form:errors path="price" cssClass="ins-field__error"/>
                     </div>
 
+                    <div class="ins-field">
+                        <label for="credits">Số tín chỉ tích lũy (Credits) <span style="color:#EF4444">*</span></label>
+                        <form:input path="credits" id="credits" type="number" min="1" max="30" step="1"/>
+                        <span class="ins-field__hint">Số tín chỉ học viên sẽ nhận được sau khi hoàn thành 100% khóa học (mặc định: 3 tín chỉ).</span>
+                        <form:errors path="credits" cssClass="ins-field__error"/>
+                    </div>
+
                     <!-- Bước 1 Media: Thumbnail & Promo Video (Hỗ trợ cả tải file từ máy tính lẫn dán link URL) -->
                     <div class="ins-form-grid" style="margin-top:16px;">
 

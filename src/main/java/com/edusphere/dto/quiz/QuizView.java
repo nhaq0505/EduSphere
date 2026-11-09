@@ -24,7 +24,7 @@ public class QuizView {
     private Integer maxAttempts;
     /** Số lần học viên đã làm (dùng trong study page) */
     private int myAttemptCount;
-    /** Điểm đạt yêu cầu % (nullable) */
+    /** Điểm đạt yêu cầu */
     private BigDecimal passingScore;
     /** Học viên đang có bài làm IN_PROGRESS */
     private Integer inProgressAttemptId;

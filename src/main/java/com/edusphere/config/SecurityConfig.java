@@ -84,6 +84,7 @@ public class SecurityConfig {
                     "/uploads/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/courses", "/courses/{courseId}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/certificates/verify/**", "/certificates/{certificateId}").permitAll()
                 .requestMatchers(HttpMethod.POST, "/payments/payos/webhook").permitAll()
                 .requestMatchers(HttpMethod.POST, "/webhooks/bunny").permitAll()
                 // Ghi danh & Vào học: hỗ trợ Học viên, Giảng viên (trải nghiệm khóa học) & Quản trị viên
@@ -92,7 +93,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/payments/result").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/courses/{courseId}/learn", "/courses/{courseId}/lessons/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/courses/{courseId}/assignments/**", "/courses/{courseId}/quizzes/**", "/courses/{courseId}/results").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
-                .requestMatchers("/my-courses").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/my-courses", "/certificates", "/certificates/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/courses/{courseId}/certificate", "/courses/{courseId}/certificate/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/courses/{courseId}/comments", "/courses/{courseId}/comments/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/study/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/admin/**").hasRole("ADMINISTRATOR")
                 .requestMatchers("/instructor/**").hasRole("INSTRUCTOR")

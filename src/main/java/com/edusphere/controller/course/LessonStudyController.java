@@ -4,8 +4,10 @@ import com.edusphere.dto.course.LessonItemView;
 import com.edusphere.dto.course.StudyCourseView;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
+import com.edusphere.service.course.CourseCommentService;
 import com.edusphere.service.course.LearningService;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,6 +25,9 @@ public class LessonStudyController {
 
     private final LearningService learningService;
 
+    @Autowired(required = false)
+    private CourseCommentService courseCommentService;
+
     public LessonStudyController(LearningService learningService) {
         this.learningService = learningService;
     }
@@ -35,13 +40,20 @@ public class LessonStudyController {
             return "redirect:/courses/" + courseId + "/lessons/" + context.currentLesson().lessonId();
         }
         model.addAttribute("study", context);
+        model.addAttribute("studyContext", context);
         return "courses/study";
+    }
+
+    public String studyLesson(Integer courseId, Integer lessonId, String tab,
+                              CustomUserDetails user, Model model, RedirectAttributes flash) {
+        return studyLesson(courseId, lessonId, tab, "newest", user, model, flash);
     }
 
     @GetMapping("/courses/{courseId}/lessons/{lessonId}")
     public String studyLesson(@PathVariable Integer courseId,
                               @PathVariable Integer lessonId,
                               @RequestParam(required = false) String tab,
+                              @RequestParam(value = "sort", defaultValue = "newest") String sort,
                               @AuthenticationPrincipal CustomUserDetails user,
                               Model model,
                               RedirectAttributes flash) {
@@ -60,6 +72,14 @@ public class LessonStudyController {
         model.addAttribute("study", context);
         model.addAttribute("studyContext", context);
         if ("exercise".equals(tab)) model.addAttribute("initialTab", "exercise");
+
+        if (courseCommentService != null && context.getCurrentLesson() != null) {
+            Integer curLessonId = context.getCurrentLesson().getLessonId();
+            Integer currentUserId = user != null ? user.getUserId() : null;
+            model.addAttribute("lessonComments", courseCommentService.getLessonComments(courseId, curLessonId, currentUserId, sort));
+            model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(courseId, curLessonId));
+            model.addAttribute("commentSort", sort);
+        }
         return "courses/study";
     }
 
@@ -115,4 +135,3 @@ public class LessonStudyController {
         return "courses/action-error";
     }
 }
-

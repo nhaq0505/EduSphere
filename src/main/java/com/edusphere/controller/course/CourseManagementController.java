@@ -32,6 +32,12 @@ public class CourseManagementController {
     @Autowired(required = false)
     private RevenueService revenueService;
 
+    @Autowired(required = false)
+    private com.edusphere.service.course.CertificateService certificateService;
+
+    @Autowired(required = false)
+    private com.edusphere.service.course.CourseCommentService courseCommentService;
+
     public CourseManagementController(CourseManagementService service) {
         this(service, null);
     }
@@ -42,9 +48,27 @@ public class CourseManagementController {
         this.learningService = learningService;
     }
 
+    // GET /my-courses handler below
+    public String myCourses(CustomUserDetails user, Model model) {
+        return myCourses(null, user, model);
+    }
+
+    // GET /my-courses handler below
     @GetMapping("/my-courses")
-    public String myCourses(@AuthenticationPrincipal CustomUserDetails user, Model model) {
+    public String myCourses(@RequestParam(value = "tab", required = false) String tab,
+                            @AuthenticationPrincipal CustomUserDetails user, Model model) {
         model.addAttribute("courses", service.enrolledCourses(user.getUserId()));
+        if (certificateService != null && user != null) {
+            var certs = certificateService.syncAndGetMyCertificates(user.getUserId());
+            int totalCredits = certs.stream()
+                    .mapToInt(c -> c.getCreditsEarned() != null ? c.getCreditsEarned() : 0)
+                    .sum();
+            model.addAttribute("certificates", certs);
+            model.addAttribute("totalCreditsEarned", totalCredits);
+        }
+        if (tab != null && !tab.isBlank()) {
+            model.addAttribute("activeTab", tab.trim().toLowerCase());
+        }
         return "courses/my-courses";
     }
 
@@ -128,6 +152,11 @@ public class CourseManagementController {
             var studyContext = learningService.getStudyContextForPreview(id, lessonId, user.getUserId());
             model.addAttribute("study", studyContext);
             model.addAttribute("studyContext", studyContext);
+            if (courseCommentService != null && studyContext.getCurrentLesson() != null) {
+                Integer curLessonId = studyContext.getCurrentLesson().getLessonId();
+                model.addAttribute("lessonComments", courseCommentService.getLessonComments(id, curLessonId, user != null ? user.getUserId() : null, "newest"));
+                model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(id, curLessonId));
+            }
             return "courses/study";
         }
         return "redirect:/instructor/courses/" + id;

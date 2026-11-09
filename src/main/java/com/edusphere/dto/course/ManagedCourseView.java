@@ -26,6 +26,8 @@ public class ManagedCourseView {
     private final boolean hidden;
     private final LocalDateTime publishedAt;
 
+    private Integer credits = 3;
+
     // Bước 1 & Bước 2 details
     private String thumbnailUrl;
     private String promoVideoUrl;

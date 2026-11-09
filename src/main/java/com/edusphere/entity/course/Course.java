@@ -51,6 +51,10 @@ public class Course {
     @Column(name = "price", nullable = false, precision = 18, scale = 2)
     private BigDecimal price = BigDecimal.ZERO;
 
+    /** Số tín chỉ của khóa học (mặc định 3 tín chỉ) */
+    @Column(name = "credits", nullable = false)
+    private Integer credits = 3;
+
     @Column(name = "currency", nullable = false, columnDefinition = "char(3)")
     private String currency = "VND";
 
@@ -100,5 +104,6 @@ public class Course {
     @jakarta.persistence.PrePersist
     private void setCreatedAt() {
         if (createdAt == null) createdAt = LocalDateTime.now();
+        if (credits == null || credits <= 0) credits = 3;
     }
 }

@@ -16,6 +16,7 @@
             <a class="hn-nav__link" href="${cp}/courses">Khám phá khóa học</a>
             <sec:authorize access="hasRole('STUDENT')">
                 <a class="hn-nav__link" href="${cp}/my-courses">Khóa học của tôi</a>
+                <a class="hn-nav__link" href="${cp}/certificates">Kho tín chỉ &amp; Chứng chỉ</a>
                 <a class="hn-nav__link" href="${cp}/study/plans">Kế hoạch học tập</a>
             </sec:authorize>
             <sec:authorize access="hasRole('INSTRUCTOR')">

@@ -18,13 +18,13 @@ import com.edusphere.repository.course.CourseRepository;
 import com.edusphere.repository.course.CourseReviewRepository;
 import com.edusphere.repository.course.CourseSectionRepository;
 import com.edusphere.repository.course.EnrollmentRepository;
+import com.edusphere.repository.course.LessonCompletionRepository;
 import com.edusphere.repository.course.LessonRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +44,12 @@ public class CourseManagementService {
     private final UserRepository users;
     private final LearningProgressService learningProgressService;
     private final CourseSectionRepository sections;
+
+    @Autowired(required = false)
+    private LessonCompletionRepository lessonCompletions;
+
+    @Autowired(required = false)
+    private CertificateService certificateService;
 
     public CourseManagementService(CourseRepository courses, CourseReviewRepository reviews,
                                    EnrollmentRepository enrollments, CategoryRepository categories,
@@ -142,6 +148,7 @@ public class CourseManagementService {
         form.setCategoryId(course.getCategory() == null ? null : course.getCategory().getCategoryId());
         form.setLevel(course.getLevel());
         form.setPrice(course.getPrice());
+        form.setCredits(course.getCredits() != null && course.getCredits() > 0 ? course.getCredits() : 3);
         form.setThumbnailUrl(course.getThumbnailUrl());
         form.setPromoVideoUrl(course.getPromoVideoUrl());
         form.setObjectives(course.getObjectives());
@@ -271,7 +278,6 @@ public class CourseManagementService {
         course.setStatus("PUBLISHED");
         course.setPublishedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
-        // Flip tất cả lesson DRAFT → PUBLISHED (bao gồm nội dung mới vừa được duyệt)
         lessons.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(id, "DRAFT")
                 .forEach(lesson -> {
                     lesson.setStatus("PUBLISHED");
@@ -286,10 +292,6 @@ public class CourseManagementService {
         }
     }
 
-    /**
-     * Tái công bố sau khi admin duyệt nội dung cập nhật (từ trạng thái APPROVED sau khi UPDATING→SUBMITTED→APPROVED).
-     * Học viên vẫn học được các bài cũ trong suốt quá trình này.
-     */
     @Transactional
     public void republish(Integer id, Integer instructorId) {
         Course course = lockedOwnedCourse(id, instructorId);
@@ -342,7 +344,6 @@ public class CourseManagementService {
             throw conflict("Khóa học có phí cần thanh toán trước khi ghi danh.");
         Enrollment existing = enrollments.findByStudent_UserIdAndCourse_CourseId(studentId, courseId).orElse(null);
         if (existing != null && !"DROPPED".equals(existing.getStatus())) {
-            // Đã ghi danh rồi -> cho phép chuyển thẳng vào học mà không báo lỗi
             return;
         }
 
@@ -358,19 +359,68 @@ public class CourseManagementService {
             existing.setEnrolledAt(LocalDateTime.now());
         }
 
-        // Ghi lại lịch sử ghi danh khóa học (UC38)
         if (learningProgressService != null) {
             learningProgressService.recordActivity(student, course,
                     "COURSE_ENROLLED", null, null, null, "Đã ghi danh khóa học: " + course.getTitle());
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<EnrolledCourseView> enrolledCourses(Integer studentId) {
         return enrollments.findByStudent_UserIdOrderByEnrolledAtDesc(studentId).stream()
-                .map(e -> new EnrolledCourseView(e.getCourse().getCourseId(), e.getCourse().getTitle(),
-                        e.getCourse().getInstructor().getFullName(), e.getStatus(), e.getCourse().getStatus()))
+                .map(this::toEnrolledView)
                 .toList();
+    }
+
+    private EnrolledCourseView toEnrolledView(Enrollment e) {
+        Course c = e.getCourse();
+        Integer courseId = c.getCourseId();
+        Integer studentId = e.getStudent() != null ? e.getStudent().getUserId() : null;
+
+        int total = lessons != null ? (int) lessons.countByCourse_CourseIdAndStatus(courseId, "PUBLISHED") : 0;
+        int completed = (lessonCompletions != null && studentId != null)
+                ? (int) lessonCompletions.countByStudent_UserIdAndCourse_CourseId(studentId, courseId)
+                : 0;
+        if (total > 0 && completed > total) {
+            completed = total;
+        }
+        int pct = total > 0 ? (int) Math.round((completed * 100.0) / total) : ("COMPLETED".equalsIgnoreCase(e.getStatus()) ? 100 : 0);
+
+        String effectiveStatus = e.getStatus();
+        if (total > 0 && completed >= total && !"COMPLETED".equalsIgnoreCase(effectiveStatus) && !"DROPPED".equalsIgnoreCase(effectiveStatus)) {
+            effectiveStatus = "COMPLETED";
+        }
+
+        EnrolledCourseView v = new EnrolledCourseView(
+                courseId,
+                c.getTitle(),
+                c.getInstructor() != null ? c.getInstructor().getFullName() : "",
+                effectiveStatus,
+                c.getStatus()
+        );
+        v.setCredits(c.getCredits() != null && c.getCredits() > 0 ? c.getCredits() : 3);
+        v.setTotalLessons(total);
+        v.setCompletedLessons(completed);
+        v.setProgressPercent(pct);
+        v.setThumbnailUrl(c.getThumbnailUrl());
+        v.setCategoryName(c.getCategory() != null ? c.getCategory().getName() : "Chuyên ngành");
+        v.setEnrolledAt(e.getEnrolledAt());
+        v.setCompletedAt(e.getCompletedAt());
+
+        if (certificateService != null && studentId != null && ("COMPLETED".equalsIgnoreCase(effectiveStatus) || pct >= 100)) {
+            try {
+                certificateService.issueCertificateIfEligible(studentId, courseId).ifPresent(cert -> {
+                    v.setCertificateId(cert.getCertificateId());
+                    v.setVerificationCode(cert.getVerificationCode());
+                    v.setGradePercent(cert.getGradePercent());
+                    if (v.getCompletedAt() == null) {
+                        v.setCompletedAt(cert.getIssuedAt());
+                    }
+                });
+            } catch (Exception ignored) {
+            }
+        }
+        return v;
     }
 
     private void applyForm(Course course, CourseForm form) {
@@ -383,12 +433,12 @@ public class CourseManagementService {
         course.setDescription(form.getDescription() == null ? null : form.getDescription().trim());
         course.setLevel(level);
         course.setPrice(form.getPrice());
+        course.setCredits(form.getCredits() != null && form.getCredits() > 0 ? form.getCredits() : 3);
         Category category = form.getCategoryId() == null ? null : categories.findById(form.getCategoryId())
                 .filter(c -> "ACTIVE".equals(c.getStatus()))
                 .orElseThrow(() -> conflict("Danh mục không hợp lệ."));
         course.setCategory(category);
 
-        // Bước 1: Thumbnail, Promo Video, Objectives, Requirements
         course.setThumbnailUrl(trimmed(form.getThumbnailUrl()));
         course.setPromoVideoUrl(trimmed(form.getPromoVideoUrl()));
         course.setObjectives(trimmed(form.getObjectives()));
@@ -464,6 +514,7 @@ public class CourseManagementService {
             view.setSections(sectionViews);
         }
         view.setChangeNote(course.getChangeNote());
+        view.setCredits(course.getCredits() != null && course.getCredits() > 0 ? course.getCredits() : 3);
         return view;
     }
 
