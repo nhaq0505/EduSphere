@@ -1,9 +1,12 @@
 package com.edusphere.controller.course;
 
+import com.edusphere.dto.course.CourseRatingSummaryView;
 import com.edusphere.dto.course.CourseView;
 import com.edusphere.repository.course.EnrollmentRepository;
 import com.edusphere.security.CustomUserDetails;
+import com.edusphere.service.course.CourseActionException;
 import com.edusphere.service.course.CourseDiscoveryService;
+import com.edusphere.service.course.CourseRatingService;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -13,20 +16,28 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class CourseDiscoveryController {
 
     private final CourseDiscoveryService courseDiscoveryService;
     private final EnrollmentRepository enrollmentRepository;
+    private final CourseRatingService courseRatingService;
 
     public CourseDiscoveryController(CourseDiscoveryService courseDiscoveryService,
-                                     EnrollmentRepository enrollmentRepository) {
+                                     EnrollmentRepository enrollmentRepository,
+                                     CourseRatingService courseRatingService) {
         this.courseDiscoveryService = courseDiscoveryService;
         this.enrollmentRepository = enrollmentRepository;
+        this.courseRatingService = courseRatingService;
     }
 
+    /**
+     * Hiển thị danh sách khóa học công khai kèm bộ lọc tìm kiếm, danh mục, trình độ và học phí.
+     */
     @GetMapping("/courses")
     public String list(@RequestParam(defaultValue = "") String q,
                        @RequestParam(required = false) Integer categoryId,
@@ -44,6 +55,9 @@ public class CourseDiscoveryController {
         return "courses/list";
     }
 
+    /**
+     * Hiển thị trang chi tiết khóa học công khai cùng thống kê điểm sao và danh sách đánh giá từ học viên.
+     */
     @GetMapping("/courses/{courseId}")
     public String detail(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails user,
                          Model model, HttpServletResponse response) {
@@ -53,18 +67,88 @@ public class CourseDiscoveryController {
                     model.addAttribute("lessonTitles", courseDiscoveryService.publishedLessonTitles(courseId));
 
                     boolean loggedIn = user != null;
+                    Integer currentUserId = loggedIn ? user.getUserId() : null;
+                    boolean isAdmin = loggedIn && user.getAuthorities().stream()
+                            .anyMatch(a -> "ROLE_ADMINISTRATOR".equals(a.getAuthority()));
                     boolean enrolled = loggedIn && enrollmentRepository
-                            .findByStudent_UserIdAndCourse_CourseId(user.getUserId(), courseId)
+                            .findByStudent_UserIdAndCourse_CourseId(currentUserId, courseId)
                             .map(enrollment -> !"DROPPED".equals(enrollment.getStatus()))
                             .orElse(false);
 
+                    CourseRatingSummaryView ratingSummary = courseRatingService
+                            .getRatingSummary(courseId, currentUserId, isAdmin);
+
                     model.addAttribute("student", loggedIn);
                     model.addAttribute("enrolled", enrolled);
+                    model.addAttribute("ratingSummary", ratingSummary);
                     return "courses/detail";
                 })
                 .orElseGet(() -> {
                     response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                     return "courses/not-found";
                 });
+    }
+
+    /**
+     * Học viên gửi mới hoặc cập nhật đánh giá sao (1–5 sao) và nhận xét cho khóa học.
+     */
+    @PostMapping("/courses/{courseId}/ratings")
+    public String submitRating(@PathVariable Integer courseId,
+                               @RequestParam Integer rating,
+                               @RequestParam(required = false) String comment,
+                               @AuthenticationPrincipal CustomUserDetails user,
+                               RedirectAttributes flash) {
+        if (user == null) {
+            return "redirect:/login?courseId=" + courseId;
+        }
+        try {
+            courseRatingService.submitOrUpdateRating(courseId, user.getUserId(), rating, comment);
+            flash.addFlashAttribute("ratingSuccess", "Cảm ơn bạn! Đánh giá khóa học của bạn đã được lưu.");
+        } catch (CourseActionException ex) {
+            flash.addFlashAttribute("ratingError", ex.getMessage());
+        }
+        return "redirect:/courses/" + courseId + "#course-reviews";
+    }
+
+    /**
+     * Học viên xóa đánh giá của chính mình trên khóa học.
+     */
+    @PostMapping("/courses/{courseId}/ratings/delete")
+    public String deleteRating(@PathVariable Integer courseId,
+                               @AuthenticationPrincipal CustomUserDetails user,
+                               RedirectAttributes flash) {
+        if (user == null) {
+            return "redirect:/login?courseId=" + courseId;
+        }
+        try {
+            courseRatingService.deleteMyRating(courseId, user.getUserId());
+            flash.addFlashAttribute("ratingSuccess", "Đã xóa đánh giá của bạn.");
+        } catch (CourseActionException ex) {
+            flash.addFlashAttribute("ratingError", ex.getMessage());
+        }
+        return "redirect:/courses/" + courseId + "#course-reviews";
+    }
+
+    /**
+     * Giảng viên của khóa học (hoặc Admin) gửi phản hồi cho đánh giá của học viên.
+     */
+    @PostMapping("/courses/{courseId}/ratings/{ratingId}/reply")
+    public String replyRating(@PathVariable Integer courseId,
+                              @PathVariable Integer ratingId,
+                              @RequestParam(required = false) String replyText,
+                              @AuthenticationPrincipal CustomUserDetails user,
+                              RedirectAttributes flash) {
+        if (user == null) {
+            return "redirect:/login?courseId=" + courseId;
+        }
+        boolean isAdmin = user.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMINISTRATOR".equals(a.getAuthority()));
+        try {
+            courseRatingService.replyToRating(courseId, ratingId, user.getUserId(), isAdmin, replyText);
+            flash.addFlashAttribute("ratingSuccess", "Đã cập nhật phản hồi đánh giá.");
+        } catch (CourseActionException ex) {
+            flash.addFlashAttribute("ratingError", ex.getMessage());
+        }
+        return "redirect:/courses/" + courseId + "#course-reviews";
     }
 }

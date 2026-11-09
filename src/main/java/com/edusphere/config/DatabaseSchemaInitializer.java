@@ -282,6 +282,17 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                     CHECK (amount > 0);
             END
             """);
+
+        // 7. CK_course_ratings_stars: số sao đánh giá khóa học từ 1 đến 5
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.course_ratings', N'U') IS NOT NULL
+            BEGIN
+                IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_course_ratings_stars' AND parent_object_id = OBJECT_ID(N'dbo.course_ratings'))
+                    ALTER TABLE dbo.course_ratings DROP CONSTRAINT CK_course_ratings_stars;
+                ALTER TABLE dbo.course_ratings WITH CHECK ADD CONSTRAINT CK_course_ratings_stars
+                    CHECK (rating BETWEEN 1 AND 5);
+            END
+            """);
     }
 
     private void syncTrueFalseAnswers() {

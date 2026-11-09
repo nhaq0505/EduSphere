@@ -4,6 +4,7 @@ import com.edusphere.dto.course.CourseView;
 import com.edusphere.entity.course.Category;
 import com.edusphere.entity.course.Course;
 import com.edusphere.repository.course.CategoryRepository;
+import com.edusphere.repository.course.CourseRatingRepository;
 import com.edusphere.repository.course.CourseRepository;
 import com.edusphere.repository.course.LessonRepository;
 
@@ -11,8 +12,10 @@ import jakarta.persistence.criteria.Predicate;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -31,12 +34,15 @@ public class CourseDiscoveryService {
     private final CourseRepository courseRepository;
     private final CategoryRepository categoryRepository;
     private final LessonRepository lessonRepository;
+    private final CourseRatingRepository courseRatingRepository;
 
     public CourseDiscoveryService(CourseRepository courseRepository, CategoryRepository categoryRepository,
-                                  LessonRepository lessonRepository) {
+                                  LessonRepository lessonRepository,
+                                  CourseRatingRepository courseRatingRepository) {
         this.courseRepository = courseRepository;
         this.categoryRepository = categoryRepository;
         this.lessonRepository = lessonRepository;
+        this.courseRatingRepository = courseRatingRepository;
     }
 
     @Transactional(readOnly = true)
@@ -75,7 +81,10 @@ public class CourseDiscoveryService {
 
         PageRequest pageable = PageRequest.of(Math.max(0, page), PAGE_SIZE,
                 Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("courseId")));
-        return courseRepository.findAll(filters, pageable).map(this::toView);
+        Page<Course> coursesPage = courseRepository.findAll(filters, pageable);
+        Map<Integer, double[]> ratingMap = loadRatingStats(
+                coursesPage.getContent().stream().map(Course::getCourseId).toList());
+        return coursesPage.map(c -> toView(c, ratingMap.get(c.getCourseId())));
     }
 
     @Transactional(readOnly = true)
@@ -85,7 +94,10 @@ public class CourseDiscoveryService {
                 .filter(c -> PUBLISHED.equals(c.getStatus())
                         || "UPDATING".equals(c.getStatus())
                         || ("SUBMITTED".equals(c.getStatus()) && c.getPublishedAt() != null))
-                .map(this::toView);
+                .map(c -> {
+                    Map<Integer, double[]> ratingMap = loadRatingStats(List.of(c.getCourseId()));
+                    return toView(c, ratingMap.get(c.getCourseId()));
+                });
     }
 
     @Transactional(readOnly = true)
@@ -99,11 +111,27 @@ public class CourseDiscoveryService {
                 .stream().map(lesson -> lesson.getTitle()).toList();
     }
 
-    private CourseView toView(Course course) {
+    private Map<Integer, double[]> loadRatingStats(List<Integer> courseIds) {
+        Map<Integer, double[]> map = new HashMap<>();
+        if (courseIds == null || courseIds.isEmpty() || courseRatingRepository == null) {
+            return map;
+        }
+        for (Object[] row : courseRatingRepository.summarizeByCourseIds(courseIds)) {
+            Integer id = (Integer) row[0];
+            double avg = row[1] == null ? 0.0 : Math.round(((Number) row[1]).doubleValue() * 10.0) / 10.0;
+            long count = row[2] == null ? 0L : ((Number) row[2]).longValue();
+            map.put(id, new double[]{avg, count});
+        }
+        return map;
+    }
+
+    private CourseView toView(Course course, double[] stats) {
         String categoryName = course.getCategory() == null ? "Chưa phân loại" : course.getCategory().getName();
+        double avgRating = stats != null ? stats[0] : 0.0;
+        long ratingCount = stats != null ? (long) stats[1] : 0L;
         return new CourseView(course.getCourseId(), course.getTitle(), course.getDescription(),
                 categoryName, course.getInstructor().getFullName(), levelLabel(course.getLevel()),
-                course.getThumbnailUrl(), course.getPrice(), course.getCurrency());
+                course.getThumbnailUrl(), course.getPrice(), course.getCurrency(), avgRating, ratingCount);
     }
 
     private String levelLabel(String level) {

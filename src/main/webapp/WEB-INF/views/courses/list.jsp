@@ -246,6 +246,19 @@
                                 <p class="cl-card__instructor">
                                     👤 <c:out value="${course.instructorName}"/>
                                 </p>
+                                <div style="display:flex; align-items:center; gap:5px; font-size:.78rem; margin:4px 0 8px; color:#64748B; font-weight:600;">
+                                    <c:choose>
+                                        <c:when test="${course.ratingCount > 0}">
+                                            <span style="color:#F59E0B;">★</span>
+                                            <strong style="color:#0F172A;">${course.averageRating}</strong>
+                                            <span>(${course.ratingCount} đánh giá)</span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span style="color:#CBD5E1;">★</span>
+                                            <span>Chưa có đánh giá</span>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </div>
                                 <div class="cl-card__footer">
                                     <span class="cl-card__price ${course.free ? 'cl-card__price--free' : ''}">
                                         <c:choose>

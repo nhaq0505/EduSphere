@@ -177,6 +177,10 @@
                                         📊 Kết quả
                                     </a>
                                     <a class="hn-btn mc-btn-outline mc-btn-sm"
+                                       href="${pageContext.request.contextPath}/courses/${course.courseId}#course-reviews">
+                                        ⭐ Đánh giá
+                                    </a>
+                                    <a class="hn-btn mc-btn-outline mc-btn-sm"
                                        href="${pageContext.request.contextPath}/courses/${course.courseId}">
                                         Chi tiết
                                     </a>

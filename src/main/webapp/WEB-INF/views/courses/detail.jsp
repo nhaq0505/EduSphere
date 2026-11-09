@@ -81,9 +81,23 @@
                                                 <h1 id="course-title">
                                                     <c:out value="${course.title}" />
                                                 </h1>
-                                                <p>Giảng viên <strong>
-                                                        <c:out value="${course.instructorName}" />
-                                                    </strong></p>
+                                                <div class="cd-hero-meta">
+                                                    <p>Giảng viên <strong>
+                                                            <c:out value="${course.instructorName}" />
+                                                        </strong></p>
+                                                    <a href="#course-reviews" class="cd-hero-rating">
+                                                        <span>⭐</span>
+                                                        <c:choose>
+                                                            <c:when test="${ratingSummary.totalRatings > 0}">
+                                                                <strong>${ratingSummary.averageRating}/5</strong>
+                                                                <span>(${ratingSummary.totalRatings} đánh giá)</span>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <span>Chưa có đánh giá</span>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </a>
+                                                </div>
                                             </div>
                                             <div class="cd-hero__art" aria-hidden="true">
                                                 <c:choose>
@@ -133,6 +147,216 @@
                                                                 </span><span class="cd-lesson-label">Bài học</span></li>
                                                         </c:forEach>
                                                     </ol>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </section>
+
+                                        <%-- ══════ PHẦN ĐÁNH GIÁ & NHẬN XÉT CỦA HỌC VIÊN ══════ --%>
+                                        <section class="cd-panel" id="course-reviews" aria-labelledby="course-reviews-heading">
+                                            <div class="cd-section-heading">
+                                                <div>
+                                                    <span class="cd-section-kicker">PHẢN HỒI HỌC VIÊN</span>
+                                                    <h2 id="course-reviews-heading">Đánh giá khóa học</h2>
+                                                </div>
+                                                <span class="cd-count">${ratingSummary.totalRatings} lượt đánh giá</span>
+                                            </div>
+
+                                            <c:if test="${not empty ratingSuccess}">
+                                                <div class="cd-rating-alert cd-rating-alert--ok">
+                                                    ✅ <c:out value="${ratingSuccess}" />
+                                                </div>
+                                            </c:if>
+                                            <c:if test="${not empty ratingError}">
+                                                <div class="cd-rating-alert cd-rating-alert--err">
+                                                    ⚠️ <c:out value="${ratingError}" />
+                                                </div>
+                                            </c:if>
+
+                                            <%-- Tổng quan điểm sao (1..5) --%>
+                                            <div class="cd-rating-overview">
+                                                <div class="cd-rating-score-box">
+                                                    <div class="cd-rating-score-num">
+                                                        <c:choose>
+                                                            <c:when test="${ratingSummary.totalRatings > 0}">${ratingSummary.averageRating}</c:when>
+                                                            <c:otherwise>—</c:otherwise>
+                                                        </c:choose>
+                                                    </div>
+                                                    <div class="cd-rating-score-stars" aria-hidden="true">
+                                                        <c:forEach begin="1" end="5" var="st">
+                                                            <c:choose>
+                                                                <c:when test="${st <= ratingSummary.roundedStars}">★</c:when>
+                                                                <c:otherwise>☆</c:otherwise>
+                                                            </c:choose>
+                                                        </c:forEach>
+                                                    </div>
+                                                    <div class="cd-rating-score-count">
+                                                        ${ratingSummary.totalRatings} đánh giá từ học viên
+                                                    </div>
+                                                </div>
+
+                                                <div class="cd-rating-bars">
+                                                    <c:forEach var="starEntry" items="${ratingSummary.starPercents}">
+                                                        <div class="cd-rating-bar-row">
+                                                            <span>${starEntry.key} ⭐</span>
+                                                            <div class="cd-rating-bar-track">
+                                                                <div class="cd-rating-bar-fill" style="width:${starEntry.value}%;"></div>
+                                                            </div>
+                                                            <span style="text-align:right;">${ratingSummary.starCounts[starEntry.key]} (${starEntry.value}%)</span>
+                                                        </div>
+                                                    </c:forEach>
+                                                </div>
+                                            </div>
+
+                                            <%-- Form gửi / sửa đánh giá (chỉ mở cho học viên đã ghi danh) --%>
+                                            <c:choose>
+                                                <c:when test="${ratingSummary.canRate}">
+                                                    <c:set var="currentStar" value="${ratingSummary.myRating != null ? ratingSummary.myRating.rating : 5}" />
+                                                    <div class="cd-review-form-box">
+                                                        <div class="cd-review-form-title">
+                                                            <span>
+                                                                <c:choose>
+                                                                    <c:when test="${ratingSummary.myRating != null}">✏️ Cập nhật đánh giá của bạn</c:when>
+                                                                    <c:otherwise>⭐ Gửi đánh giá của bạn về khóa học này</c:otherwise>
+                                                                </c:choose>
+                                                            </span>
+                                                            <c:if test="${ratingSummary.myRating != null}">
+                                                                <form method="post"
+                                                                      action="${pageContext.request.contextPath}/courses/${course.courseId}/ratings/delete"
+                                                                      style="margin:0;"
+                                                                      onsubmit="return confirm('Bạn có chắc muốn xóa đánh giá của mình?');">
+                                                                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                                    <button type="submit" class="cd-btn-delete-review">🗑️ Xóa đánh giá</button>
+                                                                </form>
+                                                            </c:if>
+                                                        </div>
+
+                                                        <form method="post" action="${pageContext.request.contextPath}/courses/${course.courseId}/ratings">
+                                                            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                            <input type="hidden" name="rating" id="selectedRatingInput" value="${currentStar}">
+
+                                                            <div class="cd-star-picker" role="radiogroup" aria-label="Chọn số sao đánh giá">
+                                                                <c:forEach begin="1" end="5" var="s">
+                                                                    <button type="button"
+                                                                            class="cd-star-btn ${s <= currentStar ? 'active' : ''}"
+                                                                            data-star="${s}"
+                                                                            onclick="selectCourseStar(${s})"
+                                                                            title="${s} sao">★</button>
+                                                                </c:forEach>
+                                                                <span class="cd-star-label" id="selectedStarLabel">5 sao — Tuyệt vời!</span>
+                                                            </div>
+
+                                                            <textarea name="comment"
+                                                                      class="cd-review-textarea"
+                                                                      maxlength="2000"
+                                                                      placeholder="Chia sẻ trải nghiệm học tập của bạn: nội dung bài giảng, bài tập thực hành, sự hỗ trợ của giảng viên..."><c:out value="${ratingSummary.myRating != null ? ratingSummary.myRating.comment : ''}" /></textarea>
+
+                                                            <div class="cd-review-form-actions">
+                                                                <span style="font-size:.78rem; color:#64748B;">
+                                                                    Đánh giá của bạn giúp học viên khác hiểu rõ hơn về khóa học.
+                                                                </span>
+                                                                <button type="submit" class="hn-btn hn-btn--primary">
+                                                                    <c:choose>
+                                                                        <c:when test="${ratingSummary.myRating != null}">💾 Lưu cập nhật</c:when>
+                                                                        <c:otherwise>🚀 Gửi đánh giá</c:otherwise>
+                                                                    </c:choose>
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </c:when>
+                                                <c:when test="${not enrolled}">
+                                                    <div class="cd-review-hint-box">
+                                                        <span>💡 Bạn cần ghi danh và tham gia khóa học để có thể gửi đánh giá sao và nhận xét.</span>
+                                                    </div>
+                                                </c:when>
+                                            </c:choose>
+
+                                            <%-- Danh sách đánh giá của học viên --%>
+                                            <c:choose>
+                                                <c:when test="${empty ratingSummary.reviews}">
+                                                    <p class="cd-empty">Chưa có đánh giá nào cho khóa học này. Hãy là học viên đầu tiên để lại cảm nhận!</p>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <div class="cd-review-list">
+                                                        <c:forEach var="rv" items="${ratingSummary.reviews}">
+                                                            <article class="cd-review-card ${ratingSummary.myRating != null and ratingSummary.myRating.ratingId == rv.ratingId ? 'cd-review-card--mine' : ''}">
+                                                                <div class="cd-review-head">
+                                                                    <div class="cd-review-author">
+                                                                        <div class="cd-review-avatar" aria-hidden="true">
+                                                                            <c:out value="${rv.studentInitial}" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <div class="cd-review-name">
+                                                                                <span><c:out value="${rv.studentName}" /></span>
+                                                                                <span class="cd-review-badge">✓ Đã ghi danh</span>
+                                                                                <c:if test="${ratingSummary.myRating != null and ratingSummary.myRating.ratingId == rv.ratingId}">
+                                                                                    <span style="font-size:.72rem; color:#2563EB; font-weight:700;">(Đánh giá của bạn)</span>
+                                                                                </c:if>
+                                                                            </div>
+                                                                            <div class="cd-review-date">
+                                                                                <c:out value="${rv.createdAtFormatted}" />
+                                                                                <c:if test="${rv.edited}"> · Đã chỉnh sửa</c:if>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="cd-review-stars" aria-label="${rv.rating} trên 5 sao">
+                                                                        <c:forEach begin="1" end="5" var="st">
+                                                                            <c:choose>
+                                                                                <c:when test="${st <= rv.rating}">★</c:when>
+                                                                                <c:otherwise>☆</c:otherwise>
+                                                                            </c:choose>
+                                                                        </c:forEach>
+                                                                    </div>
+                                                                </div>
+
+                                                                <c:choose>
+                                                                    <c:when test="${not empty rv.comment}">
+                                                                        <p class="cd-review-comment"><c:out value="${rv.comment}" /></p>
+                                                                    </c:when>
+                                                                    <c:otherwise>
+                                                                        <p class="cd-review-comment" style="color:#94A3B8; font-style:italic;">Học viên đã đánh giá ${rv.rating} sao.</p>
+                                                                    </c:otherwise>
+                                                                </c:choose>
+
+                                                                <%-- Phản hồi từ giảng viên (nếu có) --%>
+                                                                <c:if test="${not empty rv.instructorReply}">
+                                                                    <div class="cd-review-reply">
+                                                                        <div class="cd-review-reply__head">
+                                                                            <span>🎓 Phản hồi từ Giảng viên</span>
+                                                                            <c:if test="${not empty rv.repliedAtFormatted}">
+                                                                                <span style="font-weight:500; color:#64748B;">· <c:out value="${rv.repliedAtFormatted}" /></span>
+                                                                            </c:if>
+                                                                        </div>
+                                                                        <p class="cd-review-reply__text"><c:out value="${rv.instructorReply}" /></p>
+                                                                    </div>
+                                                                </c:if>
+
+                                                                <%-- Nếu người xem là Giảng viên sở hữu khóa học hoặc Admin -> cho phép phản hồi --%>
+                                                                <c:if test="${ratingSummary.canReply}">
+                                                                    <details style="margin-top:10px;">
+                                                                        <summary style="cursor:pointer; font-size:.8rem; font-weight:700; color:#2563EB;">
+                                                                            💬 ${not empty rv.instructorReply ? 'Sửa phản hồi giảng viên' : 'Phản hồi đánh giá này'}
+                                                                        </summary>
+                                                                        <form method="post"
+                                                                              action="${pageContext.request.contextPath}/courses/${course.courseId}/ratings/${rv.ratingId}/reply"
+                                                                              style="margin-top:8px; display:grid; gap:8px;">
+                                                                            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                                                            <textarea name="replyText"
+                                                                                      class="cd-review-textarea"
+                                                                                      style="min-height:64px;"
+                                                                                      maxlength="2000"
+                                                                                      placeholder="Nhập phản hồi của giảng viên cho học viên..."><c:out value="${rv.instructorReply}" /></textarea>
+                                                                            <div style="display:flex; justify-content:flex-end;">
+                                                                                <button type="submit" class="hn-btn hn-btn--primary" style="font-size:.8rem; padding:6px 14px;">
+                                                                                    Gửi phản hồi
+                                                                                </button>
+                                                                            </div>
+                                                                        </form>
+                                                                    </details>
+                                                                </c:if>
+                                                            </article>
+                                                        </c:forEach>
+                                                    </div>
                                                 </c:otherwise>
                                             </c:choose>
                                         </section>
@@ -216,6 +440,36 @@
                                     bạn.</span><a href="${pageContext.request.contextPath}/courses">Khám phá khóa
                                     học</a></div>
                         </footer>
+                        <script>
+                            var STAR_LABELS = {
+                                1: '1 sao — Rất tệ',
+                                2: '2 sao — Chưa tốt',
+                                3: '3 sao — Bình thường',
+                                4: '4 sao — Hài lòng',
+                                5: '5 sao — Tuyệt vời!'
+                            };
+                            function selectCourseStar(star) {
+                                var input = document.getElementById('selectedRatingInput');
+                                var label = document.getElementById('selectedStarLabel');
+                                if (input) input.value = star;
+                                if (label && STAR_LABELS[star]) label.textContent = STAR_LABELS[star];
+                                var btns = document.querySelectorAll('.cd-star-btn');
+                                btns.forEach(function (btn) {
+                                    var s = parseInt(btn.getAttribute('data-star'), 10);
+                                    if (s <= star) {
+                                        btn.classList.add('active');
+                                    } else {
+                                        btn.classList.remove('active');
+                                    }
+                                });
+                            }
+                            document.addEventListener('DOMContentLoaded', function () {
+                                var input = document.getElementById('selectedRatingInput');
+                                if (input && input.value) {
+                                    selectCourseStar(parseInt(input.value, 10));
+                                }
+                            });
+                        </script>
                     </body>
 
                     </html>
