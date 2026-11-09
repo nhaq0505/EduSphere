@@ -118,6 +118,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         try {
             ensureDefaultRoles();
+            ensureUnicodeColumns();
             syncCheckConstraints();
             syncTrueFalseAnswers();
             ensureDefaultCategories();
@@ -125,6 +126,60 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
         } catch (Exception ex) {
             log.warn("[DbAutoMigration] Bỏ qua đồng bộ SQL Server đặc thù: {}", ex.getMessage());
         }
+    }
+
+    /**
+     * Chuyển đổi các cột văn bản từng bị tạo nhầm thành VARCHAR sang NVARCHAR (Unicode)
+     * và khôi phục các bản ghi tiếng Việt bị lỗi dấu '?' trong bảng payout_requests.
+     */
+    private void ensureUnicodeColumns() {
+        // 1. Bảng payout_requests
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.payout_requests', N'U') IS NOT NULL
+            BEGIN
+                IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_payout_requests_status' AND parent_object_id = OBJECT_ID(N'dbo.payout_requests'))
+                    ALTER TABLE dbo.payout_requests DROP CONSTRAINT CK_payout_requests_status;
+
+                ALTER TABLE dbo.payout_requests ALTER COLUMN bank_name NVARCHAR(100) NOT NULL;
+                ALTER TABLE dbo.payout_requests ALTER COLUMN account_number NVARCHAR(50) NOT NULL;
+                ALTER TABLE dbo.payout_requests ALTER COLUMN account_holder NVARCHAR(150) NOT NULL;
+                ALTER TABLE dbo.payout_requests ALTER COLUMN instructor_note NVARCHAR(500) NULL;
+                ALTER TABLE dbo.payout_requests ALTER COLUMN admin_note NVARCHAR(500) NULL;
+                ALTER TABLE dbo.payout_requests ALTER COLUMN status NVARCHAR(20) NOT NULL;
+
+                UPDATE dbo.payout_requests
+                SET bank_name = N'MB Bank (Quân Đội)'
+                WHERE bank_name LIKE N'%MB Bank%Quân%i%';
+
+                UPDATE dbo.payout_requests
+                SET admin_note = N'Thử lại sau'
+                WHERE admin_note = N'Th? l?i sau';
+            END
+            """);
+
+        // 2. Bảng question_banks, bank_categories, bank_questions
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.question_banks', N'U') IS NOT NULL
+            BEGIN
+                ALTER TABLE dbo.question_banks ALTER COLUMN name NVARCHAR(255) NOT NULL;
+                ALTER TABLE dbo.question_banks ALTER COLUMN status NVARCHAR(20) NOT NULL;
+            END
+
+            IF OBJECT_ID(N'dbo.bank_categories', N'U') IS NOT NULL
+            BEGIN
+                ALTER TABLE dbo.bank_categories ALTER COLUMN name NVARCHAR(255) NOT NULL;
+                ALTER TABLE dbo.bank_categories ALTER COLUMN description NVARCHAR(500) NULL;
+            END
+
+            IF OBJECT_ID(N'dbo.bank_questions', N'U') IS NOT NULL
+            BEGIN
+                ALTER TABLE dbo.bank_questions ALTER COLUMN image_url NVARCHAR(500) NULL;
+                ALTER TABLE dbo.bank_questions ALTER COLUMN video_url NVARCHAR(500) NULL;
+                ALTER TABLE dbo.bank_questions ALTER COLUMN type NVARCHAR(30) NOT NULL;
+                ALTER TABLE dbo.bank_questions ALTER COLUMN difficulty_level NVARCHAR(20) NOT NULL;
+                ALTER TABLE dbo.bank_questions ALTER COLUMN tags NVARCHAR(500) NULL;
+            END
+            """);
     }
 
     private void ensureDefaultRoles() {

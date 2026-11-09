@@ -26,10 +26,10 @@ public class Category {
     @Column(name = "category_id")
     private Integer categoryId;
 
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100, columnDefinition = "nvarchar(100)")
     private String name;
 
-    @Column(name = "description", length = 2000)
+    @Column(name = "description", length = 2000, columnDefinition = "nvarchar(2000)")
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)

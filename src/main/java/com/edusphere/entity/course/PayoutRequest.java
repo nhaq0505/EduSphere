@@ -28,22 +28,22 @@ public class PayoutRequest {
     @Column(name = "amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "bank_name", nullable = false, length = 100)
+    @Column(name = "bank_name", nullable = false, length = 100, columnDefinition = "nvarchar(100)")
     private String bankName;
 
-    @Column(name = "account_number", nullable = false, length = 50)
+    @Column(name = "account_number", nullable = false, length = 50, columnDefinition = "nvarchar(50)")
     private String accountNumber;
 
-    @Column(name = "account_holder", nullable = false, length = 150)
+    @Column(name = "account_holder", nullable = false, length = 150, columnDefinition = "nvarchar(150)")
     private String accountHolder;
 
-    @Column(name = "instructor_note", length = 500)
+    @Column(name = "instructor_note", length = 500, columnDefinition = "nvarchar(500)")
     private String instructorNote;
 
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20, columnDefinition = "nvarchar(20)")
     private String status = "PENDING";
 
-    @Column(name = "admin_note", length = 500)
+    @Column(name = "admin_note", length = 500, columnDefinition = "nvarchar(500)")
     private String adminNote;
 
     @ManyToOne(fetch = FetchType.LAZY)
