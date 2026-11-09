@@ -29,10 +29,10 @@ public class BankCategory {
     @JoinColumn(name = "bank_id", referencedColumnName = "bank_id", nullable = false)
     private QuestionBank bank;
 
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", nullable = false, length = 255, columnDefinition = "nvarchar(255)")
     private String name;
 
-    @Column(name = "description", length = 500)
+    @Column(name = "description", length = 500, columnDefinition = "nvarchar(500)")
     private String description;
 
     @Column(name = "order_index", nullable = false)

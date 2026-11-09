@@ -38,7 +38,7 @@ public class CourseSection {
     @JoinColumn(name = "course_id", referencedColumnName = "course_id", nullable = false)
     private Course course;
 
-    @Column(name = "title", nullable = false, length = 255)
+    @Column(name = "title", nullable = false, length = 255, columnDefinition = "nvarchar(255)")
     private String title;
 
     @Column(name = "description", columnDefinition = "nvarchar(max)")

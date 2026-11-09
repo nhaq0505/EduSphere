@@ -44,7 +44,7 @@ public class CourseReview {
     @Column(name = "decision", nullable = false, length = 20)
     private String decision;
 
-    @Column(name = "comment", length = 2000)
+    @Column(name = "comment", length = 2000, columnDefinition = "nvarchar(2000)")
     private String comment;
 
     @Column(name = "reviewed_at", nullable = false)

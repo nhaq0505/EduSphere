@@ -90,6 +90,7 @@ public class SecurityConfig {
                 // Ghi danh & Vào học: hỗ trợ Học viên, Giảng viên (trải nghiệm khóa học) & Quản trị viên
                 .requestMatchers(HttpMethod.POST, "/courses/{courseId}/enroll").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers(HttpMethod.POST, "/courses/{courseId}/checkout").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers(HttpMethod.POST, "/courses/{courseId}/ratings", "/courses/{courseId}/ratings/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers(HttpMethod.GET, "/payments/result").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/courses/{courseId}/learn", "/courses/{courseId}/lessons/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/courses/{courseId}/assignments/**", "/courses/{courseId}/quizzes/**", "/courses/{courseId}/results").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")

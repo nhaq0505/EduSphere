@@ -32,7 +32,7 @@ public class Users implements Serializable {
 
     @NotNull
     @Size(min = 1, max = 100)
-    @Column(name = "full_name", nullable = false, length = 100)
+    @Column(name = "full_name", nullable = false, length = 100, columnDefinition = "nvarchar(100)")
     private String fullName;
 
     @NotNull

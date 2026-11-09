@@ -53,6 +53,54 @@
 .cd-footer a { margin-left: auto; color: var(--blue-dark); font-weight: 700; }
 .cd-main :focus-visible, .cd-header-actions :focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 
+/* ── Course Rating & Reviews ── */
+.cd-hero-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 8px; }
+.cd-hero-rating { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; font-size: .82rem; font-weight: 700; text-decoration: none; transition: all .15s; }
+.cd-hero-rating:hover { background: #FEF3C7; border-color: #F59E0B; }
+.cd-rating-alert { padding: 12px 16px; border-radius: 10px; font-size: .86rem; font-weight: 600; margin-bottom: 18px; }
+.cd-rating-alert--ok { background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; }
+.cd-rating-alert--err { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+
+.cd-rating-overview { display: grid; grid-template-columns: 200px 1fr; gap: 28px; align-items: center; padding: 22px 24px; border-radius: 14px; background: #F8FAFC; border: 1px solid #E2E8F0; margin: 16px 0 24px; }
+.cd-rating-score-box { text-align: center; padding-right: 20px; border-right: 1px solid #E2E8F0; }
+.cd-rating-score-num { font-size: 2.8rem; font-weight: 900; color: #0F172A; line-height: 1; }
+.cd-rating-score-stars { color: #F59E0B; font-size: 1.2rem; letter-spacing: 2px; margin: 8px 0 6px; }
+.cd-rating-score-count { font-size: .8rem; color: #64748B; font-weight: 600; }
+
+.cd-rating-bars { display: grid; gap: 8px; }
+.cd-rating-bar-row { display: grid; grid-template-columns: 54px 1fr 48px; align-items: center; gap: 10px; font-size: .8rem; color: #475569; font-weight: 600; }
+.cd-rating-bar-track { height: 8px; border-radius: 999px; background: #E2E8F0; overflow: hidden; }
+.cd-rating-bar-fill { height: 100%; border-radius: 999px; background: #F59E0B; transition: width .3s ease; }
+
+.cd-review-form-box { padding: 22px 24px; border-radius: 14px; background: #FFFBEB; border: 1px solid #FDE68A; margin-bottom: 24px; }
+.cd-review-form-title { margin: 0 0 12px; font-size: 1rem; font-weight: 800; color: #0F172A; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cd-star-picker { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.cd-star-btn { background: none; border: none; padding: 2px 4px; font-size: 1.85rem; line-height: 1; cursor: pointer; color: #CBD5E1; transition: transform .12s, color .12s; }
+.cd-star-btn.active, .cd-star-btn:hover { color: #F59E0B; transform: scale(1.1); }
+.cd-star-label { margin-left: 8px; font-size: .85rem; font-weight: 700; color: #B45309; }
+.cd-review-textarea { width: 100%; box-sizing: border-box; min-height: 92px; padding: 12px 14px; border: 1.5px solid #CBD5E1; border-radius: 10px; font: inherit; font-size: .88rem; color: #0F172A; background: #FFFFFF; resize: vertical; }
+.cd-review-textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(27, 154, 245, .15); }
+.cd-review-form-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.cd-btn-delete-review { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; padding: 8px 14px; border-radius: 999px; font-size: .82rem; font-weight: 700; cursor: pointer; }
+.cd-btn-delete-review:hover { background: #FEE2E2; }
+
+.cd-review-hint-box { padding: 14px 18px; border-radius: 12px; background: #F8FAFC; border: 1px dashed #CBD5E1; color: #475569; font-size: .86rem; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+.cd-review-list { display: grid; gap: 16px; }
+.cd-review-card { padding: 18px 20px; border-radius: 12px; border: 1px solid #E2E8F0; background: #FFFFFF; }
+.cd-review-card--mine { border-color: #93C5FD; background: #F8FAFC; }
+.cd-review-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.cd-review-author { display: flex; align-items: center; gap: 12px; }
+.cd-review-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--blue-light); color: var(--blue-dark); display: grid; place-items: center; font-weight: 800; font-size: .95rem; flex-shrink: 0; }
+.cd-review-name { font-weight: 700; color: #0F172A; font-size: .92rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cd-review-badge { padding: 2px 8px; border-radius: 999px; background: #DCFCE7; color: #15803D; font-size: .7rem; font-weight: 700; }
+.cd-review-date { font-size: .76rem; color: #94A3B8; margin-top: 2px; }
+.cd-review-stars { color: #F59E0B; font-size: 1rem; letter-spacing: 1px; }
+.cd-review-comment { margin: 8px 0 0; color: #334155; font-size: .9rem; line-height: 1.65; white-space: pre-line; overflow-wrap: anywhere; }
+.cd-review-reply { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: #EFF6FF; border-left: 3px solid var(--blue); }
+.cd-review-reply__head { font-size: .78rem; font-weight: 800; color: var(--blue-dark); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.cd-review-reply__text { margin: 0; font-size: .85rem; color: #1E293B; line-height: 1.55; white-space: pre-line; }
+
 @media (max-width: 1100px) { .cd-header-search { display: none; } .cd-layout { grid-template-columns: minmax(0, 1fr) 310px; } }
-@media (max-width: 800px) { .cd-layout { grid-template-columns: 1fr; } .cd-enroll { position: static; } .cd-hero__art { width: 118px; height: 118px; flex-basis: 118px; font-size: 3.5rem; } }
+@media (max-width: 800px) { .cd-layout { grid-template-columns: 1fr; } .cd-enroll { position: static; } .cd-hero__art { width: 118px; height: 118px; flex-basis: 118px; font-size: 3.5rem; } .cd-rating-overview { grid-template-columns: 1fr; } .cd-rating-score-box { padding-right: 0; padding-bottom: 16px; border-right: none; border-bottom: 1px solid #E2E8F0; } }
 @media (max-width: 600px) { .hn-header__inner { height: auto; min-height: 66px; padding: 12px 16px; flex-wrap: wrap; } .hn-nav { order: 3; width: 100%; flex-basis: 100%; overflow-x: auto; } .hn-nav__link { padding: 6px 9px; } .cd-header-actions { margin-left: auto; } .cd-profile-link { padding: 0 12px; } .cd-main { padding: 20px 0 48px; } .cd-hero { padding: 25px 22px; } .cd-hero__art { display: none; } .cd-panel { padding: 24px 20px; } .cd-enroll { padding: 24px 20px; } .cd-lesson-label { display: none; } .cd-footer .hn-container { flex-wrap: wrap; } .cd-footer a { margin-left: 0; } }

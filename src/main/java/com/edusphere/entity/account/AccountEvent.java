@@ -35,7 +35,7 @@ public class AccountEvent {
     @Column(name = "action", nullable = false, length = 30)
     private String action;
 
-    @Column(name = "reason", length = 1000)
+    @Column(name = "reason", length = 1000, columnDefinition = "nvarchar(1000)")
     private String reason;
 
     @Column(name = "created_at", nullable = false)

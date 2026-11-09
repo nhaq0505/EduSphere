@@ -46,18 +46,18 @@ public class BankQuestion {
     @Column(name = "content", nullable = false, columnDefinition = "nvarchar(max)")
     private String content;
 
-    @Column(name = "image_url", length = 500)
+    @Column(name = "image_url", length = 500, columnDefinition = "nvarchar(500)")
     private String imageUrl;
 
-    @Column(name = "video_url", length = 500)
+    @Column(name = "video_url", length = 500, columnDefinition = "nvarchar(500)")
     private String videoUrl;
 
     /** SINGLE_CHOICE, MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER, ESSAY */
-    @Column(name = "type", nullable = false, length = 30)
+    @Column(name = "type", nullable = false, length = 30, columnDefinition = "nvarchar(30)")
     private String type = "SINGLE_CHOICE";
 
     /** EASY, MEDIUM, HARD */
-    @Column(name = "difficulty_level", nullable = false, length = 20)
+    @Column(name = "difficulty_level", nullable = false, length = 20, columnDefinition = "nvarchar(20)")
     private String difficultyLevel = "MEDIUM";
 
     @Column(name = "default_score", nullable = false, precision = 5, scale = 2)
@@ -72,7 +72,7 @@ public class BankQuestion {
     @Column(name = "sample_essay_answer", columnDefinition = "nvarchar(max)")
     private String sampleEssayAnswer;
 
-    @Column(name = "tags", length = 500)
+    @Column(name = "tags", length = 500, columnDefinition = "nvarchar(500)")
     private String tags;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

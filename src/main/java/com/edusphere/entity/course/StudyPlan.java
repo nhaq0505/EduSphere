@@ -40,7 +40,7 @@ public class StudyPlan {
     @JoinColumn(name = "student_id", referencedColumnName = "user_id", nullable = false)
     private Users student;
 
-    @Column(name = "title", nullable = false, length = 255)
+    @Column(name = "title", nullable = false, length = 255, columnDefinition = "nvarchar(255)")
     private String title;
 
     @Column(name = "description", columnDefinition = "nvarchar(max)")

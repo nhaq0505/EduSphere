@@ -34,7 +34,7 @@ public class Material {
     @JoinColumn(name = "lesson_id", referencedColumnName = "lesson_id", nullable = false)
     private Lesson lesson;
 
-    @Column(name = "title", nullable = false, length = 255)
+    @Column(name = "title", nullable = false, length = 255, columnDefinition = "nvarchar(255)")
     private String title;
 
     @Column(name = "type", nullable = false, length = 20)
@@ -43,7 +43,7 @@ public class Material {
     @Column(name = "file_url", nullable = false, length = 2048)
     private String fileUrl;
 
-    @Column(name = "original_file_name", length = 255)
+    @Column(name = "original_file_name", length = 255, columnDefinition = "nvarchar(255)")
     private String originalFileName;
 
     @Column(name = "content_type", length = 100)

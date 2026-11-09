@@ -43,13 +43,13 @@ public class QuestionBank {
     @JoinColumn(name = "course_id", referencedColumnName = "course_id")
     private Course course;
 
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", nullable = false, length = 255, columnDefinition = "nvarchar(255)")
     private String name;
 
     @Column(name = "description", columnDefinition = "nvarchar(max)")
     private String description;
 
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20, columnDefinition = "nvarchar(20)")
     private String status = "ACTIVE";
 
     @Column(name = "created_at", nullable = false)

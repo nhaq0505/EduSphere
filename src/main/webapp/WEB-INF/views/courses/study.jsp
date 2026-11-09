@@ -356,6 +356,10 @@
                                 <span>📊</span> Kết quả
                             </a>
                         </div>
+                        <a href="${pageContext.request.contextPath}/courses/${study.courseId}#course-reviews"
+                           style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:#FFFBEB; border:1.5px solid #FDE68A; color:#B45309; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
+                            <span>⭐</span> Đánh giá khóa học
+                        </a>
                     </div>
                 </aside>
 
