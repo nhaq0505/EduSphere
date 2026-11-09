@@ -373,6 +373,103 @@ public class QuestionBankService {
         return importQuestionsFromFile(bankId, instructorId, null, null, file);
     }
 
+    /**
+     * Lưu danh sách các câu hỏi do AI (RAG) sinh ra sau khi Giảng viên đã kiểm duyệt và chỉnh sửa.
+     */
+    @Transactional
+    public int saveApprovedAiQuestions(
+            Integer bankId,
+            Integer instructorId,
+            Integer categoryId,
+            String newCategoryName,
+            List<ParsedQuestionDto> approvedQuestions) {
+
+        if (approvedQuestions == null || approvedQuestions.isEmpty()) {
+            return 0;
+        }
+
+        QuestionBank bank = getBank(bankId, instructorId);
+        Users instructor = bank.getInstructor();
+
+        BankCategory targetCategory = null;
+        if (newCategoryName != null && !newCategoryName.trim().isEmpty()) {
+            targetCategory = addCategory(bankId, instructorId, newCategoryName.trim(), null);
+        } else if (categoryId != null && categoryId > 0) {
+            targetCategory = categoryRepository.findByCategoryIdAndBank_BankId(categoryId, bankId).orElse(null);
+        }
+
+        List<BankQuestion> questionsToSave = new ArrayList<>();
+        List<BankAnswerOption> optionsToSave = new ArrayList<>();
+
+        for (ParsedQuestionDto dto : approvedQuestions) {
+            if (dto.getContent() == null || dto.getContent().isBlank()) {
+                continue;
+            }
+            BankQuestion q = new BankQuestion();
+            q.setBank(bank);
+            q.setCreatedBy(instructor);
+            q.setCategory(targetCategory);
+            q.setContent(dto.getContent().trim());
+            q.setType(dto.getType() != null ? dto.getType() : "SINGLE_CHOICE");
+            q.setDifficultyLevel(dto.getDifficultyLevel() != null ? dto.getDifficultyLevel() : "MEDIUM");
+            q.setDefaultScore(dto.getDefaultScore() != null ? dto.getDefaultScore() : BigDecimal.valueOf(1.0));
+            q.setExplanation(dto.getExplanation());
+            q.setSampleEssayAnswer(dto.getSampleEssayAnswer());
+            q.setTags("AI-RAG");
+
+            if ("TRUE_FALSE".equals(q.getType())) {
+                String tf = QuestionImportService.normalizeTrueFalse(dto.getCorrectAnswer());
+                q.setCorrectAnswer(tf != null ? tf : "TRUE");
+            } else {
+                q.setCorrectAnswer(dto.getCorrectAnswer());
+            }
+            questionsToSave.add(q);
+        }
+
+        List<BankQuestion> savedQuestions = questionRepository.saveAll(questionsToSave);
+
+        for (int i = 0; i < savedQuestions.size(); i++) {
+            BankQuestion savedQ = savedQuestions.get(i);
+            ParsedQuestionDto dto = approvedQuestions.get(i);
+
+            if ("ESSAY".equals(savedQ.getType()) || "SHORT_ANSWER".equals(savedQ.getType())) {
+                continue;
+            }
+            if ("TRUE_FALSE".equals(savedQ.getType())) {
+                boolean isTrue = "TRUE".equalsIgnoreCase(savedQ.getCorrectAnswer());
+                BankAnswerOption opt1 = new BankAnswerOption();
+                opt1.setBankQuestion(savedQ);
+                opt1.setContent("Đúng");
+                opt1.setCorrect(isTrue);
+                opt1.setOrderIndex(1);
+                optionsToSave.add(opt1);
+
+                BankAnswerOption opt2 = new BankAnswerOption();
+                opt2.setBankQuestion(savedQ);
+                opt2.setContent("Sai");
+                opt2.setCorrect(!isTrue);
+                opt2.setOrderIndex(2);
+                optionsToSave.add(opt2);
+            } else if (dto.getOptions() != null) {
+                for (ParsedOptionDto optDto : dto.getOptions()) {
+                    if (optDto.getContent() == null || optDto.getContent().isBlank()) continue;
+                    BankAnswerOption opt = new BankAnswerOption();
+                    opt.setBankQuestion(savedQ);
+                    opt.setContent(optDto.getContent().trim());
+                    opt.setCorrect(optDto.isCorrect());
+                    opt.setOrderIndex(optDto.getOrderIndex());
+                    optionsToSave.add(opt);
+                }
+            }
+        }
+
+        if (!optionsToSave.isEmpty()) {
+            optionRepository.saveAll(optionsToSave);
+        }
+
+        return savedQuestions.size();
+    }
+
     // ==========================================
     // CHUYÊN ĐỀ (CATEGORIES)
     // ==========================================
