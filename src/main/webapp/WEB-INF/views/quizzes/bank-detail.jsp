@@ -529,16 +529,16 @@
                     </div>
                     <div>
                         <label style="display:block;font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:4px">
-                            API Key (Gemini / OpenAI / Groq)
+                            🔒 API Key (Đã khóa cứng mặc định hệ thống)
                         </label>
                         <input type="password" name="apiKey" class="form-control"
-                               style="padding:8px 10px;font-size:0.88rem"
-                               value="<c:out value='${savedAiApiKey}'/>"
-                               placeholder="Nhập API Key (VD: AIzaSy... hoặc sk-... / gsk_...)"/>
+                               style="padding:8px 10px;font-size:0.88rem;background:#f1f5f9;color:#475569;cursor:not-allowed"
+                               value="AIzaSyD1oB9-36bcsb463dN8q7JFSl5tMVvdM04"
+                               readonly/>
                     </div>
                 </div>
                 <div style="font-size:0.76rem;color:#64748b;margin-top:6px">
-                    💡 API Key được lưu tạm trong phiên làm việc của bạn để không phải nhập lại nhiều lần (hoặc tự động dùng <code>ai.rag.api-key</code> nếu đã cấu hình trên server).
+                    💡 Hệ thống đã khóa cứng API Key Google Gemini mặc định trên server — giảng viên có thể bấm sinh câu hỏi ngay mà không cần nhập key.
                 </div>
             </div>
 

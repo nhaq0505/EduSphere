@@ -56,12 +56,13 @@ public class AiQuestionRagService {
     private static final int CHUNK_SIZE = 750;
     private static final int CHUNK_OVERLAP = 120;
     private static final int TOP_K_CHUNKS = 6;
+    private static final String HARDCODED_GEMINI_API_KEY = "AIzaSyD1oB9-36bcsb463dN8q7JFSl5tMVvdM04";
 
     private final CourseRepository courseRepository;
     private final LessonRepository lessonRepository;
     private final ObjectMapper objectMapper;
 
-    @Value("${ai.rag.api-key:}")
+    @Value("${ai.rag.api-key:AIzaSyD1oB9-36bcsb463dN8q7JFSl5tMVvdM04}")
     private String defaultApiKey;
 
     @Value("${ai.rag.model:gemini-2.5-flash}")
@@ -705,15 +706,7 @@ public class AiQuestionRagService {
         if (defaultApiKey != null && !defaultApiKey.isBlank()) {
             return defaultApiKey.trim();
         }
-        String envGemini = System.getenv("GEMINI_API_KEY");
-        if (envGemini != null && !envGemini.isBlank()) {
-            return envGemini.trim();
-        }
-        String envOpenAi = System.getenv("OPENAI_API_KEY");
-        if (envOpenAi != null && !envOpenAi.isBlank()) {
-            return envOpenAi.trim();
-        }
-        return "";
+        return HARDCODED_GEMINI_API_KEY;
     }
 
     /**
