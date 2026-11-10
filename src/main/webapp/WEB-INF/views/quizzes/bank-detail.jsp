@@ -689,6 +689,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         var navItem = document.getElementById('nav-question-banks');
         if (navItem) navItem.classList.add('active');
+        if (window.location.search.indexOf('openAi=true') !== -1) {
+            openAiRagModal();
+        }
     });
 
     function openImportModal() { document.getElementById('importModal').classList.add('active'); }
