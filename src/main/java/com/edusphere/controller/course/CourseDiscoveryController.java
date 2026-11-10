@@ -4,6 +4,9 @@ import com.edusphere.dto.course.CourseRatingSummaryView;
 import com.edusphere.dto.course.CourseView;
 import com.edusphere.repository.course.EnrollmentRepository;
 import com.edusphere.security.CustomUserDetails;
+import com.edusphere.service.course.CertificateService;
+import com.edusphere.service.course.CourseActionException;
+import com.edusphere.service.course.CourseCommentService;
 import com.edusphere.service.course.CourseDiscoveryService;
 import com.edusphere.service.course.CourseRatingService;
 
@@ -85,6 +88,11 @@ public class CourseDiscoveryController {
 
                     model.addAttribute("student", loggedIn);
                     model.addAttribute("enrolled", enrolled);
+                    model.addAttribute("ratingSummary", ratingSummary);
+                    if (certificateService != null && loggedIn && enrolled) {
+                        certificateService.findExistingCertificate(currentUserId, courseId)
+                                .ifPresent(cert -> model.addAttribute("myCertificateId", cert.getCertificateId()));
+                    }
                     return "courses/detail";
                 })
                 .orElseGet(() -> {
