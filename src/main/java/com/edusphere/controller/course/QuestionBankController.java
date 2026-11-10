@@ -121,7 +121,11 @@ public class QuestionBankController {
         model.addAttribute("selectedCategoryId", categoryId);
         model.addAttribute("courses", courseRepository.findByInstructor_UserIdOrderByCreatedAtDesc(instructorId));
         model.addAttribute("bankLessons", bankLessons);
-        model.addAttribute("savedAiApiKey", session.getAttribute("INSTRUCTOR_AI_API_KEY"));
+        String sessionKey = (String) session.getAttribute("INSTRUCTOR_AI_API_KEY");
+        if (sessionKey == null || sessionKey.isBlank()) {
+            sessionKey = aiQuestionRagService.getDefaultApiKey();
+        }
+        model.addAttribute("savedAiApiKey", sessionKey);
         model.addAttribute("savedAiModel", session.getAttribute("INSTRUCTOR_AI_MODEL"));
         return "quizzes/bank-detail";
     }
@@ -382,7 +386,7 @@ public class QuestionBankController {
             @RequestParam(required = false) Integer categoryId,
             @RequestParam(required = false) String newCategoryName,
             @RequestParam(required = false) String apiKey,
-            @RequestParam(defaultValue = "gemini-2.0-flash") String aiModel,
+            @RequestParam(defaultValue = "gemini-2.5-flash") String aiModel,
             @AuthenticationPrincipal CustomUserDetails user,
             HttpSession session,
             Model model,

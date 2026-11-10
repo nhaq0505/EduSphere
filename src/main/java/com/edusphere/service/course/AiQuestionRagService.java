@@ -64,8 +64,14 @@ public class AiQuestionRagService {
     @Value("${ai.rag.api-key:}")
     private String defaultApiKey;
 
-    @Value("${ai.rag.model:gemini-2.0-flash}")
+    @Value("${ai.rag.model:gemini-2.5-flash}")
     private String defaultModel;
+
+    private static final List<String> GEMINI_FALLBACK_MODELS = List.of(
+            "gemini-2.5-flash",
+            "gemini-3-flash-preview",
+            "gemini-flash-latest"
+    );
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(20))
@@ -87,11 +93,11 @@ public class AiQuestionRagService {
             String modelInput) {
 
         String resolvedApiKey = resolveApiKey(apiKeyInput);
-        String resolvedModel = (modelInput != null && !modelInput.isBlank()) ? modelInput.trim() : defaultModel;
+        String resolvedModel = normalizeModelName((modelInput != null && !modelInput.isBlank()) ? modelInput.trim() : defaultModel);
         int safeCount = Math.max(1, Math.min(20, questionCount));
 
         // Bước 1: Thu thập toàn bộ tài liệu gốc từ bài học, tệp đính kèm và văn bản nhập tay
-        Map<String, String> sourceDocuments = collectKnowledgeDocuments(courseId, lessonIds, documentFile, customContext);
+        Map<String, String> sourceDocuments = collectKnowledgeDocuments(courseId, lessonIds, documentFile, customContext, topicPrompt);
         if (sourceDocuments.isEmpty()) {
             throw new CourseActionException(HttpStatus.BAD_REQUEST,
                     "Không có dữ liệu ngữ cảnh để thực hiện RAG. Vui lòng chọn bài học trong khóa học, tải lên tệp tài liệu (.docx/.txt) hoặc dán nội dung bài giảng.");
@@ -140,7 +146,8 @@ public class AiQuestionRagService {
             Integer courseId,
             List<Integer> lessonIds,
             MultipartFile documentFile,
-            String customContext) {
+            String customContext,
+            String topicPrompt) {
 
         Map<String, String> docs = new LinkedHashMap<>();
 
@@ -149,14 +156,20 @@ public class AiQuestionRagService {
             Course course = courseRepository.findById(courseId).orElse(null);
             if (course != null) {
                 StringBuilder courseIntro = new StringBuilder();
+                if (course.getTitle() != null && !course.getTitle().isBlank()) {
+                    courseIntro.append("Khóa học: ").append(course.getTitle().trim()).append("\n");
+                }
                 if (course.getDescription() != null && !course.getDescription().isBlank()) {
                     courseIntro.append(course.getDescription().trim()).append("\n");
                 }
                 if (course.getObjectives() != null && !course.getObjectives().isBlank()) {
-                    courseIntro.append("Mục tiêu khóa học: ").append(course.getObjectives().trim());
+                    courseIntro.append("Mục tiêu khóa học: ").append(course.getObjectives().trim()).append("\n");
+                }
+                if (course.getRequirements() != null && !course.getRequirements().isBlank()) {
+                    courseIntro.append("Yêu cầu kiến thức: ").append(course.getRequirements().trim());
                 }
                 if (!courseIntro.isEmpty()) {
-                    docs.put("Khóa học: " + course.getTitle(), courseIntro.toString());
+                    docs.put("Khóa học: " + course.getTitle(), courseIntro.toString().trim());
                 }
             }
 
@@ -170,6 +183,9 @@ public class AiQuestionRagService {
                     continue;
                 }
                 StringBuilder lessonText = new StringBuilder();
+                if (lesson.getTitle() != null && !lesson.getTitle().isBlank()) {
+                    lessonText.append("Chủ đề bài học: ").append(lesson.getTitle().trim()).append("\n");
+                }
                 if (lesson.getContent() != null && !lesson.getContent().isBlank()) {
                     lessonText.append(lesson.getContent().trim()).append("\n");
                 }
@@ -177,7 +193,7 @@ public class AiQuestionRagService {
                     lessonText.append("Ghi chú trọng tâm: ").append(lesson.getInstructorNotes().trim());
                 }
                 if (!lessonText.isEmpty()) {
-                    docs.put("Bài học: " + lesson.getTitle(), lessonText.toString());
+                    docs.put("Bài học: " + lesson.getTitle(), lessonText.toString().trim());
                 }
             }
         }
@@ -196,6 +212,11 @@ public class AiQuestionRagService {
         // 3. Nguồn từ văn bản giảng viên dán trực tiếp
         if (customContext != null && !customContext.isBlank()) {
             docs.put("Tài liệu giảng viên cung cấp", customContext.trim());
+        }
+
+        // 4. Dự phòng nếu giảng viên chỉ nhập chủ đề trọng tâm mà không chọn khóa học/tài liệu
+        if (docs.isEmpty() && topicPrompt != null && !topicPrompt.isBlank()) {
+            docs.put("Chủ đề trọng tâm giảng viên yêu cầu", topicPrompt.trim());
         }
 
         return docs;
@@ -404,11 +425,41 @@ public class AiQuestionRagService {
     }
 
     /**
-     * Gọi Google Gemini API (generateContent) và yêu cầu trả về JSON chuẩn.
+     * Chuẩn hóa tên model Gemini để tự động nâng cấp các mã model cũ (như gemini-2.0-flash, gemini-1.5-flash)
+     * đã bị Google AI Studio ngừng hỗ trợ (HTTP 404) sang gemini-2.5-flash.
+     */
+    private String normalizeModelName(String rawModel) {
+        if (rawModel == null || rawModel.isBlank()) {
+            return "gemini-2.5-flash";
+        }
+        String trimmed = rawModel.trim();
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        if (lower.equals("gemini-2.0-flash")
+                || lower.equals("gemini-1.5-flash")
+                || lower.equals("gemini-1.5-pro")
+                || lower.equals("gemini-2.5-pro")
+                || lower.equals("gemini-2.5-flash-lite")) {
+            return "gemini-2.5-flash";
+        }
+        return trimmed;
+    }
+
+    /**
+     * Gọi Google Gemini API (generateContent) có cơ chế tự động thử lại qua danh sách model dự phòng
+     * nếu một model bị ngừng hỗ trợ (404) hoặc quá tải tạm thời (429/503).
      */
     private String callGeminiApi(String apiKey, String model, String systemPrompt, String userPrompt) throws Exception {
-        String geminiModel = model.toLowerCase(Locale.ROOT).startsWith("gemini") ? model : "gemini-2.0-flash";
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + geminiModel + ":generateContent?key=" + apiKey;
+        String primaryModel = model.toLowerCase(Locale.ROOT).startsWith("gemini")
+                ? normalizeModelName(model)
+                : "gemini-2.5-flash";
+
+        List<String> candidateModels = new ArrayList<>();
+        candidateModels.add(primaryModel);
+        for (String fallback : GEMINI_FALLBACK_MODELS) {
+            if (!candidateModels.contains(fallback)) {
+                candidateModels.add(fallback);
+            }
+        }
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("systemInstruction", Map.of(
@@ -422,28 +473,41 @@ public class AiQuestionRagService {
                 "temperature", 0.3,
                 "responseMimeType", "application/json"
         ));
-
         String requestBody = objectMapper.writeValueAsString(payload);
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Content-Type", "application/json; charset=UTF-8")
-                .timeout(Duration.ofSeconds(60))
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
-                .build();
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            log.warn("Gemini API trả về HTTP {}: {}", response.statusCode(), response.body());
-            throw new CourseActionException(HttpStatus.BAD_GATEWAY,
-                    "Gemini API trả về lỗi (HTTP " + response.statusCode() + "). Vui lòng kiểm tra lại API Key hoặc hạn mức sử dụng.");
+        int lastStatus = 500;
+        String lastBody = "";
+
+        for (String candidateModel : candidateModels) {
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + candidateModel + ":generateContent?key=" + apiKey;
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Content-Type", "application/json; charset=UTF-8")
+                    .timeout(Duration.ofSeconds(60))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            lastStatus = response.statusCode();
+            lastBody = response.body();
+
+            if (lastStatus >= 200 && lastStatus < 300) {
+                JsonNode root = objectMapper.readTree(lastBody);
+                JsonNode textNode = root.at("/candidates/0/content/parts/0/text");
+                if (!textNode.isMissingNode() && !textNode.asText().isBlank()) {
+                    return textNode.asText();
+                }
+            }
+
+            log.warn("Gemini API (model={}) trả về HTTP {}: {}", candidateModel, lastStatus, lastBody);
+            // Nếu lỗi do API key không hợp lệ (400/401/403), dừng ngay không cần thử model khác
+            if (lastStatus == 400 || lastStatus == 401 || lastStatus == 403) {
+                break;
+            }
         }
 
-        JsonNode root = objectMapper.readTree(response.body());
-        JsonNode textNode = root.at("/candidates/0/content/parts/0/text");
-        if (textNode.isMissingNode() || textNode.asText().isBlank()) {
-            throw new CourseActionException(HttpStatus.BAD_GATEWAY, "Gemini API không trả về nội dung JSON hợp lệ.");
-        }
-        return textNode.asText();
+        throw new CourseActionException(HttpStatus.BAD_GATEWAY,
+                "Gemini API trả về lỗi (HTTP " + lastStatus + "). Vui lòng kiểm tra lại API Key hoặc thử lại sau.");
     }
 
     /**
@@ -650,6 +714,13 @@ public class AiQuestionRagService {
             return envOpenAi.trim();
         }
         return "";
+    }
+
+    /**
+     * Lấy API Key mặc định đã cấu hình trên hệ thống (nếu có) để hỗ trợ hiển thị sẵn trên giao diện giảng viên.
+     */
+    public String getDefaultApiKey() {
+        return resolveApiKey(null);
     }
 
     private String cleanJsonFence(String raw) {

@@ -521,9 +521,8 @@
                     <div>
                         <label style="display:block;font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:4px">Model AI</label>
                         <select name="aiModel" class="form-control" style="padding:8px 10px;font-size:0.88rem">
-                            <option value="gemini-2.0-flash" ${savedAiModel == 'gemini-2.0-flash' ? 'selected' : ''}>Google Gemini 2.0 Flash (Khuyên dùng)</option>
-                            <option value="gemini-2.5-flash" ${savedAiModel == 'gemini-2.5-flash' ? 'selected' : ''}>Google Gemini 2.5 Flash</option>
-                            <option value="gemini-1.5-flash" ${savedAiModel == 'gemini-1.5-flash' ? 'selected' : ''}>Google Gemini 1.5 Flash</option>
+                            <option value="gemini-2.5-flash" ${empty savedAiModel or savedAiModel == 'gemini-2.5-flash' or savedAiModel == 'gemini-2.0-flash' ? 'selected' : ''}>Google Gemini 2.5 Flash (Khuyên dùng)</option>
+                            <option value="gemini-3-flash-preview" ${savedAiModel == 'gemini-3-flash-preview' ? 'selected' : ''}>Google Gemini 3 Flash Preview</option>
                             <option value="gpt-4o-mini" ${savedAiModel == 'gpt-4o-mini' ? 'selected' : ''}>OpenAI GPT-4o mini</option>
                             <option value="llama-3.3-70b-versatile" ${savedAiModel == 'llama-3.3-70b-versatile' ? 'selected' : ''}>Groq Llama 3.3 70B</option>
                         </select>
