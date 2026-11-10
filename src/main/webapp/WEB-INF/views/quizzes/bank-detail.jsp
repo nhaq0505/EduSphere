@@ -501,7 +501,7 @@
                     🤖 Tạo câu hỏi bằng AI theo cơ chế RAG
                 </h2>
                 <p style="color:#64748b;font-size:0.86rem;margin:0">
-                    Hệ thống tự động phân đoạn (Chunking) &amp; truy xuất các đoạn kiến thức liên quan nhất (Top-K Retrieval) từ bài giảng/tài liệu, sau đó gọi Model AI qua API Key để sinh bản nháp cho <strong>Giảng viên kiểm duyệt cuối cùng</strong>.
+                    Hệ thống tự động phân đoạn (Chunking) &amp; truy xuất các đoạn kiến thức liên quan nhất (Top-K Retrieval) từ bài giảng/tài liệu để AI sinh bản nháp cho <strong>Giảng viên kiểm duyệt cuối cùng</strong>.
                 </p>
             </div>
         </div>
@@ -512,40 +512,10 @@
               onsubmit="document.getElementById('aiSubmitBtn').disabled=true; document.getElementById('aiSubmitBtn').textContent='⏳ Đang truy xuất RAG & gọi Model AI...';">
             <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
 
-            <%-- KHỐI 1: CẤU HÌNH MODEL & API KEY --%>
-            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:16px">
-                <div style="font-size:0.84rem;font-weight:800;color:#334155;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em">
-                    🔑 1. Cấu hình Model AI &amp; API Key
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:12px">
-                    <div>
-                        <label style="display:block;font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:4px">Model AI</label>
-                        <select name="aiModel" class="form-control" style="padding:8px 10px;font-size:0.88rem">
-                            <option value="gemini-2.5-flash" ${empty savedAiModel or savedAiModel == 'gemini-2.5-flash' or savedAiModel == 'gemini-2.0-flash' ? 'selected' : ''}>Google Gemini 2.5 Flash (Khuyên dùng)</option>
-                            <option value="gemini-3-flash-preview" ${savedAiModel == 'gemini-3-flash-preview' ? 'selected' : ''}>Google Gemini 3 Flash Preview</option>
-                            <option value="gpt-4o-mini" ${savedAiModel == 'gpt-4o-mini' ? 'selected' : ''}>OpenAI GPT-4o mini</option>
-                            <option value="llama-3.3-70b-versatile" ${savedAiModel == 'llama-3.3-70b-versatile' ? 'selected' : ''}>Groq Llama 3.3 70B</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display:block;font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:4px">
-                            🔒 API Key (Đã khóa cứng mặc định hệ thống)
-                        </label>
-                        <input type="password" name="apiKey" class="form-control"
-                               style="padding:8px 10px;font-size:0.88rem;background:#f1f5f9;color:#475569;cursor:not-allowed"
-                               value="AIzaSyD1oB9-36bcsb463dN8q7JFSl5tMVvdM04"
-                               readonly/>
-                    </div>
-                </div>
-                <div style="font-size:0.76rem;color:#64748b;margin-top:6px">
-                    💡 Hệ thống đã khóa cứng API Key Google Gemini mặc định trên server — giảng viên có thể bấm sinh câu hỏi ngay mà không cần nhập key.
-                </div>
-            </div>
-
-            <%-- KHỐI 2: NGUỒN TRI THỨC ĐẦU VÀO CHO RAG --%>
+            <%-- KHỐI 1: NGUỒN TRI THỨC ĐẦU VÀO CHO RAG --%>
             <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px 16px;margin-bottom:16px">
                 <div style="font-size:0.84rem;font-weight:800;color:#1e40af;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em">
-                    📚 2. Nguồn tri thức RAG (Chọn 1 hoặc kết hợp nhiều nguồn)
+                    📚 1. Nguồn tri thức RAG (Chọn 1 hoặc kết hợp nhiều nguồn)
                 </div>
 
                 <div class="form-group" style="margin-bottom:12px">
@@ -593,10 +563,10 @@
                 </div>
             </div>
 
-            <%-- KHỐI 3: TRUY VẤN RAG & CẤU HÌNH CÂU HỎI --%>
+            <%-- KHỐI 2: TRUY VẤN RAG & CẤU HÌNH CÂU HỎI --%>
             <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:16px">
                 <div style="font-size:0.84rem;font-weight:800;color:#334155;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em">
-                    🎯 3. Truy vấn trọng tâm (RAG Query) &amp; Cấu hình câu hỏi
+                    🎯 2. Truy vấn trọng tâm (RAG Query) &amp; Cấu hình câu hỏi
                 </div>
 
                 <div class="form-group" style="margin-bottom:12px">
