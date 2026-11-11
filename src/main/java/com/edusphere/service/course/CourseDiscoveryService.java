@@ -1,11 +1,14 @@
 package com.edusphere.service.course;
 
 import com.edusphere.dto.course.CourseView;
+import com.edusphere.dto.course.LessonItemView;
 import com.edusphere.entity.course.Category;
 import com.edusphere.entity.course.Course;
+import com.edusphere.entity.course.Lesson;
 import com.edusphere.repository.course.CategoryRepository;
 import com.edusphere.repository.course.CourseRatingRepository;
 import com.edusphere.repository.course.CourseRepository;
+import com.edusphere.repository.course.CourseSectionRepository;
 import com.edusphere.repository.course.LessonRepository;
 
 import jakarta.persistence.criteria.Predicate;
@@ -18,6 +21,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -35,14 +39,26 @@ public class CourseDiscoveryService {
     private final CategoryRepository categoryRepository;
     private final LessonRepository lessonRepository;
     private final CourseRatingRepository courseRatingRepository;
+    private final CourseSectionRepository courseSectionRepository;
 
-    public CourseDiscoveryService(CourseRepository courseRepository, CategoryRepository categoryRepository,
+    @Autowired
+    public CourseDiscoveryService(CourseRepository courseRepository,
+                                  CategoryRepository categoryRepository,
                                   LessonRepository lessonRepository,
-                                  CourseRatingRepository courseRatingRepository) {
+                                  CourseRatingRepository courseRatingRepository,
+                                  @Autowired(required = false) CourseSectionRepository courseSectionRepository) {
         this.courseRepository = courseRepository;
         this.categoryRepository = categoryRepository;
         this.lessonRepository = lessonRepository;
         this.courseRatingRepository = courseRatingRepository;
+        this.courseSectionRepository = courseSectionRepository;
+    }
+
+    public CourseDiscoveryService(CourseRepository courseRepository,
+                                  CategoryRepository categoryRepository,
+                                  LessonRepository lessonRepository,
+                                  CourseRatingRepository courseRatingRepository) {
+        this(courseRepository, categoryRepository, lessonRepository, courseRatingRepository, null);
     }
 
     @Transactional(readOnly = true)
@@ -84,7 +100,7 @@ public class CourseDiscoveryService {
         Page<Course> coursesPage = courseRepository.findAll(filters, pageable);
         Map<Integer, double[]> ratingMap = loadRatingStats(
                 coursesPage.getContent().stream().map(Course::getCourseId).toList());
-        return coursesPage.map(c -> toView(c, ratingMap.get(c.getCourseId())));
+        return coursesPage.map(c -> toListView(c, ratingMap.get(c.getCourseId())));
     }
 
     @Transactional(readOnly = true)
@@ -96,7 +112,7 @@ public class CourseDiscoveryService {
                         || ("SUBMITTED".equals(c.getStatus()) && c.getPublishedAt() != null))
                 .map(c -> {
                     Map<Integer, double[]> ratingMap = loadRatingStats(List.of(c.getCourseId()));
-                    return toView(c, ratingMap.get(c.getCourseId()));
+                    return toDetailView(c, ratingMap.get(c.getCourseId()));
                 });
     }
 
@@ -108,7 +124,26 @@ public class CourseDiscoveryService {
     @Transactional(readOnly = true)
     public List<String> publishedLessonTitles(Integer courseId) {
         return lessonRepository.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(courseId, PUBLISHED)
-                .stream().map(lesson -> lesson.getTitle()).toList();
+                .stream().map(Lesson::getTitle).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<LessonItemView> publishedLessonItems(Integer courseId) {
+        return lessonRepository.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(courseId, PUBLISHED)
+                .stream()
+                .map(l -> new LessonItemView(
+                        l.getLessonId(),
+                        l.getTitle(),
+                        l.getOrderIndex(),
+                        false,
+                        false,
+                        l.getLessonType(),
+                        l.getVideoDuration(),
+                        false,
+                        l.getSection() != null ? l.getSection().getSectionId() : null,
+                        l.getSection() != null ? l.getSection().getTitle() : null
+                ))
+                .toList();
     }
 
     private Map<Integer, double[]> loadRatingStats(List<Integer> courseIds) {
@@ -125,16 +160,78 @@ public class CourseDiscoveryService {
         return map;
     }
 
-    private CourseView toView(Course course, double[] stats) {
+    private CourseView toListView(Course course, double[] stats) {
         String categoryName = course.getCategory() == null ? "Chưa phân loại" : course.getCategory().getName();
         double avgRating = stats != null ? stats[0] : 0.0;
         long ratingCount = stats != null ? (long) stats[1] : 0L;
+        String insName = course.getInstructor() != null ? course.getInstructor().getFullName() : "Giảng viên";
         return new CourseView(course.getCourseId(), course.getTitle(), course.getDescription(),
-                categoryName, course.getInstructor().getFullName(), levelLabel(course.getLevel()),
-                course.getThumbnailUrl(), course.getPrice(), course.getCurrency());
+                categoryName, insName, levelLabel(course.getLevel()),
+                course.getThumbnailUrl(), course.getPrice(), course.getCurrency(),
+                avgRating, ratingCount);
+    }
+
+    private CourseView toDetailView(Course course, double[] stats) {
+        String categoryName = course.getCategory() == null ? "Chưa phân loại" : course.getCategory().getName();
+        double avgRating = stats != null ? stats[0] : 0.0;
+        long ratingCount = stats != null ? (long) stats[1] : 0L;
+
+        String insName = course.getInstructor() != null ? course.getInstructor().getFullName() : "Giảng viên EduSphere";
+        String insAvatar = course.getInstructor() != null ? course.getInstructor().getAvatarUrl() : null;
+        String insEmail = course.getInstructor() != null ? course.getInstructor().getEmail() : null;
+
+        List<Lesson> lessons = lessonRepository.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(course.getCourseId(), PUBLISHED);
+        int lessonCount = lessons.size();
+        int totalSecs = lessons.stream()
+                .filter(l -> l.getVideoDuration() != null && l.getVideoDuration() > 0)
+                .mapToInt(Lesson::getVideoDuration)
+                .sum();
+        int totalMins = totalSecs > 0 ? (int) Math.ceil(totalSecs / 60.0) : 0;
+        String formattedDuration = formatDuration(totalMins);
+
+        int sectionCount = courseSectionRepository != null
+                ? (int) courseSectionRepository.countByCourse_CourseId(course.getCourseId())
+                : 0;
+
+        return new CourseView(
+                course.getCourseId(),
+                course.getTitle(),
+                course.getDescription(),
+                categoryName,
+                insName,
+                insAvatar,
+                insEmail,
+                levelLabel(course.getLevel()),
+                course.getThumbnailUrl(),
+                course.getPrice(),
+                course.getCurrency(),
+                avgRating,
+                ratingCount,
+                course.getObjectives(),
+                course.getRequirements(),
+                course.getCredits(),
+                sectionCount,
+                lessonCount,
+                totalMins,
+                formattedDuration
+        );
+    }
+
+    private String formatDuration(int totalMinutes) {
+        if (totalMinutes <= 0) return null;
+        int hours = totalMinutes / 60;
+        int mins = totalMinutes % 60;
+        if (hours > 0 && mins > 0) {
+            return hours + " giờ " + mins + " phút";
+        } else if (hours > 0) {
+            return hours + " giờ";
+        } else {
+            return mins + " phút";
+        }
     }
 
     private String levelLabel(String level) {
+        if (level == null) return "Mọi trình độ";
         return switch (level) {
             case "BEGINNER" -> "Cơ bản";
             case "INTERMEDIATE" -> "Trung cấp";

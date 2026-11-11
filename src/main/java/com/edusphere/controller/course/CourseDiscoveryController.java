@@ -2,6 +2,8 @@ package com.edusphere.controller.course;
 
 import com.edusphere.dto.course.CourseRatingSummaryView;
 import com.edusphere.dto.course.CourseView;
+import com.edusphere.dto.course.LessonItemView;
+import com.edusphere.dto.course.StudyCourseView;
 import com.edusphere.repository.course.EnrollmentRepository;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CertificateService;
@@ -11,6 +13,8 @@ import com.edusphere.service.course.CourseDiscoveryService;
 import com.edusphere.service.course.CourseRatingService;
 
 import jakarta.servlet.http.HttpServletResponse;
+
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -72,7 +76,10 @@ public class CourseDiscoveryController {
         return courseDiscoveryService.findPublishedCourse(courseId)
                 .map(course -> {
                     model.addAttribute("course", course);
-                    model.addAttribute("lessonTitles", courseDiscoveryService.publishedLessonTitles(courseId));
+                    List<LessonItemView> publishedLessons = courseDiscoveryService.publishedLessonItems(courseId);
+                    model.addAttribute("lessons", publishedLessons);
+                    model.addAttribute("sections", StudyCourseView.buildSections(publishedLessons, course.getTitle()));
+                    model.addAttribute("lessonTitles", publishedLessons.stream().map(LessonItemView::getTitle).toList());
 
                     boolean loggedIn = user != null;
                     Integer currentUserId = loggedIn ? user.getUserId() : null;
@@ -89,6 +96,10 @@ public class CourseDiscoveryController {
                     model.addAttribute("student", loggedIn);
                     model.addAttribute("enrolled", enrolled);
                     model.addAttribute("ratingSummary", ratingSummary);
+                    if (courseCommentService != null) {
+                        model.addAttribute("courseComments", courseCommentService.getCourseComments(courseId, currentUserId, sort));
+                        model.addAttribute("commentSort", sort);
+                    }
                     if (certificateService != null && loggedIn && enrolled) {
                         certificateService.findExistingCertificate(currentUserId, courseId)
                                 .ifPresent(cert -> model.addAttribute("myCertificateId", cert.getCertificateId()));

@@ -39,4 +39,18 @@ public class CourseRatingSummaryView {
 
     /** Người xem hiện tại có phải giảng viên sở hữu khóa học (hoặc Admin) để trả lời đánh giá không */
     private final boolean canReply;
+
+    // --- Helper / Alias getters cho JSP EL ---
+
+    public long getRatingCount() {
+        return totalRatings;
+    }
+
+    public List<CourseRatingItemView> getItems() {
+        return reviews;
+    }
+
+    public int starPercent(int star) {
+        return (starPercents != null && starPercents.containsKey(star)) ? starPercents.get(star) : 0;
+    }
 }
