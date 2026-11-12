@@ -18,10 +18,11 @@ echo    ai.service.base-url=https://xxxxxxxxxxxxxx.trycloudflare.com
 echo ======================================================================
 echo.
 if exist "%~dp0cloudflared.exe" (
-    "%~dp0cloudflared.exe" tunnel --url http://localhost:8000
+    "%~dp0cloudflared.exe" tunnel --protocol http2 --url http://localhost:8000
 ) else if exist "D:\EduSphere-AI\cloudflared.exe" (
-    "D:\EduSphere-AI\cloudflared.exe" tunnel --url http://localhost:8000
+    "D:\EduSphere-AI\cloudflared.exe" tunnel --protocol http2 --url http://localhost:8000
 ) else (
     echo Chưa tìm thấy cloudflared.exe! Vui lòng tải từ https://github.com/cloudflare/cloudflared/releases
 )
 pause
+
