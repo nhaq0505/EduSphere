@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning-new.css">
 </head>
 <body>
-<jsp:include page="/WEB-INF/views/planning/planning-navbar.jsp"/>
+<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 
 <div class="pl-shell">
 

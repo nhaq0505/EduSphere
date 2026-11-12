@@ -486,11 +486,90 @@
                                 <div class="lesson-body"><c:out value="${study.lessonContent}"/></div>
                             </c:if>
 
-                            <c:if test="${empty study.lessonContent and empty study.materials}">
-                                <p style="color:#64748B;font-size:0.88rem;margin:8px 0 16px;">
-                                    Hãy theo dõi trọn vẹn video bài giảng ở trên để nắm vững kiến thức trọng tâm!
-                                </p>
-                            </c:if>
+                            <%-- GIAI ĐOẠN 6: TÀI LIỆU HỌC TẬP TỔNG HỢP BỞI AI DÀNH CHO HỌC VIÊN --%>
+                            <c:choose>
+                                <c:when test="${not empty aiMaterial and aiMaterial.status eq 'COMPLETED'}">
+                                    <div class="study-ai-card">
+                                        <div class="study-ai-card__header">
+                                            <div class="study-ai-card__brand">
+                                                <div class="study-ai-card__icon">🤖</div>
+                                                <div>
+                                                    <div class="study-ai-card__title">
+                                                        Tài liệu học tập tổng hợp bởi AI
+                                                        <span class="study-ai-card__badge">Tự động</span>
+                                                    </div>
+                                                    <div class="study-ai-card__sub">
+                                                        Phân tích và tóm lược từ video bài giảng bằng AI (Faster-Whisper &amp; Qwen 2.5:3B)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="study-ai-card__model">
+                                                Mô hình: <strong><c:out value="${aiMaterial.aiModel}"/></strong>
+                                            </div>
+                                        </div>
+
+                                        <div class="study-ai-grid">
+                                            <!-- 1. SUMMARY -->
+                                            <c:if test="${not empty aiMaterial.summary}">
+                                                <div class="study-ai-sec study-ai-sec--summary">
+                                                    <div class="study-ai-sec__head">
+                                                        <span>📝</span> 1. TÓM TẮT NỘI DUNG CHÍNH (SUMMARY)
+                                                    </div>
+                                                    <div class="study-ai-sec__body"><c:out value="${aiMaterial.summary}"/></div>
+                                                </div>
+                                            </c:if>
+
+                                            <!-- 2. KEY POINTS -->
+                                            <c:if test="${not empty aiMaterial.keyPoints}">
+                                                <div class="study-ai-sec study-ai-sec--keypoints">
+                                                    <div class="study-ai-sec__head">
+                                                        <span>💡</span> 2. KIẾN THỨC TRỌNG TÂM CẦN NHỚ (KEY POINTS)
+                                                    </div>
+                                                    <div class="study-ai-sec__body"><c:out value="${aiMaterial.keyPoints}"/></div>
+                                                </div>
+                                            </c:if>
+
+                                            <!-- 3. TERMS -->
+                                            <c:if test="${not empty aiMaterial.terms}">
+                                                <div class="study-ai-sec study-ai-sec--terms">
+                                                    <div class="study-ai-sec__head">
+                                                        <span>📖</span> 3. THUẬT NGỮ CHUYÊN NGÀNH &amp; CÚ PHÁP (TERMS)
+                                                    </div>
+                                                    <div class="study-ai-sec__body"><c:out value="${aiMaterial.terms}"/></div>
+                                                </div>
+                                            </c:if>
+
+                                            <!-- 4. CONCLUSION -->
+                                            <c:if test="${not empty aiMaterial.conclusion}">
+                                                <div class="study-ai-sec study-ai-sec--conclusion">
+                                                    <div class="study-ai-sec__head">
+                                                        <span>🎯</span> 4. TỔNG KẾT BÀI HỌC (CONCLUSION)
+                                                    </div>
+                                                    <div class="study-ai-sec__body"><c:out value="${aiMaterial.conclusion}"/></div>
+                                                </div>
+                                            </c:if>
+                                        </div>
+
+                                        <!-- Accordion xem Transcript bài giảng -->
+                                        <c:if test="${not empty aiMaterial.correctedTranscript}">
+                                            <details class="study-ai-transcript-box">
+                                                <summary>
+                                                    <span>📜</span> Xem chi tiết toàn bộ bản ghi lời thoại bài giảng (Transcript có mốc thời gian)
+                                                </summary>
+                                                <div class="study-ai-transcript-content"><c:out value="${aiMaterial.correctedTranscript}"/></div>
+                                            </details>
+                                        </c:if>
+                                    </div>
+                                </c:when>
+
+                                <c:otherwise>
+                                    <c:if test="${empty study.lessonContent and empty study.materials}">
+                                        <p style="color:#64748B;font-size:0.88rem;margin:8px 0 16px;">
+                                            Hãy theo dõi trọn vẹn video bài giảng ở trên để nắm vững kiến thức trọng tâm!
+                                        </p>
+                                    </c:if>
+                                </c:otherwise>
+                            </c:choose>
 
                             <c:if test="${not empty study.materials}">
                                 <div class="materials-section" style="margin-top:20px;">

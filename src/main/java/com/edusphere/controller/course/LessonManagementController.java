@@ -7,8 +7,10 @@ import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
 import com.edusphere.service.course.CourseSectionService;
 import com.edusphere.service.course.LessonManagementService;
+import com.edusphere.service.course.ai.AiMaterialService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,10 +31,14 @@ import java.util.List;
 public class LessonManagementController {
     private final LessonManagementService service;
     private final CourseSectionService sectionService;
+    private final AiMaterialService aiMaterialService;
 
-    public LessonManagementController(LessonManagementService service, CourseSectionService sectionService) {
+    public LessonManagementController(LessonManagementService service,
+                                      CourseSectionService sectionService,
+                                      @Autowired(required = false) AiMaterialService aiMaterialService) {
         this.service = service;
         this.sectionService = sectionService;
+        this.aiMaterialService = aiMaterialService;
     }
 
     @GetMapping
@@ -97,6 +103,9 @@ public class LessonManagementController {
         model.addAttribute("materials", service.materials(courseId, lessonId, instructor.getUserId()));
         model.addAttribute("materialForm", new MaterialForm());
         model.addAttribute("editable", !"SUBMITTED".equals(course.getStatus()) && !"ARCHIVED".equals(course.getStatus()));
+        if (aiMaterialService != null) {
+            model.addAttribute("aiMaterial", aiMaterialService.getMaterial(courseId, lessonId, instructor.getUserId()).orElse(null));
+        }
         return "courses/instructor-lesson-detail";
     }
 

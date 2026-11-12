@@ -19,6 +19,14 @@ logs/
 # Build output
 target/
 
+# Python AI Service
+ai-service/venv/
+ai-service/tasks/
+ai-service/__pycache__/
+*.pyc
+__pycache__/
+venv/
+
 # IDE files
 .idea/
 *.iml
