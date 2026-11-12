@@ -36,3 +36,16 @@ Trong `src/main/resources/application.properties` của EduSphere:
 ```properties
 ai.service.base-url=http://localhost:8000
 ```
+
+## 5. Dùng chung AI cho cả nhóm (Không cần cài đặt nhiều máy)
+Nếu chỉ 1 máy chạy AI, bạn có thể chia sẻ cổng AI cho cả nhóm dùng chung từ xa:
+1. Chạy file `share_public_ai.bat`.
+2. Màn hình sẽ hiện một đường link HTTPS công khai miễn phí dạng:
+   `https://xxxxxxxxxxxx.trycloudflare.com`
+3. Các thành viên khác chỉ cần đổi trong `application.properties` của họ:
+   ```properties
+   ai.service.base-url=https://xxxxxxxxxxxx.trycloudflare.com
+   ```
+   Cả nhóm sẽ dùng chung mô hình AI trên máy của bạn mà không cần cài đặt gì thêm!
+
+
