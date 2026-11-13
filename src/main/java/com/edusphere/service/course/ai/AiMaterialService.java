@@ -311,12 +311,11 @@ public class AiMaterialService {
             throw new CourseActionException(HttpStatus.BAD_REQUEST, "Bài học không thuộc khóa học này.");
         }
 
-        // Quyền xem: Giảng viên sở hữu, hoặc bài học xem trước (isPreview), hoặc học viên đã ghi danh
+        // Quyền xem: giảng viên sở hữu khóa học hoặc học viên đã ghi danh
         boolean isOwner = Objects.equals(course.getInstructor().getUserId(), currentUserId);
-        boolean isPreview = Boolean.TRUE.equals(lesson.getIsPreview());
         boolean isEnrolled = enrollmentRepository.existsByStudent_UserIdAndCourse_CourseId(currentUserId, courseId);
 
-        if (!isOwner && !isPreview && !isEnrolled) {
+        if (!isOwner && !isEnrolled) {
             throw new CourseActionException(HttpStatus.FORBIDDEN, "Bạn chưa đăng ký khóa học này để xem tài liệu.");
         }
     }

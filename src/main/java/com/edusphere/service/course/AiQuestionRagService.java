@@ -190,9 +190,6 @@ public class AiQuestionRagService {
                 if (lesson.getContent() != null && !lesson.getContent().isBlank()) {
                     lessonText.append(lesson.getContent().trim()).append("\n");
                 }
-                if (lesson.getInstructorNotes() != null && !lesson.getInstructorNotes().isBlank()) {
-                    lessonText.append("Ghi chú trọng tâm: ").append(lesson.getInstructorNotes().trim());
-                }
                 if (!lessonText.isEmpty()) {
                     docs.put("Bài học: " + lesson.getTitle(), lessonText.toString().trim());
                 }

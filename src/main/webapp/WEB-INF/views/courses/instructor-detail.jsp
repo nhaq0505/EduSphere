@@ -64,7 +64,6 @@
         .badge-video { background: #DBEAFE; color: #1D4ED8; }
         .badge-article { background: #FEF3C7; color: #B45309; }
         .badge-quiz { background: #F3E8FF; color: #7E22CE; }
-        .badge-preview { background: #DCFCE7; color: #15803D; font-weight: 700; }
 
         /* Modal */
         .modal-overlay {
@@ -328,14 +327,6 @@
                                                             <span class="lesson-type-badge badge-article">📄 Văn bản</span>
                                                         </c:otherwise>
                                                     </c:choose>
-
-                                                    <!-- Preview badge -->
-                                                    <c:if test="${les.isPreview}">
-                                                        <span class="lesson-type-badge badge-preview">👁️ Xem thử miễn phí</span>
-                                                    </c:if>
-                                                    <c:if test="${not empty les.unlockDaysAfterEnroll and les.unlockDaysAfterEnroll > 0}">
-                                                        <span class="lesson-type-badge" style="background:#FEF9C3; color:#A16207;">⏳ Sau ${les.unlockDaysAfterEnroll} ngày</span>
-                                                    </c:if>
 
                                                     <div>
                                                         <a href="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons/${les.lessonId}"

@@ -40,12 +40,6 @@ public class LessonForm {
      */
     private Integer minWatchPercent = 0;
 
-    // Bước 4: Cấu hình nâng cao
-    private Boolean isPreview = false; // Học thử / xem trước
-    private Integer unlockDaysAfterEnroll; // Mở sau X ngày (Drip content)
-    private Integer prerequisiteLessonId; // Cần học bài này trước
-    private String instructorNotes; // Ghi chú riêng cho GV
-
     // Bước 3.3: Đính kèm tài liệu học tập (Tùy chọn)
     private String materialTitle;
     private String materialType; // DOCUMENT, LINK, VIDEO

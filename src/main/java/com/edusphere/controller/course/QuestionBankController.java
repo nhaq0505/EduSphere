@@ -361,8 +361,7 @@ public class QuestionBankController {
             Map<String, Object> item = new HashMap<>();
             item.put("lessonId", lesson.getLessonId());
             item.put("title", lesson.getTitle());
-            item.put("hasContent", (lesson.getContent() != null && !lesson.getContent().isBlank())
-                    || (lesson.getInstructorNotes() != null && !lesson.getInstructorNotes().isBlank()));
+            item.put("hasContent", lesson.getContent() != null && !lesson.getContent().isBlank());
             result.add(item);
         }
         return result;

@@ -231,32 +231,37 @@ class CoreLogicStabilityTest {
     }
 
     @Test
-    void testLearningServicePreviewAllowsUnenrolledStudent() {
-        Lesson previewLesson = new Lesson();
-        previewLesson.setLessonId(55);
-        previewLesson.setTitle("Free Preview");
-        previewLesson.setOrderIndex(1);
-        previewLesson.setContent("Preview content");
-        previewLesson.setIsPreview(true);
-        previewLesson.setCourse(testCourse);
+    void testLearningServiceLegacyPreviewLessonStillRequiresEnrollment() {
+        // Free preview was removed: a lesson that still carries is_preview = 1 from old data
+        // must not open a paid course to a student who is not enrolled.
+        Course paidCourse = new Course();
+        paidCourse.setCourseId(100);
+        paidCourse.setTitle("Paid course");
+        paidCourse.setStatus("PUBLISHED");
+        paidCourse.setPrice(new BigDecimal("199000"));
+
+        Lesson legacyPreviewLesson = new Lesson();
+        legacyPreviewLesson.setLessonId(55);
+        legacyPreviewLesson.setTitle("Old free preview");
+        legacyPreviewLesson.setOrderIndex(1);
+        legacyPreviewLesson.setContent("Preview content");
+        legacyPreviewLesson.setIsPreview(true);
+        legacyPreviewLesson.setCourse(paidCourse);
 
         LessonRepository lesRepo = mock(LessonRepository.class);
         EnrollmentRepository enrRepo = mock(EnrollmentRepository.class);
         CourseRepository cRepo = mock(CourseRepository.class);
 
         when(lesRepo.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(100, "PUBLISHED"))
-                .thenReturn(List.of(previewLesson));
+                .thenReturn(List.of(legacyPreviewLesson));
         when(enrRepo.findByStudent_UserIdAndCourse_CourseId(99, 100))
                 .thenReturn(Optional.empty()); // not enrolled
-        when(cRepo.findById(100)).thenReturn(Optional.of(testCourse));
+        when(cRepo.findById(100)).thenReturn(Optional.of(paidCourse));
 
         LearningService lService = new LearningService(lesRepo, enrRepo, mock(LessonCompletionRepository.class),
                 mock(MaterialRepository.class), userRepo, null, cRepo);
 
-        var context = lService.getStudyContext(100, 55, 99);
-        assertNotNull(context);
-        assertEquals("Preview content", context.lessonContent());
-        assertTrue(context.isPreviewMode());
+        assertThrows(CourseActionException.class, () -> lService.getStudyContext(100, 55, 99));
     }
 
     @Test

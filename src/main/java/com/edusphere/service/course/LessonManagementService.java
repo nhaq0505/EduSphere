@@ -466,17 +466,6 @@ public class LessonManagementService {
         lesson.setQuizRequiresVideo(quizReqVideo);
         int minPct = form.getMinWatchPercent() != null ? form.getMinWatchPercent() : 0;
         lesson.setMinWatchPercent(Math.max(0, Math.min(100, minPct)));
-
-        // Advanced Settings
-        lesson.setIsPreview(Boolean.TRUE.equals(form.getIsPreview()));
-        lesson.setUnlockDaysAfterEnroll(form.getUnlockDaysAfterEnroll());
-        if (form.getPrerequisiteLessonId() != null) {
-            Lesson prereq = lessons.findByLessonIdAndCourse_CourseId(form.getPrerequisiteLessonId(), courseId).orElse(null);
-            lesson.setPrerequisiteLesson(prereq);
-        } else {
-            lesson.setPrerequisiteLesson(null);
-        }
-        lesson.setInstructorNotes(trimmed(form.getInstructorNotes()));
     }
 
     private void bumpCourseToDraftIfPublishedOrApproved(Course course) {

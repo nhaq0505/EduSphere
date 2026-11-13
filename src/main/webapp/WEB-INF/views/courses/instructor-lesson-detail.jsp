@@ -96,9 +96,6 @@
                                     <c:otherwise>📄 Văn bản</c:otherwise>
                                 </c:choose>
                             </span>
-                            <c:if test="${lesson.isPreview}">
-                                <span class="ins-status-badge" style="background:#DCFCE7; color:#15803D; font-size:.72rem;">👁️ Xem thử miễn phí</span>
-                            </c:if>
                         </div>
                         <h1><c:out value="${lesson.title}"/></h1>
                     </div>
@@ -398,14 +395,6 @@
                                 <c:otherwise><em style="color:var(--muted)">Chưa có nội dung chữ.</em></c:otherwise>
                             </c:choose>
                         </div>
-
-                        <!-- Instructor Notes if present -->
-                        <c:if test="${not empty lesson.instructorNotes}">
-                            <h2 style="margin-top:24px;">Ghi chú nội bộ cho Giảng viên</h2>
-                            <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:var(--r8); padding:14px 18px; font-size:.88rem; color:#92400E; white-space:pre-line;">
-                                <c:out value="${lesson.instructorNotes}"/>
-                            </div>
-                        </c:if>
 
                         <!-- Danh sách tài liệu -->
                         <h2 style="margin-top:28px">Tài liệu học tập & Đính kèm
