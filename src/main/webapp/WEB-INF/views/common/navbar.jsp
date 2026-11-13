@@ -9,10 +9,13 @@
 <c:if test="${empty currentUri}">
     <c:set var="currentUri" value="${pageContext.request.requestURI}"/>
 </c:if>
-<c:set var="isHome" value="${empty currentUri or currentUri == cp or currentUri == cp.concat('/') or fn:endsWith(currentUri, '/index.jsp')}"/>
-<c:set var="isCourses" value="${fn:contains(currentUri, '/courses') and not fn:contains(currentUri, '/my-courses') and not fn:contains(currentUri, '/certificate')}"/>
-<c:set var="isCertificates" value="${fn:contains(currentUri, '/certificate') or param.tab == 'certificates' or activeTab == 'certificates'}"/>
-<c:set var="isPlans" value="${fn:contains(currentUri, '/study/') or fn:contains(currentUri, '/planning')}"/>
+<c:set var="servletPath" value="${requestScope['jakarta.servlet.forward.servlet_path']}"/>
+
+<c:set var="isDashboard" value="${fn:contains(currentUri, '/dashboard') or fn:contains(servletPath, '/dashboard')}"/>
+<c:set var="isCertificates" value="${fn:contains(currentUri, '/certificate') or fn:contains(servletPath, '/certificate') or param.tab == 'certificates' or activeTab == 'certificates'}"/>
+<c:set var="isPlans" value="${fn:contains(currentUri, '/study/') or fn:contains(currentUri, '/planning') or fn:contains(servletPath, '/study/') or fn:contains(servletPath, '/planning')}"/>
+<c:set var="isCourses" value="${(fn:contains(currentUri, '/courses') or fn:contains(servletPath, '/courses')) and not isDashboard and not isCertificates and not isPlans and not fn:contains(currentUri, '/my-courses')}"/>
+<c:set var="isHome" value="${(empty currentUri or currentUri == cp or currentUri == cp.concat('/') or fn:endsWith(currentUri, '/index.jsp') or servletPath == '/') and not isDashboard and not isCourses and not isCertificates and not isPlans}"/>
 
 <header class="hn-header">
     <div class="hn-header__inner">
@@ -28,7 +31,7 @@
             <a class="hn-nav__link ${isHome ? 'hn-nav__link--active' : ''}" href="${cp}/">Trang chủ</a>
             <a class="hn-nav__link ${isCourses ? 'hn-nav__link--active' : ''}" href="${cp}/courses">Khám phá khóa học</a>
             <sec:authorize access="hasRole('STUDENT')">
-                <a class="hn-nav__link" href="${cp}/student/dashboard">Dashboard</a>
+                <a class="hn-nav__link ${isDashboard ? 'hn-nav__link--active' : ''}" href="${cp}/student/dashboard">Dashboard</a>
                 <a class="hn-nav__link ${isCertificates ? 'hn-nav__link--active' : ''}" href="${cp}/certificates">Kho chứng chỉ</a>
             </sec:authorize>
             <sec:authorize access="hasRole('INSTRUCTOR')">
