@@ -178,27 +178,27 @@
         .cert-course-logo {
             width: 62px;
             height: 62px;
-            border-radius: 4px;
-            background: #00274c;
-            color: #ffcb05;
+            border-radius: 10px;
+            background: #E8F4FD;
+            border: 1px solid #cfe8fc;
+            color: #0F7DD8;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-weight: 900;
+            font-weight: 800;
             font-size: 1.5rem;
             flex-shrink: 0;
             line-height: 1;
-            letter-spacing: -0.03em;
+            letter-spacing: -0.02em;
             overflow: hidden;
         }
         .cert-course-logo span.sub {
-            font-size: 0.45rem;
-            color: #ffffff;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            margin-top: 3px;
-            text-transform: uppercase;
+            font-size: 0.54rem;
+            color: #0F7DD8;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            margin-top: 4px;
         }
         .cert-course-mini__body h3 {
             font-size: 1rem;
@@ -363,8 +363,8 @@
         }
         .cert-seal__center {
             font-size: 0.92rem;
-            font-weight: 900;
-            color: #111827;
+            font-weight: 800;
+            color: #0F7DD8;
             letter-spacing: -0.02em;
             border-top: 1px solid #9ca3af;
             border-bottom: 1px solid #9ca3af;
@@ -395,27 +395,26 @@
         .cert-brand__emblem {
             width: 44px;
             height: 44px;
-            background: #00274c;
-            color: #ffcb05;
-            font-weight: 900;
-            font-size: 1.45rem;
+            background: #E8F4FD;
+            border: 1px solid #cfe8fc;
+            color: #0F7DD8;
+            font-weight: 800;
+            font-size: 1.4rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 3px;
-            letter-spacing: -0.04em;
+            border-radius: 10px;
         }
         .cert-brand__text {
             display: flex;
             flex-direction: column;
         }
         .cert-brand__uni {
-            font-size: 0.98rem;
+            font-size: 1.15rem;
             font-weight: 800;
-            letter-spacing: 0.06em;
-            color: #00274c;
+            letter-spacing: -0.01em;
+            color: #0F7DD8;
             line-height: 1.15;
-            text-transform: uppercase;
         }
         .cert-brand__sub {
             font-size: 0.65rem;
@@ -645,7 +644,7 @@
     </c:if>
     <c:if test="${verifiedBanner}">
         <div class="cert-alert cert-alert--success">
-            <span>✅ Chứng chỉ xác thực hợp lệ trên hệ thống đào tạo tín chỉ trực tuyến EduSphere (Mã xác thực: <strong><c:out value="${cert.verificationCode}"/></strong>).</span>
+            <span>✅ Chứng chỉ xác thực hợp lệ trên hệ thống đào tạo trực tuyến EduSphere (Mã xác thực: <strong><c:out value="${cert.verificationCode}"/></strong>).</span>
         </div>
     </c:if>
 
@@ -672,14 +671,14 @@
                     <h2>Completed by <c:out value="${cert.studentName}"/></h2>
                     <p class="cert-verified-meta"><c:out value="${cert.formattedIssuedDateEn}"/></p>
                     <div class="cert-verified-credits">
-                        🎓 <c:out value="${cert.creditsEarned}"/> Tín chỉ tích lũy (Credits)
+                        🎓 1 Chứng chỉ tích lũy ( Certificate )
                     </div>
                     <p class="cert-verified-meta"><c:out value="${cert.totalHours}"/> hours (approximately)</p>
                     <p class="cert-verified-meta">Grade Achieved: <c:out value="${cert.gradePercent}"/>%</p>
                     <p class="cert-verified-desc">
                         <c:out value="${cert.studentName}"/>'s account is verified. EduSphere certifies their successful completion of
                         <a href="${cp}/courses/${cert.courseId}"><c:out value="${cert.courseTitle}"/></a>
-                        (<c:out value="${cert.creditsEarned}"/> tín chỉ).
+                        (1 chứng chỉ).
                     </p>
                 </div>
             </div>
@@ -687,8 +686,8 @@
             <!-- Course Summary Mini Card -->
             <div class="cert-course-mini">
                 <div class="cert-course-logo">
-                    <span>E</span>
-                    <span class="sub">EDUSPHERE</span>
+                    <span>🎓</span>
+                    <span class="sub">EduSphere</span>
                 </div>
                 <div class="cert-course-mini__body">
                     <h3><a href="${cp}/courses/${cert.courseId}"><c:out value="${cert.courseTitle}"/></a></h3>
@@ -699,8 +698,6 @@
                         <span>(<c:out value="${cert.ratingCount}"/> ratings)</span>
                         <span>|</span>
                         <span><c:out value="${cert.enrolledCount}"/> already enrolled</span>
-                        <span>|</span>
-                        <strong><c:out value="${cert.creditsEarned}"/> Tín chỉ</strong>
                     </div>
                 </div>
             </div>
@@ -738,9 +735,6 @@
                         <div class="cert-ribbon__title">
                             COURSE<br>CERTIFICATE
                         </div>
-                        <div class="cert-ribbon__credits-pill">
-                            ★ <c:out value="${cert.creditsEarned}"/> CREDITS ★
-                        </div>
                         <div class="cert-seal">
                             <span class="cert-seal__top">EDUCATION FOR EVERYONE</span>
                             <span class="cert-seal__center">EduSphere</span>
@@ -751,10 +745,10 @@
                     <!-- Main Certificate Body -->
                     <div class="cert-doc-content">
                         <div class="cert-brand">
-                            <div class="cert-brand__emblem">E</div>
+                            <div class="cert-brand__emblem">🎓</div>
                             <div class="cert-brand__text">
-                                <span class="cert-brand__uni">EDUSPHERE ACADEMY</span>
-                                <span class="cert-brand__sub"><c:out value="${cert.categoryName}"/> • CREDIT SYSTEM</span>
+                                <span class="cert-brand__uni">EduSphere</span>
+                                <span class="cert-brand__sub"><c:out value="${cert.categoryName}"/> • ONLINE EDUCATION PLATFORM</span>
                             </div>
                         </div>
 
@@ -763,7 +757,7 @@
                         <div class="cert-completed-label">has successfully completed</div>
                         <div class="cert-course-title"><c:out value="${cert.courseTitle}"/></div>
                         <p class="cert-auth-line">
-                            an online credit-bearing course (<c:out value="${cert.creditsEarned}"/> Academic Credits • <c:out value="${cert.totalHours}"/> Hours) authorized by EduSphere Academy and offered through EduSphere E-Learning Platform.
+                            an online course (<c:out value="${cert.totalHours}"/> Hours) authorized by EduSphere Academy and offered through EduSphere E-Learning Platform.
                         </p>
                     </div>
 
@@ -794,7 +788,7 @@
                         </div>
 
                         <div class="cert-disclaimer">
-                            This certificate attests to the learner's completion of an online course / project delivered via EduSphere and awards <c:out value="${cert.creditsEarned}"/> learning credits on the EduSphere Credit Repository.
+                            This certificate attests to the learner's completion of an online course / project delivered via EduSphere.
                         </div>
                     </div>
                 </div>
