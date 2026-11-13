@@ -54,9 +54,17 @@ function showSeekWarning(msg) {
     }, 2800);
 }
 
+function getTargetMinPct() {
+    var app = document.getElementById('studyApp');
+    if (!app) return 80;
+    var val = parseInt(app.getAttribute('data-min-watch-pct'), 10);
+    return (val && val > 0) ? val : 80;
+}
+
 function handleLockedQuizClick(e) {
     if (e) e.preventDefault();
-    showSeekWarning('🔒 Bạn cần xem ít nhất 80% video để mở khóa bài kiểm tra!');
+    var targetMinPct = getTargetMinPct();
+    showSeekWarning('🔒 Bạn cần xem ít nhất ' + targetMinPct + '% video để mở khóa bài kiểm tra!');
     return false;
 }
 
@@ -83,15 +91,30 @@ function updateWatchBar(pct) {
     if (statusBadge) statusBadge.textContent = '✔ Đã xem ' + pct + '%';
 
     // Mô tả động viên còn thiếu bao nhiêu %
+    var app = document.getElementById('studyApp');
+    var targetMinPct = getTargetMinPct();
+    var motTitle = document.getElementById('rightMotivationTitle');
     var motDesc = document.getElementById('rightMotivationDesc');
-    if (motDesc && pct < 80) {
-        var needed = Math.max(0, 80 - pct);
-        var app = document.getElementById('studyApp');
-        var hasQuiz = app && app.getAttribute('data-has-quiz') === 'true';
-        if (hasQuiz) {
-            motDesc.textContent = 'Bạn chỉ cần xem thêm ' + needed + '% nữa là có thể làm bài Quiz rồi!';
-        } else {
-            motDesc.textContent = 'Bạn chỉ cần xem thêm ' + needed + '% nữa là có thể học bài tiếp theo rồi!';
+    var hasQuiz = app && app.getAttribute('data-has-quiz') === 'true';
+
+    if (pct < targetMinPct) {
+        if (motTitle) motTitle.textContent = 'Cố lên!';
+        if (motDesc) {
+            var needed = Math.max(0, targetMinPct - pct);
+            if (hasQuiz) {
+                motDesc.textContent = 'Bạn chỉ cần xem thêm ' + needed + '% nữa là có thể làm bài Quiz rồi!';
+            } else {
+                motDesc.textContent = 'Bạn chỉ cần xem thêm ' + needed + '% nữa là có thể học bài tiếp theo rồi!';
+            }
+        }
+    } else {
+        if (motTitle) motTitle.textContent = 'Chúc mừng!';
+        if (motDesc) {
+            if (hasQuiz) {
+                motDesc.textContent = 'Chúc mừng bạn đã mở khóa bài Quiz! Bạn có thể làm bài ngay bây giờ.';
+            } else {
+                motDesc.textContent = 'Chúc mừng bạn đã hoàn thành bài học. Bạn có thể học bài tiếp theo.';
+            }
         }
     }
 
@@ -100,7 +123,8 @@ function updateWatchBar(pct) {
 }
 
 function unlockQuizUI(pct) {
-    updateWatchBar(pct || 80);
+    var targetMinPct = getTargetMinPct();
+    updateWatchBar(pct || targetMinPct);
 
     var app = document.getElementById('studyApp');
     var hasQuiz = app && app.getAttribute('data-has-quiz') === 'true';
@@ -347,8 +371,9 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(function(data) {
                 if (data && data.success) {
                     var pct = data.percent;
+                    var targetMinPct = (data.minWatchPercent && data.minWatchPercent > 0) ? data.minWatchPercent : getTargetMinPct();
                     updateWatchBar(pct);
-                    if (data.quizUnlocked || pct >= 80) {
+                    if (data.quizUnlocked || pct >= targetMinPct) {
                         unlockQuizUI(pct);
                     }
                 }
