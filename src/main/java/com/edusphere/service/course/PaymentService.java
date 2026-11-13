@@ -48,8 +48,10 @@ public class PaymentService {
         Course course = courses.findLockedById(courseId)
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy khóa học."));
 
-        if (!"PUBLISHED".equals(course.getStatus()) || course.getPrice().signum() <= 0)
-            throw error(HttpStatus.CONFLICT, "Khóa học này không cần thanh toán.");
+        if (!isOnSale(course))
+            throw error(HttpStatus.CONFLICT, "Khóa học này hiện chưa mở bán.");
+        if (course.getPrice() == null || course.getPrice().signum() <= 0)
+            throw error(HttpStatus.CONFLICT, "Khóa học này miễn phí, không cần thanh toán.");
         if (!"VND".equals(course.getCurrency()))
             throw error(HttpStatus.CONFLICT, "PayOS chỉ hỗ trợ thanh toán VND.");
         if (course.getInstructor() != null && Objects.equals(course.getInstructor().getUserId(), studentId))
@@ -224,6 +226,16 @@ public class PaymentService {
     }
 
     /** Chuyển đổi giá tiền BigDecimal sang số nguyên VND cho PayOS. */
+    /**
+     * Khóa học đang có bản công khai cho học viên: đã xuất bản, hoặc đã từng xuất bản và đang
+     * được giảng viên cập nhật/chờ duyệt lại. Khớp với quy tắc hiển thị của CourseDiscoveryService.
+     */
+    static boolean isOnSale(Course course) {
+        String status = course.getStatus();
+        if ("PUBLISHED".equals(status)) return true;
+        return ("UPDATING".equals(status) || "SUBMITTED".equals(status)) && course.getPublishedAt() != null;
+    }
+
     private long amount(BigDecimal price) {
         try {
             return price.longValueExact();

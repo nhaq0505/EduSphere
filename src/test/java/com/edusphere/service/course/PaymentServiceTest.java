@@ -176,6 +176,37 @@ class PaymentServiceTest {
         assertTrue(ex.getMessage().contains("giảng viên"));
     }
 
+    @Test
+    void publishedCourseBeingUpdatedCanStillBeBought() {
+        Course course = payment.getCourse();
+        course.setStatus("UPDATING");
+        course.setPublishedAt(java.time.LocalDateTime.now().minusDays(1));
+        payment.setStatus("INITIATED");
+        when(payments.findFirstByStudent_UserIdAndCourse_CourseIdAndStatusOrderByCreatedAtDesc(
+                7, 42, "INITIATED")).thenReturn(Optional.of(payment));
+
+        PaymentService.Checkout checkout = service.prepare(42, 7);
+
+        assertEquals(199000L, checkout.amount());
+    }
+
+    @Test
+    void neverPublishedOrFreeCourseCannotBeBought() {
+        Course course = payment.getCourse();
+        course.setStatus("UPDATING");
+        course.setPublishedAt(null);
+        CourseActionException notOnSale = assertThrows(CourseActionException.class, () -> service.prepare(42, 7));
+        assertTrue(notOnSale.getMessage().contains("chưa mở bán"));
+
+        course.setStatus("DRAFT");
+        assertThrows(CourseActionException.class, () -> service.prepare(42, 7));
+
+        course.setStatus("PUBLISHED");
+        course.setPrice(BigDecimal.ZERO);
+        CourseActionException free = assertThrows(CourseActionException.class, () -> service.prepare(42, 7));
+        assertTrue(free.getMessage().contains("miễn phí"));
+    }
+
     private WebhookData webhook(long amount) {
         WebhookData data = new WebhookData();
         data.setOrderCode(1770000000013L);
