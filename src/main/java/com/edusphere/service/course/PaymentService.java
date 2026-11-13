@@ -232,6 +232,11 @@ public class PaymentService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public Payment findByOrderCode(long orderCode) {
+        return payments.findByRequestKey(Long.toString(orderCode)).orElse(null);
+    }
+
     /** Tạo ngoại lệ nghiệp vụ với mã HTTP tương ứng. */
     private CourseActionException error(HttpStatus status, String message) {
         return new CourseActionException(status, message);

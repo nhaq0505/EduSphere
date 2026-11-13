@@ -1,7 +1,10 @@
 package com.edusphere.controller.course;
 
+import com.edusphere.dto.course.CourseView;
+import com.edusphere.entity.course.Payment;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
+import com.edusphere.service.course.CourseDiscoveryService;
 import com.edusphere.service.course.PayOsGateway;
 import com.edusphere.service.course.PaymentService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,6 +28,10 @@ import vn.payos.model.v2.paymentRequests.PaymentLinkStatus;
 import vn.payos.model.webhooks.Webhook;
 import vn.payos.model.webhooks.WebhookData;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
 /**
  * Controller điều phối luồng thanh toán khóa học qua cổng PayOS (Checkout, Return URL và Webhook).
  */
@@ -32,26 +39,46 @@ import vn.payos.model.webhooks.WebhookData;
 public class PaymentController {
     private final PaymentService payments;
     private final PayOsGateway payOs;
+    private final CourseDiscoveryService courseDiscoveryService;
 
-    public PaymentController(PaymentService payments, PayOsGateway payOs) {
+    public PaymentController(PaymentService payments, PayOsGateway payOs, CourseDiscoveryService courseDiscoveryService) {
         this.payments = payments;
         this.payOs = payOs;
+        this.courseDiscoveryService = courseDiscoveryService;
     }
 
     /**
-     * Khởi tạo đơn hàng thanh toán cho khóa học và chuyển hướng học viên sang trang QR của PayOS.
+     * Khởi tạo hoặc chuyển hướng sang trang thanh toán mã QR của khóa học.
      */
     @PostMapping("/courses/{courseId}/checkout")
-    public String checkout(@PathVariable Integer courseId, @AuthenticationPrincipal CustomUserDetails user) {
-        if (!payOs.isConfigured()) throw new CourseActionException(HttpStatus.SERVICE_UNAVAILABLE,
-                "Chưa cấu hình PayOS. Vui lòng liên hệ quản trị viên.");
+    public String checkout(@PathVariable Integer courseId) {
+        return "redirect:/courses/" + courseId + "/payment";
+    }
+
+    /**
+     * Hiển thị trang thanh toán QR đồng bộ trong hệ thống.
+     */
+    @GetMapping("/courses/{courseId}/payment")
+    public String paymentPage(@PathVariable Integer courseId,
+                              @AuthenticationPrincipal CustomUserDetails user,
+                              Model model) {
+        if (user == null) {
+            return "redirect:/login";
+        }
+        if (!payOs.isConfigured()) {
+            throw new CourseActionException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Chưa cấu hình PayOS. Vui lòng liên hệ quản trị viên.");
+        }
+        CourseView course = courseDiscoveryService.findPublishedCourse(courseId)
+                .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy khóa học."));
+        model.addAttribute("course", course);
+
         PaymentService.Checkout checkout = payments.prepare(courseId, user.getUserId());
-        if (checkout.checkoutUrl() != null) return "redirect:" + checkout.checkoutUrl();
         CreatePaymentLinkResponse link;
         try {
             link = payOs.create(checkout.orderCode(), checkout.amount());
+            payments.markPending(checkout.paymentId(), link);
         } catch (RuntimeException ex) {
-            // Khôi phục link nếu PayOS đã tạo đơn thành công nhưng phản hồi mạng bị ngắt
             PaymentLink existing;
             try {
                 existing = payOs.get(checkout.orderCode());
@@ -59,12 +86,65 @@ public class PaymentController {
                 throw ex;
             }
             payments.markRecovered(checkout.paymentId(), existing);
-            if (existing.getStatus() != PaymentLinkStatus.PENDING)
+            if (existing.getStatus() != PaymentLinkStatus.PENDING) {
                 return "redirect:/payments/result?orderCode=" + checkout.orderCode();
-            return "redirect:https://pay.payos.vn/web/" + existing.getId();
+            }
+            link = CreatePaymentLinkResponse.builder()
+                    .orderCode(existing.getOrderCode())
+                    .amount(existing.getAmount())
+                    .checkoutUrl("https://pay.payos.vn/web/" + existing.getId())
+                    .paymentLinkId(existing.getId())
+                    .status(existing.getStatus())
+                    .build();
         }
-        payments.markPending(checkout.paymentId(), link);
-        return "redirect:" + link.getCheckoutUrl();
+
+        model.addAttribute("orderCode", checkout.orderCode());
+        model.addAttribute("amount", checkout.amount());
+        model.addAttribute("checkoutUrl", link.getCheckoutUrl());
+
+        String bin = link.getBin() != null && !link.getBin().isBlank() ? link.getBin() : "970422";
+        String accNo = link.getAccountNumber() != null && !link.getAccountNumber().isBlank() ? link.getAccountNumber() : "";
+        String desc = link.getDescription() != null && !link.getDescription().isBlank() ? link.getDescription() : Long.toString(checkout.orderCode());
+        String accName = link.getAccountName() != null && !link.getAccountName().isBlank() ? link.getAccountName() : "EDUSPHERE";
+
+        model.addAttribute("bin", bin);
+        model.addAttribute("accountNumber", accNo);
+        model.addAttribute("accountName", accName);
+        model.addAttribute("description", desc);
+        model.addAttribute("qrCode", link.getQrCode());
+
+        String vietQrUrl = "https://img.vietqr.io/image/" + bin + "-" + accNo + "-print.png?amount=" + checkout.amount()
+                + "&addInfo=" + URLEncoder.encode(desc, StandardCharsets.UTF_8)
+                + "&accountName=" + URLEncoder.encode(accName, StandardCharsets.UTF_8);
+        model.addAttribute("vietQrUrl", vietQrUrl);
+
+        return "courses/payment";
+    }
+
+    /**
+     * API kiểm tra nhanh trạng thái thanh toán từ client (Polling mỗi 3 giây).
+     */
+    @ResponseBody
+    @GetMapping("/payments/status")
+    public Map<String, Object> checkStatus(@RequestParam Long orderCode,
+                                           @AuthenticationPrincipal CustomUserDetails user) {
+        if (user == null) {
+            return Map.of("status", "UNAUTHORIZED");
+        }
+        try {
+            Payment payment = payments.findByOrderCode(orderCode);
+            if (payment != null && "COMPLETED".equals(payment.getStatus())) {
+                return Map.of("status", "PAID", "courseId", payment.getCourse().getCourseId());
+            }
+            PaymentLink link = payOs.get(orderCode);
+            if (link != null && link.getStatus() == PaymentLinkStatus.PAID) {
+                PaymentService.Result res = payments.reconcile(orderCode, user.getUserId(), link);
+                return Map.of("status", "PAID", "courseId", res.courseId());
+            }
+            return Map.of("status", link != null ? link.getStatus().name() : "PENDING");
+        } catch (Exception ex) {
+            return Map.of("status", "PENDING");
+        }
     }
 
     /**
