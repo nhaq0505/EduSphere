@@ -29,7 +29,6 @@
             <a class="hn-nav__link ${isCourses ? 'hn-nav__link--active' : ''}" href="${cp}/courses">Khám phá khóa học</a>
             <sec:authorize access="hasRole('STUDENT')">
                 <a class="hn-nav__link" href="${cp}/student/dashboard">Dashboard</a>
-                <a class="hn-nav__link" href="${cp}/my-courses">Khóa học của tôi</a>
                 <a class="hn-nav__link ${isCertificates ? 'hn-nav__link--active' : ''}" href="${cp}/certificates">Kho chứng chỉ</a>
             </sec:authorize>
             <sec:authorize access="hasRole('INSTRUCTOR')">
@@ -38,9 +37,6 @@
             <sec:authorize access="hasRole('ADMINISTRATOR')">
                 <a class="hn-nav__link" href="${cp}/admin/users">Quản trị</a>
             </sec:authorize>
-            
-            <a class="hn-nav__link" href="${cp}/#about">Về chúng tôi</a>
-            <a class="hn-nav__link" href="${cp}/#contact">Liên hệ</a>
             
             <sec:authorize access="hasRole('STUDENT') or isAnonymous()">
                 <a class="hn-nav__link ${isPlans ? 'hn-nav__link--active' : ''}" href="${cp}/study/plans">Kế Hoạch &amp; Tiến Độ</a>
