@@ -154,8 +154,9 @@ public class CourseManagementController {
             model.addAttribute("studyContext", studyContext);
             if (courseCommentService != null && studyContext.getCurrentLesson() != null) {
                 Integer curLessonId = studyContext.getCurrentLesson().getLessonId();
-                model.addAttribute("lessonComments", courseCommentService.getLessonComments(id, curLessonId, user != null ? user.getUserId() : null, "newest"));
-                model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(id, curLessonId));
+                Integer currentUserId = user != null ? user.getUserId() : null;
+                model.addAttribute("lessonComments", courseCommentService.getLessonComments(id, curLessonId, currentUserId, "newest"));
+                model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(id, curLessonId, currentUserId));
             }
             return "courses/study";
         }

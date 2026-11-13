@@ -817,16 +817,16 @@
                         </div>
                     </c:if>
 
-                    <%-- ══ HỎI ĐÁP & BÌNH LUẬN BÀI GIẢNG (Phong cách VietJack) ══ --%>
+                    <%-- ══ TRAO ĐỔI RIÊNG GIỮA HỌC VIÊN VÀ GIÁO VIÊN ══ --%>
                     <c:if test="${not empty study.currentLesson}">
                         <section id="comments-section" style="margin-top:24px;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 2px 10px rgba(15,23,42,.04);">
                             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e2e8f0;">
                                 <div>
                                     <div style="font-size:.75rem;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">
-                                        HỎI ĐÁP &amp; THẢO LUẬN BÀI HỌC
+                                        TRAO ĐỔI VỚI GIÁO VIÊN
                                     </div>
                                     <h3 style="margin:0;font-size:1.15rem;font-weight:800;color:#0f172a;">
-                                        💬 Bình luận dưới bài giảng (${not empty lessonCommentCount ? lessonCommentCount : 0})
+                                        💬 Trao đổi bài học (${not empty lessonCommentCount ? lessonCommentCount : 0})
                                     </h3>
                                 </div>
                                 <div style="display:flex;gap:8px;">
@@ -852,28 +852,28 @@
                                 </div>
                             </c:if>
 
-                            <%-- Form đặt câu hỏi / bình luận dưới bài giảng --%>
+                            <%-- Form gửi trao đổi riêng với giáo viên --%>
                             <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments"
                                   style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:14px 16px;margin-bottom:22px;">
                                 <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
                                 <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
                                 <textarea name="content" required maxlength="3000"
                                           style="width:100%;box-sizing:border-box;border:none;background:transparent;outline:none;resize:vertical;min-height:68px;font-family:inherit;font-size:.9rem;color:#0f172a;line-height:1.5;"
-                                          placeholder="Bạn có câu hỏi hoặc phần nào chưa rõ trong bài giảng &quot;${fn:escapeXml(study.currentLesson.title)}&quot;? Hãy bình luận tại đây để Giảng viên và các bạn cùng giải đáp nhé..."></textarea>
+                                          placeholder="Bạn có câu hỏi hoặc phần nào chưa rõ trong bài giảng &quot;${fn:escapeXml(study.currentLesson.title)}&quot;? Hãy nhắn tại đây để trao đổi riêng với Giáo viên nhé..."></textarea>
                                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;flex-wrap:wrap;gap:8px;">
-                                    <span style="font-size:.76rem;color:#64748b;">💡 Đặt câu hỏi rõ ràng giúp Giảng viên hỗ trợ bạn nhanh nhất.</span>
+                                    <span style="font-size:.76rem;color:#64748b;">🔒 Nội dung trao đổi riêng tư giữa bạn và Giáo viên phụ trách khóa học.</span>
                                     <button type="submit"
                                             style="background:#2563eb;color:#ffffff;border:none;border-radius:8px;padding:8px 18px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
-                                        💬 Gửi câu hỏi / Bình luận
+                                        💬 Gửi cho Giáo viên
                                     </button>
                                 </div>
                             </form>
 
-                            <%-- Danh sách bình luận bài học --%>
+                            <%-- Danh sách trao đổi bài học --%>
                             <c:choose>
                                 <c:when test="${empty lessonComments}">
                                     <div style="text-align:center;padding:24px 12px;color:#64748b;font-size:.9rem;">
-                                        Chưa có câu hỏi hay bình luận nào ở bài giảng này. Hãy đặt câu hỏi đầu tiên nếu bạn cần hỗ trợ!
+                                        Chưa có trao đổi nào ở bài giảng này. Hãy gửi câu hỏi nếu bạn cần Giáo viên hỗ trợ riêng!
                                     </div>
                                 </c:when>
                                 <c:otherwise>
@@ -883,7 +883,7 @@
                                                  style="border:1px solid ${cmt.pinned ? '#fde68a' : '#e2e8f0'};background:${cmt.pinned ? '#fffbeb' : '#ffffff'};border-radius:12px;padding:14px 16px;">
                                                 <c:if test="${cmt.pinned}">
                                                     <div style="font-size:.74rem;font-weight:700;color:#b45309;margin-bottom:6px;">
-                                                        📌 Câu trả lời / Bình luận được ghim bởi Giảng viên
+                                                        📌 Trao đổi được ghim bởi Giáo viên
                                                     </div>
                                                 </c:if>
                                                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
@@ -945,7 +945,7 @@
                                                         <input type="hidden" name="parentCommentId" value="${cmt.commentId}">
                                                         <textarea name="content" required maxlength="3000"
                                                                   style="width:100%;box-sizing:border-box;border:none;background:transparent;outline:none;resize:vertical;min-height:52px;font-family:inherit;font-size:.86rem;color:#0f172a;"
-                                                                  placeholder="Trả lời bình luận của ${fn:escapeXml(cmt.authorName)}..."></textarea>
+                                                                  placeholder="Trả lời riêng cho ${fn:escapeXml(cmt.authorName)}..."></textarea>
                                                         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
                                                             <button type="button" onclick="toggleLessonReply(${cmt.commentId})"
                                                                     style="background:none;border:none;font-size:.8rem;color:#64748b;cursor:pointer;font-weight:600;">Hủy</button>

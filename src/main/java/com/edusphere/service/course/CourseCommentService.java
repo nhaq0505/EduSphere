@@ -72,16 +72,24 @@ public class CourseCommentService {
 
     @Transactional(readOnly = true)
     public List<CourseCommentView> getLessonComments(Integer courseId, Integer lessonId, Integer currentUserId, String sort) {
-        if (courseId == null || lessonId == null) {
+        if (courseId == null || lessonId == null || currentUserId == null) {
             return List.of();
         }
         Course course = courseRepository.findById(courseId).orElse(null);
         if (course == null) {
             return List.of();
         }
+        Users currentUser = userRepository.findById(currentUserId).orElse(null);
+        boolean isModerator = canModerate(course, currentUser);
+
         List<CourseComment> roots = new ArrayList<>(
                 commentRepository.findByCourse_CourseIdAndLesson_LessonIdAndParentIsNullAndStatusOrderByPinnedDescCreatedAtDesc(courseId, lessonId, ACTIVE)
         );
+        // Học viên chỉ xem được các luồng trao đổi riêng của chính mình với giáo viên;
+        // Giảng viên khóa học / Quản trị viên xem được toàn bộ để trả lời riêng từng học viên.
+        if (!isModerator) {
+            roots.removeIf(r -> r.getAuthor() == null || !Objects.equals(r.getAuthor().getUserId(), currentUserId));
+        }
         sortRootComments(roots, sort);
 
         List<CourseComment> allReplies = commentRepository
@@ -94,6 +102,28 @@ public class CourseCommentService {
     public long countLessonComments(Integer courseId, Integer lessonId) {
         if (courseId == null || lessonId == null) return 0;
         return commentRepository.countByCourse_CourseIdAndLesson_LessonIdAndStatus(courseId, lessonId, ACTIVE);
+    }
+
+    @Transactional(readOnly = true)
+    public long countLessonComments(Integer courseId, Integer lessonId, Integer currentUserId) {
+        if (courseId == null || lessonId == null || currentUserId == null) return 0;
+        Course course = courseRepository.findById(courseId).orElse(null);
+        if (course == null) return 0;
+        Users currentUser = userRepository.findById(currentUserId).orElse(null);
+        if (canModerate(course, currentUser)) {
+            return commentRepository.countByCourse_CourseIdAndLesson_LessonIdAndStatus(courseId, lessonId, ACTIVE);
+        }
+        List<CourseComment> roots = commentRepository
+                .findByCourse_CourseIdAndLesson_LessonIdAndParentIsNullAndStatusOrderByPinnedDescCreatedAtDesc(courseId, lessonId, ACTIVE)
+                .stream()
+                .filter(r -> r.getAuthor() != null && Objects.equals(r.getAuthor().getUserId(), currentUserId))
+                .toList();
+        if (roots.isEmpty()) {
+            return 0;
+        }
+        List<Integer> rootIds = roots.stream().map(CourseComment::getCommentId).toList();
+        long replyCount = commentRepository.findByParent_CommentIdInAndStatusOrderByCreatedAtAsc(rootIds, ACTIVE).size();
+        return roots.size() + replyCount;
     }
 
     @Transactional(readOnly = true)
@@ -156,12 +186,19 @@ public class CourseCommentService {
                     .filter(p -> ACTIVE.equalsIgnoreCase(p.getStatus())
                             && Objects.equals(p.getCourse().getCourseId(), courseId))
                     .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy bình luận gốc để trả lời."));
-            // Nếu người dùng trả lời vào một reply cấp 2, gắn về comment gốc cấp 1 để hiển thị dạng thread chuẩn VietJack
+            // Nếu người dùng trả lời vào một reply cấp 2, gắn về comment gốc cấp 1 để hiển thị dạng thread
             if (parent.getParent() != null) {
                 parent = parent.getParent();
             }
             if (lesson == null && parent.getLesson() != null) {
                 lesson = parent.getLesson();
+            }
+            // Trong trao đổi riêng dưới bài giảng: chỉ tác giả câu hỏi gốc hoặc giảng viên/admin mới được trả lời
+            if (lesson != null && !canModerate(course, author)) {
+                Integer rootAuthorId = parent.getAuthor() != null ? parent.getAuthor().getUserId() : null;
+                if (!Objects.equals(rootAuthorId, userId)) {
+                    throw new CourseActionException(HttpStatus.FORBIDDEN, "Bạn không có quyền trả lời trao đổi riêng của học viên khác.");
+                }
             }
         }
 
