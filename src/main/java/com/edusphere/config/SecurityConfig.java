@@ -95,6 +95,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/courses/{courseId}/checkout").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers(HttpMethod.POST, "/courses/{courseId}/ratings", "/courses/{courseId}/ratings/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers(HttpMethod.GET, "/payments/result").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/payments/{orderCode}/checkout", "/payments/{orderCode}/status", "/payments/{orderCode}/cancel").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/courses/{courseId}/learn", "/courses/{courseId}/lessons/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/courses/{courseId}/assignments/**", "/courses/{courseId}/quizzes/**", "/courses/{courseId}/results").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/my-courses", "/certificates", "/certificates/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")

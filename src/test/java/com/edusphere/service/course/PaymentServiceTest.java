@@ -191,6 +191,46 @@ class PaymentServiceTest {
     }
 
     @Test
+    void pendingOrderWithLiveQrIsReusedButExpiredOneIsReplaced() {
+        payment.setCheckoutUrl("https://pay.payos.vn/web/payos-link-13");
+        payment.setQrCode("000201010212...");
+        payment.setExpiresAt(java.time.LocalDateTime.now().plusMinutes(10));
+        when(payments.findFirstByStudent_UserIdAndCourse_CourseIdAndStatusOrderByCreatedAtDesc(
+                7, 42, "PENDING")).thenReturn(Optional.of(payment));
+
+        PaymentService.Checkout reused = service.prepare(42, 7);
+        assertEquals(1770000000013L, reused.orderCode());
+        assertTrue(reused.hasQr());
+
+        payment.setExpiresAt(java.time.LocalDateTime.now().minusMinutes(1));
+        when(payments.saveAndFlush(any(Payment.class))).thenAnswer(inv -> {
+            Payment p = inv.getArgument(0);
+            if (p.getPaymentId() == null) p.setPaymentId(99);
+            return p;
+        });
+        PaymentService.Checkout fresh = service.prepare(42, 7);
+        assertEquals("CANCELLED", payment.getStatus());
+        assertEquals(99, fresh.paymentId());
+        assertFalse(fresh.hasQr());
+    }
+
+    @Test
+    void checkoutViewIsOnlyForTheOwnerAndNamesTheBank() {
+        payment.setQrCode("000201010212...");
+        payment.setBankBin("970422");
+        payment.setAccountNumber("0123456789");
+        payment.setTransferNote("CSABC123");
+
+        PaymentService.CheckoutView view = service.getCheckoutView(1770000000013L, 7);
+        assertEquals("MB Bank", view.bankName());
+        assertEquals(199000L, view.amount());
+        assertEquals("CSABC123", view.transferNote());
+
+        assertThrows(CourseActionException.class, () -> service.getCheckoutView(1770000000013L, 8));
+        assertThrows(CourseActionException.class, () -> service.statusOf(1770000000013L, 8));
+    }
+
+    @Test
     void neverPublishedOrFreeCourseCannotBeBought() {
         Course course = payment.getCourse();
         course.setStatus("UPDATING");

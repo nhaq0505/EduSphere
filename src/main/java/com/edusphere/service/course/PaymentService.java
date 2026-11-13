@@ -16,7 +16,10 @@ import vn.payos.model.v2.paymentRequests.PaymentLinkStatus;
 import vn.payos.model.webhooks.WebhookData;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -66,8 +69,12 @@ public class PaymentService {
         Payment pending = payments.findFirstByStudent_UserIdAndCourse_CourseIdAndStatusOrderByCreatedAtDesc(
                 studentId, courseId, "PENDING").orElse(null);
         if (pending != null) {
-            if (pending.getCheckoutUrl() != null && pending.getAmount().compareTo(course.getPrice()) == 0) {
-                return new Checkout(pending.getPaymentId(), Long.parseLong(pending.getRequestKey()), amount, pending.getCheckoutUrl());
+            // Dùng lại khi cùng giá và mã QR còn hạn ít nhất 1 phút; hết hạn thì tạo đơn mới
+            boolean stillValid = pending.getExpiresAt() == null
+                    || pending.getExpiresAt().isAfter(LocalDateTime.now().plusMinutes(1));
+            if (pending.getCheckoutUrl() != null && stillValid && pending.getAmount().compareTo(course.getPrice()) == 0) {
+                return new Checkout(pending.getPaymentId(), Long.parseLong(pending.getRequestKey()), amount,
+                        pending.getCheckoutUrl(), pending.getQrCode() != null);
             }
             pending.setStatus("CANCELLED");
             payments.saveAndFlush(pending);
@@ -78,7 +85,7 @@ public class PaymentService {
                 studentId, courseId, "INITIATED").orElse(null);
         if (initiating != null) {
             if (initiating.getAmount().compareTo(course.getPrice()) == 0) {
-                return new Checkout(initiating.getPaymentId(), Long.parseLong(initiating.getRequestKey()), amount, null);
+                return new Checkout(initiating.getPaymentId(), Long.parseLong(initiating.getRequestKey()), amount, null, false);
             }
             initiating.setStatus("CANCELLED");
             payments.saveAndFlush(initiating);
@@ -92,7 +99,7 @@ public class PaymentService {
                 + ThreadLocalRandom.current().nextInt(1000)));
         payment.setAmount(course.getPrice());
         payment = payments.saveAndFlush(payment);
-        return new Checkout(payment.getPaymentId(), Long.parseLong(payment.getRequestKey()), amount, null);
+        return new Checkout(payment.getPaymentId(), Long.parseLong(payment.getRequestKey()), amount, null, false);
     }
 
     /**
@@ -107,6 +114,14 @@ public class PaymentService {
             throw error(HttpStatus.BAD_GATEWAY, "Thông tin PayOS không khớp với đơn hàng.");
         payment.setProviderTransactionId(link.getPaymentLinkId());
         payment.setCheckoutUrl(link.getCheckoutUrl());
+        payment.setQrCode(trimTo(link.getQrCode(), 1000));
+        payment.setBankBin(trimTo(link.getBin(), 20));
+        payment.setAccountNumber(trimTo(link.getAccountNumber(), 50));
+        payment.setAccountName(trimTo(link.getAccountName(), 150));
+        payment.setTransferNote(trimTo(link.getDescription(), 100));
+        if (link.getExpiredAt() != null && link.getExpiredAt() > 0) {
+            payment.setExpiresAt(LocalDateTime.ofInstant(Instant.ofEpochSecond(link.getExpiredAt()), ZoneId.systemDefault()));
+        }
         if ("INITIATED".equals(payment.getStatus())) payment.setStatus("PENDING");
     }
 
@@ -249,6 +264,75 @@ public class PaymentService {
         return new CourseActionException(status, message);
     }
 
-    public record Checkout(Integer paymentId, long orderCode, long amount, String checkoutUrl) {}
+    /**
+     * Dữ liệu cho trang quét mã QR trong EduSphere. Chỉ chủ đơn hàng mới đọc được.
+     */
+    @Transactional(readOnly = true)
+    public CheckoutView getCheckoutView(long orderCode, Integer studentId) {
+        Payment payment = payments.findByRequestKey(Long.toString(orderCode))
+                .filter(p -> p.getStudent().getUserId().equals(studentId))
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch."));
+        Course course = payment.getCourse();
+        String instructor = course.getInstructor() != null ? course.getInstructor().getFullName() : null;
+        Long expiresAtMillis = payment.getExpiresAt() == null ? null
+                : payment.getExpiresAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        return new CheckoutView(orderCode, payment.getStatus(), amount(payment.getAmount()),
+                course.getCourseId(), course.getTitle(), course.getThumbnailUrl(), instructor,
+                payment.getQrCode(), bankName(payment.getBankBin()), payment.getAccountNumber(),
+                payment.getAccountName(), payment.getTransferNote(), expiresAtMillis, payment.getCheckoutUrl());
+    }
+
+    /** Trạng thái hiện tại của đơn trong cơ sở dữ liệu (đã kiểm tra chủ đơn). */
+    @Transactional(readOnly = true)
+    public String statusOf(long orderCode, Integer studentId) {
+        return payments.findByRequestKey(Long.toString(orderCode))
+                .filter(p -> p.getStudent().getUserId().equals(studentId))
+                .map(Payment::getStatus)
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch."));
+    }
+
+    // Mã BIN ngân hàng theo chuẩn VietQR (Napas) của các ngân hàng phổ biến
+    private static final Map<String, String> BANK_NAMES = Map.ofEntries(
+            Map.entry("970422", "MB Bank"), Map.entry("970436", "Vietcombank"),
+            Map.entry("970415", "VietinBank"), Map.entry("970418", "BIDV"),
+            Map.entry("970405", "Agribank"), Map.entry("970407", "Techcombank"),
+            Map.entry("970416", "ACB"), Map.entry("970432", "VPBank"),
+            Map.entry("970423", "TPBank"), Map.entry("970403", "Sacombank"),
+            Map.entry("970437", "HDBank"), Map.entry("970448", "OCB"),
+            Map.entry("970441", "VIB"), Map.entry("970443", "SHB"),
+            Map.entry("970426", "MSB"));
+
+    static String bankName(String bin) {
+        if (bin == null || bin.isBlank()) return null;
+        return BANK_NAMES.getOrDefault(bin, "Ngân hàng (mã " + bin + ")");
+    }
+
+    private static String trimTo(String value, int max) {
+        if (value == null) return null;
+        String v = value.trim();
+        return v.length() > max ? v.substring(0, max) : v;
+    }
+
+    public record CheckoutView(long orderCode, String status, long amount,
+                               Integer courseId, String courseTitle, String courseThumbnail, String instructorName,
+                               String qrCode, String bankName, String accountNumber, String accountName,
+                               String transferNote, Long expiresAtMillis, String payosUrl) {
+        public long getOrderCode() { return orderCode; }
+        public String getStatus() { return status; }
+        public long getAmount() { return amount; }
+        public Integer getCourseId() { return courseId; }
+        public String getCourseTitle() { return courseTitle; }
+        public String getCourseThumbnail() { return courseThumbnail; }
+        public String getInstructorName() { return instructorName; }
+        public String getQrCode() { return qrCode; }
+        public String getBankName() { return bankName; }
+        public String getAccountNumber() { return accountNumber; }
+        public String getAccountName() { return accountName; }
+        public String getTransferNote() { return transferNote; }
+        public Long getExpiresAtMillis() { return expiresAtMillis; }
+        public String getPayosUrl() { return payosUrl; }
+    }
+
+    public record Checkout(Integer paymentId, long orderCode, long amount, String checkoutUrl, boolean hasQr) {}
     public record Result(Integer courseId, String status) {}
 }

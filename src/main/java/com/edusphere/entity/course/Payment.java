@@ -40,6 +40,25 @@ public class Payment {
     @Column(name = "checkout_url", length = 2048)
     private String checkoutUrl;
 
+    // Thông tin chuyển khoản PayOS trả về khi tạo link, dùng để hiện mã QR ngay trong trang EduSphere
+    @Column(name = "qr_code", length = 1000)
+    private String qrCode;
+
+    @Column(name = "bank_bin", length = 20)
+    private String bankBin;
+
+    @Column(name = "account_number", length = 50)
+    private String accountNumber;
+
+    @Column(name = "account_name", columnDefinition = "nvarchar(150)")
+    private String accountName;
+
+    @Column(name = "transfer_note", length = 100)
+    private String transferNote;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
     @Column(name = "amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 

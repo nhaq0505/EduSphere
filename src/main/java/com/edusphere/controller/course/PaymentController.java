@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import vn.payos.exception.PayOSException;
+import java.util.Map;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
 import vn.payos.model.v2.paymentRequests.PaymentLink;
 import vn.payos.model.v2.paymentRequests.PaymentLinkStatus;
@@ -46,7 +47,9 @@ public class PaymentController {
         if (!payOs.isConfigured()) throw new CourseActionException(HttpStatus.SERVICE_UNAVAILABLE,
                 "Chưa cấu hình PayOS. Vui lòng liên hệ quản trị viên.");
         PaymentService.Checkout checkout = payments.prepare(courseId, user.getUserId());
-        if (checkout.checkoutUrl() != null) return "redirect:" + checkout.checkoutUrl();
+        if (checkout.checkoutUrl() != null) {
+            return checkout.hasQr() ? "redirect:" + qrPagePath(checkout.orderCode()) : "redirect:" + checkout.checkoutUrl();
+        }
         CreatePaymentLinkResponse link;
         try {
             link = payOs.create(checkout.orderCode(), checkout.amount());
@@ -64,7 +67,61 @@ public class PaymentController {
             return "redirect:https://pay.payos.vn/web/" + existing.getId();
         }
         payments.markPending(checkout.paymentId(), link);
-        return "redirect:" + link.getCheckoutUrl();
+        // Có dữ liệu VietQR thì hiện mã QR ngay trong EduSphere; không có thì dùng trang PayOS như trước
+        return link.getQrCode() != null && !link.getQrCode().isBlank()
+                ? "redirect:" + qrPagePath(checkout.orderCode())
+                : "redirect:" + link.getCheckoutUrl();
+    }
+
+    /**
+     * Trang quét mã QR chuyển khoản ngay trong EduSphere.
+     */
+    @GetMapping("/payments/{orderCode}/checkout")
+    public String checkoutPage(@PathVariable Long orderCode,
+                               @AuthenticationPrincipal CustomUserDetails user, Model model) {
+        PaymentService.CheckoutView view = payments.getCheckoutView(orderCode, user.getUserId());
+        if (!"PENDING".equals(view.status())) return "redirect:/payments/result?orderCode=" + orderCode;
+        if (view.qrCode() == null || view.qrCode().isBlank()) return "redirect:" + view.payosUrl();
+        model.addAttribute("checkout", view);
+        return "courses/payment-checkout";
+    }
+
+    /**
+     * Trang QR hỏi định kỳ: đơn đã được thanh toán chưa. Nếu chưa, đối soát lại với PayOS.
+     */
+    @ResponseBody
+    @GetMapping("/payments/{orderCode}/status")
+    public Map<String, String> status(@PathVariable Long orderCode,
+                                      @AuthenticationPrincipal CustomUserDetails user) {
+        String status = payments.statusOf(orderCode, user.getUserId());
+        if ("PENDING".equals(status) || "INITIATED".equals(status)) {
+            try {
+                status = payments.reconcile(orderCode, user.getUserId(), payOs.get(orderCode)).status();
+            } catch (CourseActionException ex) {
+                // PayOS tạm thời không trả lời: giữ trạng thái hiện tại, lần hỏi sau thử lại
+            }
+        }
+        return Map.of("status", status, "resultUrl", "/payments/result?orderCode=" + orderCode);
+    }
+
+    /**
+     * Học viên chủ động hủy giao dịch: hủy link trên PayOS rồi đối soát lại.
+     */
+    @PostMapping("/payments/{orderCode}/cancel")
+    public String cancel(@PathVariable Long orderCode, @AuthenticationPrincipal CustomUserDetails user) {
+        payments.verifyOwner(orderCode, user.getUserId());
+        PaymentLink link;
+        try {
+            link = payOs.cancel(orderCode, "Học viên hủy giao dịch");
+        } catch (CourseActionException ex) {
+            link = payOs.get(orderCode);
+        }
+        payments.reconcile(orderCode, user.getUserId(), link);
+        return "redirect:/payments/result?orderCode=" + orderCode;
+    }
+
+    private static String qrPagePath(long orderCode) {
+        return "/payments/" + orderCode + "/checkout";
     }
 
     /**

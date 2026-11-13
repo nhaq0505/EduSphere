@@ -14,11 +14,16 @@ import vn.payos.model.webhooks.Webhook;
 import vn.payos.model.webhooks.WebhookData;
 
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Locale;
 
 @Service
 @Slf4j
 public class PayOsGateway {
+    /** Thời gian hiệu lực của mỗi mã QR thanh toán. */
+    public static final Duration LINK_LIFETIME = Duration.ofMinutes(15);
+
     private final String clientId;
     private final String apiKey;
     private final String checksumKey;
@@ -57,6 +62,7 @@ public class PayOsGateway {
                     .description(description)
                     .returnUrl(baseUrl + "/payments/result?orderCode=" + orderCode)
                     .cancelUrl(baseUrl + "/payments/result?orderCode=" + orderCode)
+                    .expiredAt(Instant.now().plus(LINK_LIFETIME).getEpochSecond())
                     .build();
             CreatePaymentLinkResponse link = client.paymentRequests().create(request);
             if (link.getOrderCode() == null || link.getOrderCode() != orderCode
@@ -82,6 +88,19 @@ public class PayOsGateway {
         } catch (PayOSException ex) {
             log.error("PayOS could not retrieve payment status: {}", safeMessage(ex));
             throw new CourseActionException(HttpStatus.BAD_GATEWAY, "Không kiểm tra được trạng thái thanh toán.");
+        } finally {
+            client.close();
+        }
+    }
+
+    /** Hủy link thanh toán trên PayOS để mã QR cũ không còn nhận tiền. */
+    public PaymentLink cancel(long orderCode, String reason) {
+        PayOS client = client();
+        try {
+            return client.paymentRequests().cancel(orderCode, reason);
+        } catch (PayOSException ex) {
+            log.error("PayOS could not cancel payment link: {}", safeMessage(ex));
+            throw new CourseActionException(HttpStatus.BAD_GATEWAY, "Không hủy được giao dịch trên PayOS. Vui lòng thử lại.");
         } finally {
             client.close();
         }
