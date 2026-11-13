@@ -571,7 +571,14 @@
                                         <c:forEach var="mat" items="${study.materials}">
                                             <c:set var="fullMatUrl" value="${mat.fileUrl}"/>
                                             <c:if test="${not empty fullMatUrl and not (fn:startsWith(fullMatUrl, 'http://') or fn:startsWith(fullMatUrl, 'https://'))}">
-                                                <c:set var="fullMatUrl" value="${pageContext.request.contextPath}${fullMatUrl}"/>
+                                                <c:choose>
+                                                    <c:when test="${not empty pageContext.request.contextPath and fn:startsWith(fullMatUrl, pageContext.request.contextPath)}">
+                                                        <%-- Already has context path --%>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <c:set var="fullMatUrl" value="${pageContext.request.contextPath}${fullMatUrl}"/>
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </c:if>
                                             <div class="material-item" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:12px 16px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:10px; background:#fff;">
                                                 <div style="display:flex; align-items:center; gap:12px; min-width:0;">
@@ -1217,6 +1224,19 @@
 <script>
 // ── Material In-Web Preview Script ──
 function openMaterialPreview(title, url, type, origName) {
+    if (!url) return;
+
+    // Chuẩn hóa URL tài liệu: khử trùng lặp contextPath và đảm bảo đúng endpoint static /uploads/
+    var ctx = '${pageContext.request.contextPath}';
+    if (ctx && ctx.length > 0) {
+        while (url.indexOf(ctx + ctx + '/') === 0) {
+            url = url.substring(ctx.length);
+        }
+        if (url.indexOf('/') === 0 && url.indexOf(ctx + '/') !== 0 && !url.match(/^https?:\/\//i)) {
+            url = ctx + url;
+        }
+    }
+
     var modal = document.getElementById('materialPreviewModal');
     var titleElem = document.getElementById('matModalTitle');
     var subElem = document.getElementById('matModalSub');
@@ -1224,10 +1244,21 @@ function openMaterialPreview(title, url, type, origName) {
     var downloadBtn = document.getElementById('matModalDownloadBtn');
     var contentElem = document.getElementById('matModalContent');
 
+    var cleanFileName = origName;
+    if (!cleanFileName && url) {
+        var parts = url.split('/');
+        var rawName = parts[parts.length - 1].split('?')[0];
+        try {
+            cleanFileName = decodeURIComponent(rawName).replace(/^\d+_[a-f0-9]+_/i, '');
+        } catch (e) {
+            cleanFileName = rawName.replace(/^\d+_[a-f0-9]+_/i, '');
+        }
+    }
+
     titleElem.textContent = title;
-    subElem.textContent = origName ? ('Tệp: ' + origName) : url;
+    subElem.textContent = cleanFileName ? ('Tệp: ' + cleanFileName) : url;
     downloadBtn.href = url;
-    downloadBtn.setAttribute('download', origName || title);
+    downloadBtn.setAttribute('download', cleanFileName || origName || title);
 
     var lowerUrl = url.toLowerCase();
     var lowerOrig = (origName || '').toLowerCase();
