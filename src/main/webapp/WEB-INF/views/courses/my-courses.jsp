@@ -355,8 +355,8 @@
         <div class="mc-page-head">
             <div>
                 <span class="mc-page-head__eyebrow">Không gian học viên</span>
-                <h1 class="mc-page-head__title">Khóa học của tôi</h1>
-                <p class="mc-page-head__sub">Theo dõi tiến độ học tập và tiếp tục các khóa học bạn đã tham gia.</p>
+                <h1 class="mc-page-head__title">Khóa học &amp; Kho chứng chỉ của tôi</h1>
+                <p class="mc-page-head__sub">Theo dõi tiến độ học tập, xem các chứng chỉ đã đạt được và tải ảnh chứng chỉ về máy.</p>
             </div>
             <a class="hn-btn hn-btn--primary" href="${cp}/courses">
                 + Khám phá thêm khóa học
@@ -383,10 +383,17 @@
         </c:forEach>
         <c:set var="certCount" value="${not empty certificates ? fn:length(certificates) : 0}"/>
 
-        <!-- Credit & Progress Summary Cards -->
+        <!-- Progress & Certificate Summary Cards -->
         <div class="mc-credit-banner">
             <div class="mc-stat-card mc-stat-card--highlight">
                 <div class="mc-stat-card__icon">🎓</div>
+                <div>
+                    <div class="mc-stat-card__val"><c:out value="${certCount}"/></div>
+                    <div class="mc-stat-card__lbl">Chứng chỉ đã đạt được</div>
+                </div>
+            </div>
+            <div class="mc-stat-card">
+                <div class="mc-stat-card__icon">📚</div>
                 <div>
                     <div class="mc-stat-card__val"><c:out value="${not empty courses ? fn:length(courses) : 0}"/></div>
                     <div class="mc-stat-card__lbl">Tổng khóa học đã tham gia</div>
@@ -409,22 +416,27 @@
         </div>
 
         <!-- Coursera-style Horizontal Tabs -->
-        <c:set var="currentTab" value="${not empty activeTab and activeTab != 'certificates' ? activeTab : 'all'}"/>
+        <c:set var="currentTab" value="${not empty activeTab ? activeTab : 'all'}"/>
         <div class="cs-tabs" role="tablist">
             <button type="button" class="cs-tab ${currentTab == 'in-progress' ? 'active' : ''}"
                     onclick="switchTab('in-progress', this)">
-                In Progress
+                Đang học (In Progress)
                 <span class="cs-tab__badge"><c:out value="${inProgressCount}"/></span>
             </button>
             <button type="button" class="cs-tab ${currentTab == 'completed' ? 'active' : ''}"
                     onclick="switchTab('completed', this)">
-                Completed
+                Đã hoàn thành (Completed)
                 <span class="cs-tab__badge"><c:out value="${completedCount}"/></span>
             </button>
             <button type="button" class="cs-tab ${currentTab == 'all' ? 'active' : ''}"
                     onclick="switchTab('all', this)">
-                Saved / All
+                Tất cả khóa học
                 <span class="cs-tab__badge"><c:out value="${not empty courses ? fn:length(courses) : 0}"/></span>
+            </button>
+            <button type="button" class="cs-tab ${currentTab == 'certificates' ? 'active' : ''}"
+                    onclick="switchTab('certificates', this)">
+                🏅 Kho chứng chỉ (Certificates)
+                <span class="cs-tab__badge"><c:out value="${certCount}"/></span>
             </button>
         </div>
 
@@ -520,7 +532,27 @@
                                             </div>
                                         </div>
                                         <div class="mc-card__actions">
-                                            <a class="hn-btn hn-btn--primary mc-btn-sm"
+                                            <c:choose>
+                                                <c:when test="${not empty course.certificateId}">
+                                                    <a class="hn-btn hn-btn--primary mc-btn-sm"
+                                                       href="${cp}/certificates/${course.certificateId}">
+                                                        🎓 Xem Chứng chỉ
+                                                    </a>
+                                                    <a class="hn-btn mc-btn-outline mc-btn-sm"
+                                                       style="border-color:#0056d2;color:#0056d2;font-weight:700;"
+                                                       href="${cp}/certificates/${course.certificateId}/download"
+                                                       download="Chung-chi-EduSphere-${course.verificationCode}.png">
+                                                        🖼️ Tải ảnh
+                                                    </a>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <a class="hn-btn hn-btn--primary mc-btn-sm"
+                                                       href="${cp}/courses/${course.courseId}/certificate">
+                                                        🎓 Nhận Chứng chỉ
+                                                    </a>
+                                                </c:otherwise>
+                                            </c:choose>
+                                            <a class="hn-btn mc-btn-outline mc-btn-sm"
                                                href="${cp}/courses/${course.courseId}/learn">
                                                 Ôn tập lại
                                             </a>
@@ -598,6 +630,13 @@
                                                 Vào học →
                                             </a>
                                         </c:if>
+                                        <c:if test="${course.completed}">
+                                            <a class="hn-btn mc-btn-outline mc-btn-sm"
+                                               style="border-color:#2563eb;color:#2563eb;font-weight:700;"
+                                               href="${cp}/courses/${course.courseId}/certificate">
+                                                🎓 Chứng chỉ
+                                            </a>
+                                        </c:if>
                                         <a class="hn-btn mc-btn-outline mc-btn-sm"
                                            href="${cp}/courses/${course.courseId}/results">
                                             📊 Kết quả
@@ -615,15 +654,15 @@
             </c:choose>
         </div>
 
-        <!-- ══════ TAB 4: CERTIFICATES & BADGES (Coursera Layout - Image 1) ══════ -->
+        <!-- ══════ TAB 4: CERTIFICATES & BADGES (Kho chứng chỉ đạt được) ══════ -->
         <div id="panel-certificates" class="cs-panel ${currentTab == 'certificates' ? 'active' : ''}">
-            <h2 class="cb-section-title">Specialization &amp; Course Certificates</h2>
+            <h2 class="cb-section-title">Kho chứng chỉ đã đạt được (Course Certificates)</h2>
             <c:choose>
                 <c:when test="${empty certificates}">
                     <div class="mc-empty">
                         <div class="mc-empty__icon">🏅</div>
-                        <h2>Chưa có chứng chỉ hay tín chỉ nào trong kho</h2>
-                        <p>Khi bạn hoàn thành 100% các bài học trong một khóa học, chứng chỉ và số tín chỉ tương ứng sẽ tự động xuất hiện tại đây.</p>
+                        <h2>Chưa có chứng chỉ nào trong kho</h2>
+                        <p>Khi bạn hoàn thành 100% các bài học trong một khóa học, chứng chỉ điện tử sẽ tự động được cấp và xuất hiện tại đây để bạn xem và tải ảnh về.</p>
                         <button type="button" class="hn-btn hn-btn--primary" onclick="switchTab('in-progress', document.querySelector('.cs-tab'))">
                             Xem các khóa đang học
                         </button>
@@ -647,8 +686,8 @@
                                             <c:out value="${cert.courseTitle}"/>
                                         </div>
                                         <div class="cb-card__preview-footer">
-                                            <span>Verified • <c:out value="${cert.gradePercent}"/>%</span>
-                                            <span class="cb-card__credits-tag">+<c:out value="${cert.creditsEarned}"/> Tín chỉ</span>
+                                            <span>Verified • Điểm: <c:out value="${cert.gradePercent}"/>%</span>
+                                            <span class="cb-card__credits-tag">ID: <c:out value="${cert.verificationCode}"/></span>
                                         </div>
                                     </div>
                                 </a>
@@ -660,25 +699,34 @@
                                     </a>
                                 </h3>
 
-                                <!-- Blue Action Links: Add to LinkedIn | View certificate -->
-                                <div class="cb-card__links">
+                                <!-- Action Buttons: Xem chứng chỉ | Tải ảnh chứng chỉ | LinkedIn -->
+                                <div class="cb-card__links" style="gap:10px;margin-bottom:14px;">
+                                    <a class="hn-btn hn-btn--primary mc-btn-sm"
+                                       style="padding:7px 14px;font-size:.82rem;"
+                                       href="${cp}/certificates/${cert.certificateId}">
+                                        🎓 Xem chứng chỉ
+                                    </a>
+                                    <a class="hn-btn mc-btn-outline mc-btn-sm"
+                                       style="padding:7px 14px;font-size:.82rem;border-color:#0056d2;color:#0056d2;font-weight:700;"
+                                       href="${cp}/certificates/${cert.certificateId}/download"
+                                       download="Chung-chi-EduSphere-${cert.verificationCode}.png">
+                                        🖼️ Tải ảnh chứng chỉ
+                                    </a>
                                     <a class="cb-card__link"
+                                       style="font-size:.82rem;"
                                        target="_blank"
                                        rel="noopener"
                                        href="https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&amp;name=${fn:escapeXml(cert.courseTitle)}&amp;organizationName=EduSphere+Academy&amp;certId=${cert.verificationCode}">
-                                        Add to LinkedIn
-                                    </a>
-                                    <a class="cb-card__link" href="${cp}/certificates/${cert.certificateId}">
-                                        View certificate
+                                        + LinkedIn
                                     </a>
                                 </div>
 
                                 <!-- Organization / Provider & Completed Month Year -->
                                 <p class="cb-card__provider">
-                                    EduSphere Academy • GV: <c:out value="${cert.instructorName}"/> (<c:out value="${cert.creditsEarned}"/> tín chỉ)
+                                    EduSphere Academy • GV: <c:out value="${cert.instructorName}"/>
                                 </p>
                                 <p class="cb-card__completed">
-                                    Completed <c:out value="${cert.formattedIssuedMonthYearEn}"/>
+                                    Cấp ngày: <c:out value="${cert.formattedIssuedDateVi}"/> (<c:out value="${cert.formattedIssuedMonthYearEn}"/>)
                                 </p>
                             </article>
                         </c:forEach>
@@ -698,12 +746,13 @@
                 <div class="hn-logo__icon">🎓</div>
                 <span>EduSphere</span>
             </a>
-            <p>Nền tảng học tập trực tuyến &amp; tích lũy tín chỉ chất lượng cao dành cho mọi người.</p>
+            <p>Nền tảng học tập trực tuyến chất lượng cao dành cho mọi người.</p>
         </div>
         <div class="hn-footer__col">
             <h4>Khóa học</h4>
             <a href="${cp}/courses">Tất cả khóa học</a>
             <a href="${cp}/my-courses">Khóa học của tôi</a>
+            <a href="${cp}/certificates">Kho chứng chỉ</a>
             <a href="${cp}/student/dashboard">Dashboard</a>
         </div>
         <div class="hn-footer__col">

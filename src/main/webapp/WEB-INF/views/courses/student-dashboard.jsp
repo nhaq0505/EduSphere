@@ -72,10 +72,10 @@
             pointer-events: none;
         }
 
-        /* Stat Cards (3 cards: Số giờ học, Khóa học đã tham gia, Đánh giá trung bình) */
+        /* Stat Cards (4 cards: Số giờ học, Khóa học đã tham gia, Chứng chỉ đạt được, Đánh giá trung bình) */
         .sd-stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
         }
         .sd-stat-card {
@@ -122,6 +122,7 @@
         }
         .sd-stat-card__icon--blue { background: #eff6ff; color: #1d4ed8; }
         .sd-stat-card__icon--sky { background: #e0f2fe; color: #0284c7; }
+        .sd-stat-card__icon--emerald { background: #ecfdf5; color: #059669; }
         .sd-stat-card__icon--amber { background: #fef3c7; color: #d97706; }
 
         .sd-stat-card__label {
@@ -431,6 +432,8 @@
             <a class="hn-nav__link" href="#">Liên hệ</a>
             <sec:authorize access="hasRole('STUDENT')">
                 <a class="hn-nav__link hn-nav__link--active" href="${cp}/student/dashboard">Dashboard</a>
+                <a class="hn-nav__link" href="${cp}/my-courses">Khóa học của tôi</a>
+                <a class="hn-nav__link" href="${cp}/certificates">Kho chứng chỉ</a>
                 <a class="hn-nav__link" href="${cp}/study/plans">Kế Hoạch &amp; Tiến Độ</a>
             </sec:authorize>
         </nav>
@@ -476,6 +479,7 @@
                             <a class="hn-user-dropdown__item" href="${cp}/profile">Thông tin cá nhân</a>
                             <a class="hn-user-dropdown__item" href="${cp}/student/dashboard">Dashboard</a>
                             <a class="hn-user-dropdown__item" href="${cp}/my-courses">Khóa học của tôi</a>
+                            <a class="hn-user-dropdown__item" href="${cp}/certificates">Kho chứng chỉ</a>
                             <a class="hn-user-dropdown__item" href="${cp}/change-password">Đổi mật khẩu</a>
                             <div class="hn-user-dropdown__divider"></div>
                             <form method="post" action="${cp}/logout" style="margin:0">
@@ -572,6 +576,27 @@
                 </div>
             </a>
 
+            <%-- Chứng chỉ đã đạt được --%>
+            <a class="sd-stat-card" href="${cp}/certificates">
+                <div class="sd-stat-card__top">
+                    <div class="sd-stat-card__left">
+                        <div class="sd-stat-card__icon sd-stat-card__icon--emerald">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="9" r="6" stroke="currentColor" stroke-width="2"/>
+                                <path d="M9 14.5L7.5 21l4.5-2.2L16.5 21 15 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="sd-stat-card__label">Kho chứng chỉ</div>
+                            <div class="sd-stat-card__val">
+                                <c:out value="${dashboard.certificatesCount}"/> <span>chứng chỉ</span>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="sd-stat-card__arrow">&gt;</span>
+                </div>
+            </a>
+
             <%-- Đánh giá trung bình --%>
             <a class="sd-stat-card" href="${cp}/courses">
                 <div class="sd-stat-card__top">
@@ -646,10 +671,17 @@
                                     </div>
                                 </div>
 
-                                <div class="sd-course-actions">
+                                <div class="sd-course-actions" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                    <c:if test="${course.completed}">
+                                        <a class="sd-link-pill"
+                                           style="border-color:#2563eb;color:#2563eb;font-weight:700;padding:10px 16px;"
+                                           href="${cp}/courses/${course.courseId}/certificate">
+                                            🎓 Xem chứng chỉ
+                                        </a>
+                                    </c:if>
                                     <a class="sd-btn-continue" href="${cp}/courses/${course.courseId}/learn">
                                         <span>▶</span>
-                                        <span>Tiếp tục học</span>
+                                        <span><c:out value="${course.completed ? 'Ôn tập lại' : 'Tiếp tục học'}"/></span>
                                     </a>
                                 </div>
                             </article>
@@ -683,11 +715,12 @@
                 <div class="sd-card__head" style="margin-bottom:8px;">
                     <h2 class="sd-card__title">
                         <span style="color:#d97706;">🏆</span>
-                        <span>Thành tích của bạn</span>
+                        <span>Thành tích &amp; Chứng chỉ</span>
                     </h2>
+                    <a class="sd-link-pill" href="${cp}/certificates">Kho chứng chỉ →</a>
                 </div>
                 <div class="sd-achievement-body">
-                    <svg width="96" height="96" viewBox="0 0 96 96" fill="none" aria-hidden="true">
+                    <svg width="84" height="84" viewBox="0 0 96 96" fill="none" aria-hidden="true">
                         <!-- Confetti dots -->
                         <circle cx="14" cy="30" r="3" fill="#ef4444"/>
                         <circle cx="82" cy="26" r="3" fill="#3b82f6"/>
@@ -704,7 +737,34 @@
                         <path d="M48 28l3.5 7.2 7.9 1.1-5.7 5.5 1.3 7.8L48 45.9l-7 3.7 1.3-7.8-5.7-5.5 7.9-1.1L48 28z" fill="#f59e0b"/>
                     </svg>
                     <h3 class="sd-achievement-title"><c:out value="${dashboard.achievementTitle}"/></h3>
-                    <p class="sd-achievement-sub"><c:out value="${dashboard.achievementSubtitle}"/></p>
+                    <p class="sd-achievement-sub" style="margin-bottom:14px;"><c:out value="${dashboard.achievementSubtitle}"/></p>
+
+                    <c:if test="${not empty dashboard.certificates}">
+                        <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-bottom:14px;text-align:left;">
+                            <c:forEach var="cert" items="${dashboard.certificates}" begin="0" end="1">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;font-size:.82rem;">
+                                    <a href="${cp}/certificates/${cert.certificateId}"
+                                       style="font-weight:700;color:#0f172a;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                        🎓 <c:out value="${cert.courseTitle}"/>
+                                    </a>
+                                    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                                        <a href="${cp}/certificates/${cert.certificateId}"
+                                           style="color:#2563eb;font-weight:700;text-decoration:none;">Xem</a>
+                                        <span style="color:#cbd5e1;">|</span>
+                                        <a href="${cp}/certificates/${cert.certificateId}/download"
+                                           download="Chung-chi-EduSphere-${cert.verificationCode}.png"
+                                           style="color:#059669;font-weight:700;text-decoration:none;">🖼️ Tải ảnh</a>
+                                    </div>
+                                </div>
+                            </c:forEach>
+                        </div>
+                    </c:if>
+
+                    <a class="sd-link-pill"
+                       style="border-color:#2563eb;color:#2563eb;font-weight:700;"
+                       href="${cp}/certificates">
+                        🏅 Xem Kho chứng chỉ (<c:out value="${dashboard.certificatesCount}"/>)
+                    </a>
                 </div>
             </div>
         </section>

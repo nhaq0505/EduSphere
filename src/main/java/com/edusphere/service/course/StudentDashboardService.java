@@ -1,5 +1,6 @@
 package com.edusphere.service.course;
 
+import com.edusphere.dto.course.CertificateView;
 import com.edusphere.dto.course.EnrolledCourseView;
 import com.edusphere.dto.course.StudentDashboardView;
 import com.edusphere.dto.course.StudentDashboardView.ActiveCourseCard;
@@ -9,6 +10,7 @@ import com.edusphere.repository.course.LessonRepository;
 import com.edusphere.repository.course.StudentStudyLogRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +36,9 @@ public class StudentDashboardService {
     private final LessonRepository lessonRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Autowired(required = false)
+    private CertificateService certificateService;
+
     public StudentDashboardService(CourseManagementService courseManagementService,
                                    StudentStudyLogRepository studentStudyLogRepository,
                                    CourseRatingRepository courseRatingRepository,
@@ -44,9 +49,12 @@ public class StudentDashboardService {
         this.lessonRepository = lessonRepository;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public StudentDashboardView getDashboard(Integer studentId, String studentFullName) {
         List<EnrolledCourseView> enrolled = courseManagementService.enrolledCourses(studentId);
+        List<CertificateView> certs = certificateService != null
+                ? certificateService.syncAndGetMyCertificates(studentId)
+                : List.of();
         int enrolledCount = enrolled.size();
         int completedCount = (int) enrolled.stream().filter(EnrolledCourseView::isCompleted).count();
         int inProgressCount = Math.max(0, enrolledCount - completedCount);
@@ -86,6 +94,7 @@ public class StudentDashboardService {
                         .studiedHoursFormatted(formatHours(courseStudiedHours))
                         .targetHoursFormatted(formatHours(courseTargetHours))
                         .completed(c.isCompleted())
+                        .certificateId(c.getCertificateId())
                         .build());
             }
         }
@@ -153,6 +162,8 @@ public class StudentDashboardService {
                 .enrolledCoursesCount(enrolledCount)
                 .completedCoursesCount(completedCount)
                 .inProgressCoursesCount(inProgressCount)
+                .certificatesCount(certs.size())
+                .certificates(certs)
                 .hasRatings(hasRatings)
                 .averageRatingFormatted(avgRatingFormatted)
                 .activeCourses(activeCards)

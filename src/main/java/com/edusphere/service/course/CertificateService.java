@@ -22,6 +22,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.imageio.ImageIO;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.GradientPaint;
+import java.awt.Graphics2D;
+import java.awt.Polygon;
+import java.awt.RenderingHints;
+import java.awt.geom.Ellipse2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -413,5 +426,297 @@ public class CertificateService {
             case "ADVANCED" -> "Nâng cao";
             default -> "Mọi trình độ";
         };
+    }
+
+    /**
+     * Render chứng chỉ hoàn thành khóa học thành file ảnh PNG độ phân giải cao (1800 x 1260 px)
+     * để học viên tải trực tiếp về máy từ Kho chứng chỉ hoặc trang chi tiết chứng chỉ.
+     */
+    public byte[] renderCertificatePng(CertificateView cert, String verifyBaseUrl) {
+        final int width = 1800;
+        final int height = 1260;
+
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics();
+        try {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+
+            // 1. Nền ngoài & Khung viền kép trang trọng
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, width, height);
+
+            g.setColor(new Color(0xFF, 0xFD, 0xF9));
+            g.fillRect(42, 42, width - 84, height - 84);
+
+            // Họa tiết nền nhẹ bên phải
+            g.setColor(new Color(219, 234, 254, 70));
+            g.fill(new Ellipse2D.Double(980, 180, 680, 680));
+
+            // Viền ngoài (#9ca3af) & Viền trong (#cbd5e1)
+            g.setColor(new Color(0x9C, 0xA3, 0xAF));
+            g.setStroke(new BasicStroke(6f));
+            g.drawRect(24, 24, width - 48, height - 48);
+
+            g.setColor(new Color(0xCB, 0xD5, 0xE1));
+            g.setStroke(new BasicStroke(3f));
+            g.drawRect(42, 42, width - 84, height - 84);
+
+            // Viền chỉ vàng trang trí góc trong
+            g.setColor(new Color(0xE2, 0xE8, 0xF0));
+            g.setStroke(new BasicStroke(1.5f));
+            g.drawRect(56, 56, width - 112, height - 112);
+
+            // 2. Dải ruy-băng dọc bên phải (Ribbon) + Con dấu tròn (Seal)
+            int ribX = 1320;
+            int ribY = 44;
+            int ribW = 280;
+            int ribH = 820;
+            Polygon ribbonPoly = new Polygon(
+                    new int[]{ribX, ribX + ribW, ribX + ribW, ribX + ribW / 2, ribX},
+                    new int[]{ribY, ribY, ribY + ribH, ribY + ribH - 105, ribY + ribH},
+                    5
+            );
+            GradientPaint ribGrad = new GradientPaint(
+                    ribX, ribY, new Color(0xE5, 0xE7, 0xEB),
+                    ribX, ribY + ribH, new Color(0xF3, 0xF4, 0xF6)
+            );
+            g.setPaint(ribGrad);
+            g.fillPolygon(ribbonPoly);
+
+            g.setColor(new Color(0xD1, 0xD5, 0xDB));
+            g.setStroke(new BasicStroke(2f));
+            g.drawPolygon(ribbonPoly);
+
+            // Chữ COURSE CERTIFICATE trên Ribbon
+            g.setColor(new Color(0x37, 0x41, 0x51));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
+            drawCenteredString(g, "COURSE", ribX + ribW / 2, ribY + 86);
+            drawCenteredString(g, "CERTIFICATE", ribX + ribW / 2, ribY + 120);
+
+            // Huy hiệu VERIFIED trên Ribbon
+            int pillW = 210;
+            int pillH = 40;
+            int pillX = ribX + (ribW - pillW) / 2;
+            int pillY = ribY + 155;
+            g.setColor(new Color(0x1E, 0x3A, 0x8A));
+            g.fillRoundRect(pillX, pillY, pillW, pillH, 40, 40);
+            g.setColor(new Color(0xFD, 0xE0, 0x47));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+            drawCenteredString(g, "★ VERIFIED ★", ribX + ribW / 2, pillY + 26);
+
+            // Con dấu tròn (Circular Seal)
+            int sealR = 112;
+            int sealCx = ribX + ribW / 2;
+            int sealCy = ribY + 370;
+            g.setColor(Color.WHITE);
+            g.fillOval(sealCx - sealR, sealCy - sealR, sealR * 2, sealR * 2);
+
+            g.setColor(new Color(0x37, 0x41, 0x51));
+            g.setStroke(new BasicStroke(4f));
+            g.drawOval(sealCx - sealR, sealCy - sealR, sealR * 2, sealR * 2);
+
+            g.setColor(new Color(0x6B, 0x72, 0x80));
+            g.setStroke(new BasicStroke(1.8f));
+            g.drawOval(sealCx - sealR + 10, sealCy - sealR + 10, (sealR - 10) * 2, (sealR - 10) * 2);
+
+            g.setColor(new Color(0x4B, 0x55, 0x63));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+            drawCenteredString(g, "EDUCATION FOR EVERYONE", sealCx, sealCy - 36);
+
+            g.setColor(new Color(0x9C, 0xA3, 0xAF));
+            g.setStroke(new BasicStroke(1.5f));
+            g.drawLine(sealCx - 78, sealCy - 20, sealCx + 78, sealCy - 20);
+            g.drawLine(sealCx - 78, sealCy + 22, sealCx + 78, sealCy + 22);
+
+            g.setColor(new Color(0x11, 0x18, 0x27));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
+            drawCenteredString(g, "EduSphere", sealCx, sealCy + 10);
+
+            g.setColor(new Color(0x4B, 0x55, 0x63));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+            drawCenteredString(g, "COURSE CERTIFICATE", sealCx, sealCy + 44);
+
+            // 3. Nội dung chính bên trái (65% chiều ngang)
+            int leftX = 115;
+            int maxContentW = 1130;
+
+            // Thương hiệu EduSphere Academy
+            g.setColor(new Color(0x00, 0x27, 0x4C));
+            g.fillRoundRect(leftX, 115, 76, 76, 10, 10);
+            g.setColor(new Color(0xFF, 0xCB, 0x05));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 46));
+            drawCenteredString(g, "E", leftX + 38, 169);
+
+            g.setColor(new Color(0x00, 0x27, 0x4C));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
+            g.drawString("EDUSPHERE ACADEMY", leftX + 98, 148);
+
+            String catUpper = (cert.getCategoryName() != null ? cert.getCategoryName() : "CHUYÊN NGÀNH").toUpperCase();
+            g.setColor(new Color(0x64, 0x74, 0x8B));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 17));
+            g.drawString(catUpper + " • ONLINE EDUCATION PLATFORM", leftX + 98, 178);
+
+            // Ngày cấp
+            g.setColor(new Color(0x6B, 0x72, 0x80));
+            g.setFont(new Font(Font.SERIF, Font.ITALIC, 22));
+            g.drawString("Issued on " + cert.getFormattedIssuedDateEn() + " (" + cert.getFormattedIssuedDateVi() + ")", leftX, 275);
+
+            // Tên học viên
+            String studentName = cert.getStudentName() != null && !cert.getStudentName().isBlank()
+                    ? cert.getStudentName()
+                    : "Học viên EduSphere";
+            int nameFontSize = 58;
+            Font nameFont = new Font(Font.SERIF, Font.BOLD, nameFontSize);
+            while (nameFontSize > 34 && g.getFontMetrics(nameFont).stringWidth(studentName) > maxContentW) {
+                nameFontSize -= 2;
+                nameFont = new Font(Font.SERIF, Font.BOLD, nameFontSize);
+            }
+            g.setColor(new Color(0x1F, 0x29, 0x37));
+            g.setFont(nameFont);
+            g.drawString(studentName, leftX, 355);
+
+            // Đường gạch trang trí dưới tên học viên
+            g.setColor(new Color(0x00, 0x56, 0xD2));
+            g.setStroke(new BasicStroke(3f));
+            g.drawLine(leftX, 378, leftX + 180, 378);
+
+            // Dòng xác nhận hoàn thành
+            g.setColor(new Color(0x6B, 0x72, 0x80));
+            g.setFont(new Font(Font.SERIF, Font.ITALIC, 24));
+            g.drawString("has successfully completed the online course", leftX, 428);
+
+            // Tên khóa học (tự động xuống dòng nếu dài)
+            String courseTitle = cert.getCourseTitle() != null ? cert.getCourseTitle() : "Khóa học EduSphere";
+            Font titleFont = new Font(Font.SERIF, Font.BOLD, 40);
+            g.setFont(titleFont);
+            g.setColor(new Color(0x11, 0x18, 0x27));
+            List<String> titleLines = wrapText(courseTitle, g.getFontMetrics(titleFont), maxContentW, 3);
+            int curY = 492;
+            for (String line : titleLines) {
+                g.drawString(line, leftX, curY);
+                curY += 52;
+            }
+
+            // Đoạn mô tả chuẩn đầu ra & thông tin khóa học
+            curY += 10;
+            g.setColor(new Color(0x4B, 0x55, 0x63));
+            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 21));
+            String authText = "an online course (" + cert.getTotalHours() + " Hours • Grade Achieved: "
+                    + cert.getGradePercent() + "%) authorized by EduSphere Academy and offered through EduSphere E-Learning Platform.";
+            for (String line : wrapText(authText, g.getFontMetrics(), maxContentW, 3)) {
+                g.drawString(line, leftX, curY);
+                curY += 32;
+            }
+
+            // 4. Chữ ký giảng viên & Khu vực xác thực bên dưới
+            int sigBaseY = 1015;
+            String instructorName = cert.getInstructorName() != null ? cert.getInstructorName() : "EduSphere Instructor";
+
+            g.setColor(new Color(0x1E, 0x29, 0x3B));
+            g.setFont(new Font(Font.SERIF, Font.BOLD | Font.ITALIC, 38));
+            g.drawString(instructorName, leftX + 6, sigBaseY - 18);
+
+            g.setColor(new Color(0x37, 0x41, 0x51));
+            g.setStroke(new BasicStroke(2f));
+            g.drawLine(leftX, sigBaseY, leftX + 430, sigBaseY);
+
+            g.setColor(new Color(0x1F, 0x29, 0x37));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 21));
+            g.drawString(instructorName, leftX, sigBaseY + 32);
+
+            g.setColor(new Color(0x6B, 0x72, 0x80));
+            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
+            g.drawString(cert.getInstructorTitle() != null ? cert.getInstructorTitle() : "Giảng viên Hướng dẫn", leftX, sigBaseY + 60);
+            g.drawString("Faculty of " + (cert.getCategoryName() != null ? cert.getCategoryName() : "EduSphere") + ", EduSphere Academy", leftX, sigBaseY + 86);
+
+            // Khu vực Verify bên phải dưới
+            int rightEdgeX = width - 115;
+            String baseUrl = (verifyBaseUrl != null && !verifyBaseUrl.isBlank()) ? verifyBaseUrl : "https://edusphere.vn";
+            String verifyUrl = baseUrl + "/certificates/verify/" + cert.getVerificationCode();
+
+            g.setColor(new Color(0x4B, 0x55, 0x63));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+            drawRightAlignedString(g, "Verify at / Xác thực chứng chỉ tại:", rightEdgeX, sigBaseY - 8);
+
+            g.setColor(new Color(0x00, 0x56, 0xD2));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+            drawRightAlignedString(g, verifyUrl, rightEdgeX, sigBaseY + 20);
+
+            g.setColor(new Color(0x11, 0x18, 0x27));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+            drawRightAlignedString(g, "Verification Code: " + cert.getVerificationCode(), rightEdgeX, sigBaseY + 48);
+
+            g.setColor(new Color(0x6B, 0x72, 0x80));
+            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
+            drawRightAlignedString(g, "EduSphere has confirmed the identity of this individual and", rightEdgeX, sigBaseY + 74);
+            drawRightAlignedString(g, "their participation in the course.", rightEdgeX, sigBaseY + 96);
+
+            // Đường kẻ chân trang & Disclaimer
+            g.setColor(new Color(0xE2, 0xE8, 0xF0));
+            g.setStroke(new BasicStroke(1.5f));
+            g.drawLine(leftX, 1148, rightEdgeX, 1148);
+
+            g.setColor(new Color(0x9C, 0xA3, 0xAF));
+            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
+            drawCenteredString(
+                    g,
+                    "This certificate attests to the learner's completion of an online course delivered via EduSphere Academy.",
+                    width / 2,
+                    1180
+            );
+        } finally {
+            g.dispose();
+        }
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ImageIO.write(image, "png", baos);
+            return baos.toByteArray();
+        } catch (IOException ex) {
+            throw new CourseActionException(HttpStatus.INTERNAL_SERVER_ERROR, "Không thể tạo file ảnh chứng chỉ.");
+        }
+    }
+
+    private void drawCenteredString(Graphics2D g, String text, int centerX, int y) {
+        FontMetrics fm = g.getFontMetrics();
+        int x = centerX - fm.stringWidth(text) / 2;
+        g.drawString(text, x, y);
+    }
+
+    private void drawRightAlignedString(Graphics2D g, String text, int rightX, int y) {
+        FontMetrics fm = g.getFontMetrics();
+        int x = rightX - fm.stringWidth(text);
+        g.drawString(text, x, y);
+    }
+
+    private List<String> wrapText(String text, FontMetrics fm, int maxWidth, int maxLines) {
+        List<String> lines = new ArrayList<>();
+        if (text == null || text.isBlank()) {
+            return lines;
+        }
+        String[] words = text.trim().split("\\s+");
+        StringBuilder currentLine = new StringBuilder();
+        for (String word : words) {
+            String candidate = currentLine.isEmpty() ? word : currentLine + " " + word;
+            if (fm.stringWidth(candidate) <= maxWidth) {
+                currentLine.setLength(0);
+                currentLine.append(candidate);
+            } else {
+                if (!currentLine.isEmpty()) {
+                    lines.add(currentLine.toString());
+                    if (lines.size() >= maxLines) {
+                        return lines;
+                    }
+                }
+                currentLine.setLength(0);
+                currentLine.append(word);
+            }
+        }
+        if (!currentLine.isEmpty() && lines.size() < maxLines) {
+            lines.add(currentLine.toString());
+        }
+        return lines;
     }
 }
