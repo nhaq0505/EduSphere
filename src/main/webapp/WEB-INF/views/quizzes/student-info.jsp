@@ -18,34 +18,92 @@
 
 <div class="quiz-page-wrap">
     <main class="quiz-shell">
-        <a class="quiz-back-link" href="${pageContext.request.contextPath}/courses/${courseId}/quizzes">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Danh sách bài kiểm tra
-        </a>
+        <!-- Top Navigation -->
+        <div class="quiz-nav-top">
+            <a class="quiz-back-link" href="${pageContext.request.contextPath}/courses/${courseId}/learn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Quay lại khóa học
+            </a>
+            <c:if test="${quiz.course != null}">
+                <div class="quiz-nav-crumb">
+                    <span>/</span>
+                    <span class="quiz-nav-crumb__cur"><c:out value="${quiz.course.title}"/></span>
+                </div>
+            </c:if>
+        </div>
 
         <!-- Hero -->
         <div class="quiz-hero quiz-hero--info">
-            <p class="quiz-hero__eyebrow">
-                <span>📝</span> BÀI KIỂM TRA ĐÁNH GIÁ
-            </p>
-            <h1 class="quiz-hero__title"><c:out value="${quiz.title}"/></h1>
-            <c:if test="${not empty quiz.description}">
-                <p class="quiz-hero__desc"><c:out value="${quiz.description}"/></p>
-            </c:if>
-            <div class="quiz-hero__chips">
-                <span class="quiz-hero__chip">
-                    ⏱ <c:choose>
-                        <c:when test="${quiz.timeLimitMinutes != null}">${quiz.timeLimitMinutes} phút</c:when>
-                        <c:otherwise>Không giới hạn thời gian</c:otherwise>
-                    </c:choose>
-                </span>
-                <span class="quiz-hero__chip">🔄 Không giới hạn lượt làm</span>
-                <c:if test="${quiz.passingScore != null}">
-                    <span class="quiz-hero__chip">🎯 Điểm đạt: ${quiz.passingScore}%</span>
-                </c:if>
-                <c:if test="${quiz.lesson != null}">
-                    <span class="quiz-hero__chip">📖 Bài học: <c:out value="${quiz.lesson.title}"/></span>
-                </c:if>
+            <div class="quiz-hero__pattern"></div>
+            <div class="quiz-hero__pattern-2"></div>
+            <div class="quiz-hero__body">
+                <!-- Main Info -->
+                <div class="quiz-hero__main">
+                    <div class="quiz-hero__eyebrow-badge">
+                        <span>📝</span> BÀI KIỂM TRA ĐÁNH GIÁ
+                    </div>
+                    <h1 class="quiz-hero__title"><c:out value="${quiz.title}"/></h1>
+                    <c:if test="${not empty quiz.description}">
+                        <p class="quiz-hero__desc"><c:out value="${quiz.description}"/></p>
+                    </c:if>
+                    <div class="quiz-hero__chips">
+                        <span class="quiz-hero__chip">
+                            ⏱ <c:choose>
+                                <c:when test="${quiz.timeLimitMinutes != null}">${quiz.timeLimitMinutes} phút</c:when>
+                                <c:otherwise>Không giới hạn thời gian</c:otherwise>
+                            </c:choose>
+                        </span>
+                        <span class="quiz-hero__chip">🔄 Không giới hạn lượt làm</span>
+                        <c:if test="${quiz.passingScore != null}">
+                            <span class="quiz-hero__chip">🎯 Điểm đạt: ${quiz.passingScore}%</span>
+                        </c:if>
+                        <c:if test="${quiz.lesson != null}">
+                            <span class="quiz-hero__chip">📖 Bài học: <c:out value="${quiz.lesson.title}"/></span>
+                        </c:if>
+                    </div>
+                </div>
+
+                <!-- Aside Glass Card -->
+                <div class="quiz-hero__aside">
+                    <c:set var="bestScore" value="-1"/>
+                    <c:set var="maxPossibleScore" value="10"/>
+                    <c:set var="hasCompleted" value="false"/>
+                    <c:forEach var="a" items="${myAttempts}">
+                        <c:if test="${a.status eq 'SCORED' or a.status eq 'SUBMITTED'}">
+                            <c:set var="hasCompleted" value="true"/>
+                            <c:if test="${a.score != null and a.score > bestScore}">
+                                <c:set var="bestScore" value="${a.score}"/>
+                            </c:if>
+                            <c:if test="${a.maxScore != null}">
+                                <c:set var="maxPossibleScore" value="${a.maxScore}"/>
+                            </c:if>
+                        </c:if>
+                    </c:forEach>
+
+                    <div class="quiz-hero__glass-card">
+                        <c:choose>
+                            <c:when test="${hasCompleted and bestScore >= 0}">
+                                <div class="quiz-hero__glass-icon">🏆</div>
+                                <div class="quiz-hero__glass-label">Điểm cao nhất của bạn</div>
+                                <div class="quiz-hero__glass-score">
+                                    <fmt:formatNumber value="${bestScore}" maxFractionDigits="1"/>
+                                    <span class="quiz-hero__glass-sub">/ <fmt:formatNumber value="${maxPossibleScore}" maxFractionDigits="1"/></span>
+                                </div>
+                                <div class="quiz-hero__glass-footer">
+                                    Đã hoàn thành ${fn:length(myAttempts)} lượt làm
+                                </div>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="quiz-hero__glass-icon">🎯</div>
+                                <div class="quiz-hero__glass-label">Trạng thái làm bài</div>
+                                <div class="quiz-hero__glass-highlight">Sẵn sàng thử sức</div>
+                                <div class="quiz-hero__glass-footer">
+                                    Không giới hạn lượt làm · <c:choose><c:when test="${quiz.timeLimitMinutes != null}">${quiz.timeLimitMinutes} phút</c:when><c:otherwise>Tự do</c:otherwise></c:choose>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -82,61 +140,66 @@
 
                     <c:choose>
                         <c:when test="${empty myAttempts}">
-                            <div style="text-align:center; padding:32px 16px; color:#64748B;">
-                                <div style="font-size:2.5rem; margin-bottom:8px;">📝</div>
-                                <p style="font-size:.95rem; font-weight:600; margin:0;">Bạn chưa làm bài kiểm tra này lần nào.</p>
-                                <p style="font-size:.85rem; margin-top:4px;">Nhấn vào nút "Bắt đầu làm bài" ở bên phải để làm bài.</p>
+                            <div class="quiz-empty-history">
+                                <div class="quiz-empty-history__icon">📝</div>
+                                <h3>Bạn chưa làm bài kiểm tra này</h3>
+                                <p>Nhấn vào nút "Bắt đầu làm bài" ở khung bên phải để thử sức ngay.</p>
                             </div>
                         </c:when>
                         <c:otherwise>
-                            <c:forEach var="a" items="${myAttempts}">
-                                <div class="quiz-attempt-item">
-                                    <div>
-                                        <div class="quiz-attempt-num">Lần làm ${a.attemptNumber}</div>
-                                        <c:if test="${a.submittedAt != null}">
-                                            <div class="quiz-attempt-date">
-                                                📅 Nộp lúc ${a.formattedSubmittedAt}
+                            <div class="quiz-attempts-list">
+                                <c:forEach var="a" items="${myAttempts}">
+                                    <div class="quiz-attempt-card">
+                                        <div class="quiz-attempt-card__main">
+                                            <div class="quiz-attempt-card__header">
+                                                <span class="quiz-attempt-card__pill">Lần làm ${a.attemptNumber}</span>
+                                                <c:choose>
+                                                    <c:when test="${a.status eq 'IN_PROGRESS'}">
+                                                        <span class="quiz-badge quiz-badge--progress">⏳ Đang làm</span>
+                                                    </c:when>
+                                                    <c:when test="${a.status eq 'SCORED'}">
+                                                        <span class="quiz-badge quiz-badge--scored">✅ Đã chấm</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="quiz-badge quiz-badge--submitted">📝 Chờ chấm tự luận</span>
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </div>
-                                        </c:if>
-                                        <c:if test="${a.score != null and a.status ne 'IN_PROGRESS'}">
-                                            <div class="quiz-score-highlight">
-                                                Điểm: <fmt:formatNumber value="${a.score}" maxFractionDigits="2"/> / <fmt:formatNumber value="${a.maxScore}" maxFractionDigits="2"/>
-                                                <c:if test="${a.status eq 'SUBMITTED'}">
-                                                    <span style="font-size:0.75rem; color:#64748B; font-weight:normal; margin-left:4px;">(Trắc nghiệm)</span>
+                                            <div class="quiz-attempt-card__meta">
+                                                <c:if test="${a.submittedAt != null}">
+                                                    <span class="quiz-attempt-card__date">
+                                                        📅 Nộp lúc ${a.formattedSubmittedAt}
+                                                    </span>
+                                                </c:if>
+                                                <c:if test="${a.score != null and a.status ne 'IN_PROGRESS'}">
+                                                    <div class="quiz-attempt-card__score">
+                                                        Điểm: <strong><fmt:formatNumber value="${a.score}" maxFractionDigits="2"/> / <fmt:formatNumber value="${a.maxScore}" maxFractionDigits="2"/></strong>
+                                                        <c:if test="${a.status eq 'SUBMITTED'}">
+                                                            <span class="quiz-attempt-card__subnote">(Trắc nghiệm)</span>
+                                                        </c:if>
+                                                    </div>
                                                 </c:if>
                                             </div>
-                                        </c:if>
+                                        </div>
+                                        <div class="quiz-attempt-card__action">
+                                            <c:choose>
+                                                <c:when test="${a.status eq 'IN_PROGRESS'}">
+                                                    <a class="quiz-btn quiz-btn--primary quiz-btn--sm"
+                                                       href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${a.attemptId}">
+                                                        Tiếp tục →
+                                                    </a>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <a class="quiz-btn quiz-btn--outline quiz-btn--sm"
+                                                       href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${a.attemptId}/result">
+                                                        Xem kết quả →
+                                                    </a>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </div>
                                     </div>
-                                    <div style="display:flex; gap:10px; align-items:center;">
-                                        <c:choose>
-                                            <c:when test="${a.status eq 'IN_PROGRESS'}">
-                                                <span class="quiz-badge quiz-badge--progress">⏳ Đang làm</span>
-                                            </c:when>
-                                            <c:when test="${a.status eq 'SCORED'}">
-                                                <span class="quiz-badge quiz-badge--scored">✅ Đã chấm</span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="quiz-badge quiz-badge--submitted">📝 Chờ chấm tự luận</span>
-                                            </c:otherwise>
-                                        </c:choose>
-
-                                        <c:choose>
-                                            <c:when test="${a.status eq 'IN_PROGRESS'}">
-                                                <a class="quiz-btn quiz-btn--primary" style="padding:6px 14px; font-size:.84rem;"
-                                                   href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${a.attemptId}">
-                                                    Tiếp tục →
-                                                </a>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <a class="quiz-btn quiz-btn--outline" style="padding:6px 14px; font-size:.84rem;"
-                                                   href="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/attempts/${a.attemptId}/result">
-                                                    Xem kết quả →
-                                                </a>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </div>
-                                </div>
-                            </c:forEach>
+                                </c:forEach>
+                            </div>
                         </c:otherwise>
                     </c:choose>
                 </div>

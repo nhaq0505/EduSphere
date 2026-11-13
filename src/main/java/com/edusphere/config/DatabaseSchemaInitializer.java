@@ -128,6 +128,38 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         ALTER TABLE dbo.certificates ADD total_hours INT NULL CONSTRAINT DF_certificates_hours DEFAULT 18;
                 END
                 """);
+
+            // Tự động tạo hoặc nâng cấp bảng lesson_ai_materials (Tài liệu học tập AI)
+            jdbcTemplate.execute("""
+                IF OBJECT_ID(N'dbo.lesson_ai_materials', N'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.lesson_ai_materials (
+                        id INT IDENTITY(1,1) PRIMARY KEY,
+                        lesson_id INT NOT NULL,
+                        task_id NVARCHAR(100) NULL,
+                        status NVARCHAR(30) NOT NULL CONSTRAINT DF_lam_status DEFAULT N'PENDING',
+                        original_transcript NVARCHAR(MAX) NULL,
+                        corrected_transcript NVARCHAR(MAX) NULL,
+                        summary NVARCHAR(MAX) NULL,
+                        key_points NVARCHAR(MAX) NULL,
+                        terms NVARCHAR(MAX) NULL,
+                        conclusion NVARCHAR(MAX) NULL,
+                        ai_model NVARCHAR(100) NULL,
+                        error_message NVARCHAR(1000) NULL,
+                        created_at DATETIME2 NOT NULL CONSTRAINT DF_lam_created DEFAULT SYSDATETIME(),
+                        updated_at DATETIME2 NULL,
+                        CONSTRAINT UQ_lesson_ai_materials_lesson UNIQUE (lesson_id),
+                        CONSTRAINT FK_lesson_ai_materials_lesson FOREIGN KEY (lesson_id) REFERENCES dbo.lessons(lesson_id) ON DELETE CASCADE
+                    );
+                END
+                ELSE
+                BEGIN
+                    IF COL_LENGTH('dbo.lesson_ai_materials', 'task_id') IS NULL
+                        ALTER TABLE dbo.lesson_ai_materials ADD task_id NVARCHAR(100) NULL;
+                    IF COL_LENGTH('dbo.lesson_ai_materials', 'error_message') IS NULL
+                        ALTER TABLE dbo.lesson_ai_materials ADD error_message NVARCHAR(1000) NULL;
+                END
+                """);
         } catch (Exception ex) {
             log.debug("[DbAutoMigration] Bỏ qua bước pre-Hibernate migration: {}", ex.getMessage());
         }
@@ -301,6 +333,17 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                     ALTER TABLE dbo.payout_requests DROP CONSTRAINT CK_payout_requests_amount;
                 ALTER TABLE dbo.payout_requests WITH CHECK ADD CONSTRAINT CK_payout_requests_amount
                     CHECK (amount > 0);
+            END
+            """);
+
+        // 7. CK_lesson_ai_materials_status: hỗ trợ PENDING, PROCESSING, COMPLETED, FAILED
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.lesson_ai_materials', N'U') IS NOT NULL
+            BEGIN
+                IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_lesson_ai_materials_status' AND parent_object_id = OBJECT_ID(N'dbo.lesson_ai_materials'))
+                    ALTER TABLE dbo.lesson_ai_materials DROP CONSTRAINT CK_lesson_ai_materials_status;
+                ALTER TABLE dbo.lesson_ai_materials WITH CHECK ADD CONSTRAINT CK_lesson_ai_materials_status
+                    CHECK (status IN (N'PENDING', N'PROCESSING', N'COMPLETED', N'FAILED'));
             END
             """);
     }

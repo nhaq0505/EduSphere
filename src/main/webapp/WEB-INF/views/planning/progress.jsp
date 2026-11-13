@@ -1,4 +1,4 @@
-﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Tiến độ học tập — EduSphere</title>
@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
 <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning-new.css">
 </head><body>
-<jsp:include page="/WEB-INF/views/planning/planning-navbar.jsp"/>
+<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 <div class="pl-shell">
 <nav class="pl-tabs">
     <a class="pl-tab" href="${pageContext.request.contextPath}/study/plans">📋 Kế hoạch học tập</a>

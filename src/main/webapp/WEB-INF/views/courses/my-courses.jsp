@@ -344,6 +344,7 @@
 </head>
 <body>
 
+<!-- ══════ NAVBAR ══════ -->
 <jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 
 <!-- ══════ MAIN ══════ -->

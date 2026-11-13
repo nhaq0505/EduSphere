@@ -212,6 +212,185 @@
                             </div>
                         </c:if>
 
+                        <!-- ======================================================== -->
+                        <!-- 🤖 KHU VỰC TÀI LIỆU HỌC TẬP AI (Faster-Whisper + Qwen)  -->
+                        <!-- ======================================================== -->
+                        <div class="ai-mat-card" id="aiMaterialCard"
+                             data-course-id="${course.courseId}"
+                             data-lesson-id="${lesson.lessonId}"
+                             data-csrf-param="${_csrf.parameterName}"
+                             data-csrf-token="${_csrf.token}"
+                             data-context-path="${pageContext.request.contextPath}">
+
+                            <div class="ai-mat-header">
+                                <div>
+                                    <div class="ai-badge">✨ EDUSPHERE AI ASSISTANT</div>
+                                    <h2 class="ai-mat-title">
+                                        <span>🤖</span> Tài liệu học tập AI
+                                    </h2>
+                                    <p class="ai-mat-sub">
+                                        Tự động trích xuất âm thanh, chuyển giọng nói thành văn bản bằng Faster-Whisper và tổng hợp kiến thức chuyên sâu bằng mô hình Qwen 2.5:3B.
+                                    </p>
+                                </div>
+
+                                <div class="ai-mat-actions" id="aiActionsArea">
+                                    <c:choose>
+                                        <%-- Chưa có tài liệu hoặc đã thất bại --%>
+                                        <c:when test="${empty aiMaterial or aiMaterial.status eq 'FAILED'}">
+                                            <button type="button" class="ai-btn ai-btn--primary" id="btnStartAi" onclick="triggerAiGeneration(false)">
+                                                <span>✨</span> Tạo tài liệu bằng AI
+                                            </button>
+                                        </c:when>
+
+                                        <%-- Đang xử lý --%>
+                                        <c:when test="${aiMaterial.status eq 'PENDING' or aiMaterial.status eq 'PROCESSING'}">
+                                            <button type="button" class="ai-btn ai-btn--secondary" disabled style="opacity:0.8; cursor:wait;">
+                                                <span class="ai-spinner"></span> Đang phân tích...
+                                            </button>
+                                        </c:when>
+
+                                        <%-- Đã hoàn thành --%>
+                                        <c:otherwise>
+                                            <button type="button" class="ai-btn ai-btn--outline" onclick="openAiEditModal()">
+                                                <span>✏️</span> Chỉnh sửa tài liệu
+                                            </button>
+                                            <button type="button" class="ai-btn ai-btn--secondary" onclick="confirmRegenerateAi()">
+                                                <span>🔄</span> Phân tích lại
+                                            </button>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </div>
+                            </div>
+
+                            <!-- ── Khối tiến trình xử lý (Progress Banner) ── -->
+                            <div id="aiProgressBanner" class="ai-progress-card" style="${(not empty aiMaterial and (aiMaterial.status eq 'PENDING' or aiMaterial.status eq 'PROCESSING')) ? 'display:block;' : 'display:none;'}">
+                                <div class="ai-progress-card__head">
+                                    <div style="font-weight:800; color:#0369A1; font-size:.92rem; display:flex; align-items:center; gap:8px;">
+                                        <span class="ai-spinner" style="border-top-color:#0284C7;"></span>
+                                        <span id="aiProgressStepTitle">Đang xử lý phân tích bài giảng...</span>
+                                    </div>
+                                    <div style="font-weight:800; color:#0284C7; font-size:.9rem;" id="aiProgressPercent">
+                                        ${not empty aiMaterial ? (aiMaterial.status eq 'COMPLETED' ? '100%' : '15%') : '0%'}
+                                    </div>
+                                </div>
+
+                                <div class="ai-progress-bar-wrap">
+                                    <div class="ai-progress-bar-fill" id="aiProgressBarFill" style="width: ${not empty aiMaterial ? (aiMaterial.status eq 'COMPLETED' ? '100%' : '15%') : '0%'};"></div>
+                                </div>
+
+                                <div style="font-size:.82rem; color:#475569;" id="aiProgressMessage">
+                                    Hệ thống đang khởi chạy các mô hình AI cục bộ, quá trình này có thể mất 1–3 phút tùy độ dài video...
+                                </div>
+
+                                <!-- 4 Steps Tracker -->
+                                <div class="ai-steps-tracker">
+                                    <div class="ai-step-item" id="aiStep1">
+                                        <span>1️⃣</span> Trích xuất âm thanh
+                                    </div>
+                                    <div class="ai-step-item" id="aiStep2">
+                                        <span>2️⃣</span> Whisper nhận diện
+                                    </div>
+                                    <div class="ai-step-item" id="aiStep3">
+                                        <span>3️⃣</span> Qwen hiệu đính
+                                    </div>
+                                    <div class="ai-step-item" id="aiStep4">
+                                        <span>4️⃣</span> Tổng hợp tài liệu
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ── Thông báo lỗi nếu thất bại ── -->
+                            <div id="aiErrorBanner" class="ins-alert" style="background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; margin-bottom:16px; ${(not empty aiMaterial and aiMaterial.status eq 'FAILED') ? 'display:block;' : 'display:none;'}">
+                                <div style="font-weight:700; margin-bottom:4px;">❌ Quá trình tạo tài liệu AI gặp sự cố</div>
+                                <div id="aiErrorMessage" style="font-size:.86rem;">
+                                    <c:out value="${aiMaterial.errorMessage}"/>
+                                </div>
+                                <div style="margin-top:10px;">
+                                    <button type="button" class="ai-btn ai-btn--secondary" style="padding:6px 14px; font-size:.8rem;" onclick="triggerAiGeneration(true)">
+                                        <span>🔄</span> Thử phân tích lại
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- ── Vùng hiển thị 4 phần tài liệu AI đã hoàn thành ── -->
+                            <div id="aiContentArea" style="${(not empty aiMaterial and aiMaterial.status eq 'COMPLETED') ? 'display:block;' : 'display:none;'}">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:.82rem; color:#64748B;">
+                                    <div>
+                                        🤖 Mô hình: <strong><span id="aiModelBadge"><c:out value="${aiMaterial.aiModel}"/></span></strong>
+                                    </div>
+                                    <div>
+                                        Cập nhật: <strong id="aiUpdatedAt"><c:out value="${aiMaterial.updatedAt}"/></strong>
+                                    </div>
+                                </div>
+
+                                <div class="ai-sections-grid">
+                                    <!-- 1. SUMMARY -->
+                                    <div class="ai-sec-box">
+                                        <div class="ai-sec-title ai-sec-title--summary">
+                                            <span>📝</span> 1. TÓM TẮT BÀI HỌC (SUMMARY)
+                                        </div>
+                                        <div class="ai-sec-content" id="aiDisplaySummary"><c:out value="${aiMaterial.summary}"/></div>
+                                    </div>
+
+                                    <!-- 2. KEY POINTS -->
+                                    <div class="ai-sec-box">
+                                        <div class="ai-sec-title ai-sec-title--keypoints">
+                                            <span>💡</span> 2. KIẾN THỨC TRỌNG TÂM (KEY POINTS)
+                                        </div>
+                                        <div class="ai-sec-content" id="aiDisplayKeyPoints"><c:out value="${aiMaterial.keyPoints}"/></div>
+                                    </div>
+
+                                    <!-- 3. TERMS -->
+                                    <div class="ai-sec-box">
+                                        <div class="ai-sec-title ai-sec-title--terms">
+                                            <span>📖</span> 3. THUẬT NGỮ CHUYÊN NGÀNH (TERMS)
+                                        </div>
+                                        <div class="ai-sec-content" id="aiDisplayTerms"><c:out value="${aiMaterial.terms}"/></div>
+                                    </div>
+
+                                    <!-- 4. CONCLUSION -->
+                                    <div class="ai-sec-box">
+                                        <div class="ai-sec-title ai-sec-title--conclusion">
+                                            <span>🎯</span> 4. TỔNG KẾT BÀI HỌC (CONCLUSION)
+                                        </div>
+                                        <div class="ai-sec-content" id="aiDisplayConclusion"><c:out value="${aiMaterial.conclusion}"/></div>
+                                    </div>
+                                </div>
+
+                                <!-- Accordion xem Transcripts (Gốc vs Hiệu đính) -->
+                                <details class="ai-transcript-toggle" style="margin-top:20px;">
+                                    <summary>
+                                        <span>📜</span> Xem chi tiết bản ghi lời thoại (Transcript gốc &amp; Bản hiệu đính có mốc thời gian)
+                                    </summary>
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px; background:#F8FAFC;">
+                                        <div>
+                                            <div style="font-weight:700; font-size:.82rem; color:#475569; margin-bottom:6px;">
+                                                🎙️ Transcript gốc từ Faster-Whisper:
+                                            </div>
+                                            <div class="ai-transcript-body" id="aiDisplayRawTranscript"><c:out value="${aiMaterial.originalTranscript}"/></div>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight:700; font-size:.82rem; color:#1E40AF; margin-bottom:6px;">
+                                                ✨ Transcript sau hiệu đính ngữ cảnh Qwen:
+                                            </div>
+                                            <div class="ai-transcript-body" id="aiDisplayCorrectedTranscript"><c:out value="${aiMaterial.correctedTranscript}"/></div>
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+
+                            <!-- ── Trạng thái chưa có tài liệu ── -->
+                            <div id="aiEmptyPlaceholder" style="${empty aiMaterial ? 'display:block;' : 'display:none;'} padding:24px 0; text-align:center;">
+                                <div style="font-size:2.4rem; margin-bottom:8px;">💡</div>
+                                <div style="font-weight:700; color:#334155; font-size:.95rem; margin-bottom:4px;">
+                                    Chưa có tài liệu AI cho bài học này
+                                </div>
+                                <div style="font-size:.84rem; color:#64748B; max-width:480px; margin:0 auto 16px auto;">
+                                    Nhấn nút <strong>"Tạo tài liệu bằng AI"</strong> để hệ thống tự động nghe video bài giảng, hiệu đính câu chữ và biên soạn tài liệu học tập toàn diện cho học viên.
+                                </div>
+                            </div>
+                        </div>
+
                         <h2>Nội dung / Ghi chú bài giảng</h2>
                         <div style="font-size:.92rem;color:var(--ink-2);line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);padding:18px;border-radius:var(--r8);">
                             <c:choose>
@@ -663,4 +842,352 @@ document.addEventListener('keydown', function(e) {
         <div id="matModalContent" style="flex:1; background:#0F172A; position:relative; overflow:auto; display:flex; align-items:center; justify-content:center;"></div>
     </div>
 </div>
+
+<!-- ======================================================== -->
+<!-- MODAL CHỈNH SỬA TÀI LIỆU AI CỦA GIẢNG VIÊN               -->
+<!-- ======================================================== -->
+<div class="ai-modal-backdrop" id="aiEditModal">
+    <div class="ai-modal-box">
+        <div class="ai-modal-head">
+            <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:#0F172A; display:flex; align-items:center; gap:8px;">
+                <span>✏️</span> Chỉnh sửa tài liệu học tập AI
+            </h3>
+            <button type="button" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#64748B;" onclick="closeAiEditModal()">&times;</button>
+        </div>
+
+        <div class="ai-modal-body">
+            <div class="ai-form-group">
+                <label class="ai-form-label">📝 1. Tóm tắt nội dung bài học (Summary):</label>
+                <textarea class="ai-form-textarea" id="editAiSummary" rows="4"></textarea>
+            </div>
+
+            <div class="ai-form-group">
+                <label class="ai-form-label">💡 2. Kiến thức trọng tâm (Key Points):</label>
+                <textarea class="ai-form-textarea" id="editAiKeyPoints" rows="5"></textarea>
+            </div>
+
+            <div class="ai-form-group">
+                <label class="ai-form-label">📖 3. Thuật ngữ chuyên ngành (Terms):</label>
+                <textarea class="ai-form-textarea" id="editAiTerms" rows="4"></textarea>
+            </div>
+
+            <div class="ai-form-group">
+                <label class="ai-form-label">🎯 4. Tổng kết bài học (Conclusion):</label>
+                <textarea class="ai-form-textarea" id="editAiConclusion" rows="3"></textarea>
+            </div>
+        </div>
+
+        <div class="ai-modal-foot">
+            <button type="button" class="ai-btn ai-btn--secondary" onclick="closeAiEditModal()">Hủy bỏ</button>
+            <button type="button" class="ai-btn ai-btn--primary" id="btnSaveAiEdit" onclick="saveAiEditChanges()">
+                <span>💾</span> Lưu thay đổi
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// EDUSPHERE AI MATERIAL CLIENT LOGIC
+// ══════════════════════════════════════════════════════════
+var aiPollTimer = null;
+
+function resetAiButton() {
+    var actArea = document.getElementById('aiActionsArea');
+    if (actArea) {
+        actArea.innerHTML = '<button type="button" class="ai-btn ai-btn--primary" id="btnStartAi" onclick="triggerAiGeneration(false)">' +
+            '<span>✨</span> Tạo tài liệu bằng AI</button>';
+    }
+}
+
+function setAiButtonRunning() {
+    var actArea = document.getElementById('aiActionsArea');
+    if (actArea) {
+        actArea.innerHTML = '<button type="button" class="ai-btn ai-btn--secondary" disabled style="opacity:0.8; cursor:wait;">' +
+            '<span class="ai-spinner"></span> Đang phân tích video...</button>';
+    }
+}
+
+function triggerAiGeneration(force) {
+    var card = document.getElementById('aiMaterialCard');
+    if (!card) return;
+    var courseId = card.getAttribute('data-course-id');
+    var lessonId = card.getAttribute('data-lesson-id');
+    var ctx = card.getAttribute('data-context-path');
+    var csrfToken = card.getAttribute('data-csrf-token');
+
+    var btn = document.getElementById('btnStartAi');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="ai-spinner"></span> Đang khởi chạy...';
+    }
+
+    var url = ctx + '/instructor/courses/' + courseId + '/lessons/' + lessonId + '/ai-materials/generate?force=' + (force ? 'true' : 'false');
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken || ''
+        }
+    })
+    .then(function(r) {
+        return r.json().then(function(data) {
+            return { ok: r.ok, status: r.status, data: data };
+        });
+    })
+    .then(function(res) {
+        var data = res.data || {};
+        if (!res.ok || data.success === false || data.status === 'FAILED') {
+            var errMsg = data.message || data.error || ('Lỗi máy chủ (HTTP ' + res.status + ')');
+            showAiError(errMsg);
+            resetAiButton();
+            return;
+        }
+        setAiButtonRunning();
+        var initPct = (typeof data.progress === 'number') ? data.progress : 15;
+        showAiProgressUI(data.currentStep || 'PENDING', initPct, data.message || 'Đã tiếp nhận yêu cầu phân tích.');
+        startAiPolling(courseId, lessonId, ctx);
+    })
+    .catch(function(err) {
+        showAiError('Không thể kết nối đến máy chủ: ' + err.message);
+        resetAiButton();
+    });
+}
+
+function startAiPolling(courseId, lessonId, ctx) {
+    if (aiPollTimer) clearInterval(aiPollTimer);
+
+    aiPollTimer = setInterval(function() {
+        var statusUrl = ctx + '/instructor/courses/' + courseId + '/lessons/' + lessonId + '/ai-materials/status';
+        fetch(statusUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'COMPLETED') {
+                    clearInterval(aiPollTimer);
+                    aiPollTimer = null;
+                    showAiProgressUI('COMPLETED', 100, 'Hoàn thành!');
+                    loadAndRenderAiMaterial(courseId, lessonId, ctx);
+                } else if (d.status === 'FAILED') {
+                    clearInterval(aiPollTimer);
+                    aiPollTimer = null;
+                    showAiError(d.error || d.message || 'Tác vụ AI thất bại.');
+                    resetAiButton();
+                } else if (d.status === 'NOT_FOUND') {
+                    clearInterval(aiPollTimer);
+                    aiPollTimer = null;
+                    showAiError(d.message || 'Chưa tìm thấy tác vụ AI.');
+                    resetAiButton();
+                } else {
+                    showAiProgressUI(d.currentStep, d.progress, d.message);
+                }
+            })
+            .catch(function(e) {
+                console.warn('AI polling error:', e);
+            });
+    }, 3500);
+}
+
+function showAiProgressUI(step, percent, msg) {
+    var pBanner = document.getElementById('aiProgressBanner');
+    var cArea = document.getElementById('aiContentArea');
+    var eBanner = document.getElementById('aiErrorBanner');
+    var emptyPh = document.getElementById('aiEmptyPlaceholder');
+
+    if (pBanner) pBanner.style.display = 'block';
+    if (cArea) cArea.style.display = 'none';
+    if (eBanner) eBanner.style.display = 'none';
+    if (emptyPh) emptyPh.style.display = 'none';
+
+    var pFill = document.getElementById('aiProgressBarFill');
+    var pText = document.getElementById('aiProgressPercent');
+    var pMsg = document.getElementById('aiProgressMessage');
+    var pTitle = document.getElementById('aiProgressStepTitle');
+
+    var pctVal = (typeof percent === 'number') ? percent : 15;
+    if (pFill) pFill.style.width = pctVal + '%';
+    if (pText) pText.textContent = pctVal + '%';
+    if (pMsg && msg) pMsg.textContent = msg;
+
+    var s1 = document.getElementById('aiStep1');
+    var s2 = document.getElementById('aiStep2');
+    var s3 = document.getElementById('aiStep3');
+    var s4 = document.getElementById('aiStep4');
+
+    [s1, s2, s3, s4].forEach(function(el) { if (el) el.className = 'ai-step-item'; });
+
+    if (step === 'EXTRACTING_AUDIO') {
+        if (s1) s1.classList.add('active');
+        if (pTitle) pTitle.textContent = '1/4: Đang trích xuất âm thanh...';
+    } else if (step === 'TRANSCRIBING') {
+        if (s1) s1.classList.add('done');
+        if (s2) s2.classList.add('active');
+        if (pTitle) pTitle.textContent = '2/4: Whisper đang nhận diện giọng nói tiếng Việt...';
+    } else if (step === 'CORRECTING') {
+        if (s1) s1.classList.add('done');
+        if (s2) s2.classList.add('done');
+        if (s3) s3.classList.add('active');
+        if (pTitle) pTitle.textContent = '3/4: Qwen 2.5:3B đang hiệu đính ngữ cảnh lập trình...';
+    } else if (step === 'GENERATING') {
+        if (s1) s1.classList.add('done');
+        if (s2) s2.classList.add('done');
+        if (s3) s3.classList.add('done');
+        if (s4) s4.classList.add('active');
+        if (pTitle) pTitle.textContent = '4/4: Đang tổng hợp tài liệu học tập toàn diện...';
+    } else if (step === 'COMPLETED') {
+        [s1, s2, s3, s4].forEach(function(el) { if (el) el.classList.add('done'); });
+        if (pTitle) pTitle.textContent = 'Đã hoàn thành phân tích!';
+    }
+}
+
+function showAiError(msg) {
+    var pBanner = document.getElementById('aiProgressBanner');
+    var eBanner = document.getElementById('aiErrorBanner');
+    var eMsg = document.getElementById('aiErrorMessage');
+
+    if (pBanner) pBanner.style.display = 'none';
+    if (eBanner) eBanner.style.display = 'block';
+    if (eMsg) eMsg.textContent = msg;
+
+    var actArea = document.getElementById('aiActionsArea');
+    if (actArea) {
+        actArea.innerHTML = '<button type="button" class="ai-btn ai-btn--primary" onclick="triggerAiGeneration(true)"><span>✨</span> Thử tạo lại bằng AI</button>';
+    }
+}
+
+function loadAndRenderAiMaterial(courseId, lessonId, ctx) {
+    fetch(ctx + '/instructor/courses/' + courseId + '/lessons/' + lessonId + '/ai-materials')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            renderAiMaterialData(data);
+        })
+        .catch(function(e) {
+            console.error('Error loading material:', e);
+            location.reload();
+        });
+}
+
+function renderAiMaterialData(data) {
+    var pBanner = document.getElementById('aiProgressBanner');
+    var cArea = document.getElementById('aiContentArea');
+    var emptyPh = document.getElementById('aiEmptyPlaceholder');
+    var eBanner = document.getElementById('aiErrorBanner');
+
+    if (pBanner) pBanner.style.display = 'none';
+    if (emptyPh) emptyPh.style.display = 'none';
+    if (eBanner) eBanner.style.display = 'none';
+    if (cArea) cArea.style.display = 'block';
+
+    document.getElementById('aiDisplaySummary').textContent = data.summary || 'Chưa có tóm tắt.';
+    document.getElementById('aiDisplayKeyPoints').textContent = data.keyPoints || 'Chưa có kiến thức trọng tâm.';
+    document.getElementById('aiDisplayTerms').textContent = data.terms || 'Chưa có thuật ngữ.';
+    document.getElementById('aiDisplayConclusion').textContent = data.conclusion || 'Chưa có kết luận.';
+
+    var rawTr = document.getElementById('aiDisplayRawTranscript');
+    if (rawTr) rawTr.textContent = data.originalTranscript || 'Chưa có bản ghi thô.';
+    var corTr = document.getElementById('aiDisplayCorrectedTranscript');
+    if (corTr) corTr.textContent = data.correctedTranscript || 'Chưa có bản ghi hiệu đính.';
+
+    var mBadge = document.getElementById('aiModelBadge');
+    if (mBadge) mBadge.textContent = data.aiModel || 'Qwen 2.5:3B + Whisper';
+
+    var actArea = document.getElementById('aiActionsArea');
+    if (actArea) {
+        actArea.innerHTML =
+            '<button type="button" class="ai-btn ai-btn--outline" onclick="openAiEditModal()"><span>✏️</span> Chỉnh sửa tài liệu</button>' +
+            '<button type="button" class="ai-btn ai-btn--secondary" onclick="confirmRegenerateAi()"><span>🔄</span> Phân tích lại</button>';
+    }
+}
+
+function confirmRegenerateAi() {
+    if (confirm('Bạn có chắc muốn phân tích lại video bài giảng bằng AI? Quá trình này sẽ tạo mới bản ghi và tài liệu học tập.')) {
+        triggerAiGeneration(true);
+    }
+}
+
+// ── Modal Chỉnh sửa ──
+function openAiEditModal() {
+    var sum = document.getElementById('aiDisplaySummary');
+    var kp = document.getElementById('aiDisplayKeyPoints');
+    var tm = document.getElementById('aiDisplayTerms');
+    var cc = document.getElementById('aiDisplayConclusion');
+
+    document.getElementById('editAiSummary').value = sum ? sum.textContent : '';
+    document.getElementById('editAiKeyPoints').value = kp ? kp.textContent : '';
+    document.getElementById('editAiTerms').value = tm ? tm.textContent : '';
+    document.getElementById('editAiConclusion').value = cc ? cc.textContent : '';
+
+    var modal = document.getElementById('aiEditModal');
+    if (modal) modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeAiEditModal() {
+    var modal = document.getElementById('aiEditModal');
+    if (modal) modal.classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+function saveAiEditChanges() {
+    var card = document.getElementById('aiMaterialCard');
+    var courseId = card.getAttribute('data-course-id');
+    var lessonId = card.getAttribute('data-lesson-id');
+    var ctx = card.getAttribute('data-context-path');
+    var csrfToken = card.getAttribute('data-csrf-token');
+
+    var btn = document.getElementById('btnSaveAiEdit');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="ai-spinner"></span> Đang lưu...';
+    }
+
+    var payload = {
+        summary: document.getElementById('editAiSummary').value,
+        keyPoints: document.getElementById('editAiKeyPoints').value,
+        terms: document.getElementById('editAiTerms').value,
+        conclusion: document.getElementById('editAiConclusion').value
+    };
+
+    fetch(ctx + '/instructor/courses/' + courseId + '/lessons/' + lessonId + '/ai-materials/edit', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken || ''
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(updated) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>💾</span> Lưu thay đổi';
+        }
+        closeAiEditModal();
+        renderAiMaterialData(updated);
+        alert('✅ Đã lưu thay đổi nội dung tài liệu AI thành công!');
+    })
+    .catch(function(err) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>💾</span> Lưu thay đổi';
+        }
+        alert('Lỗi khi lưu tài liệu: ' + err.message);
+    });
+}
+
+// Tự động kích hoạt polling nếu trang được load khi đang xử lý
+document.addEventListener('DOMContentLoaded', function() {
+    var card = document.getElementById('aiMaterialCard');
+    if (!card) return;
+    var courseId = card.getAttribute('data-course-id');
+    var lessonId = card.getAttribute('data-lesson-id');
+    var ctx = card.getAttribute('data-context-path');
+
+    var pBanner = document.getElementById('aiProgressBanner');
+    if (pBanner && pBanner.style.display !== 'none') {
+        startAiPolling(courseId, lessonId, ctx);
+    }
+});
+</script>
 </body></html>

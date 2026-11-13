@@ -133,7 +133,8 @@ public class SecurityConfig {
                     "/webhooks/bunny",
                     "/instructor/videos/upload",
                     "/instructor/videos/*/status",
-                    "/courses/*/lessons/*/watch-progress"))
+                    "/courses/*/lessons/*/watch-progress",
+                    "/instructor/courses/*/lessons/*/ai-materials/**"))
             .addFilterAfter(accountStateFilter, SecurityContextHolderFilter.class);
 
         return http.build();
