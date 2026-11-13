@@ -623,7 +623,7 @@
                                                         📝 <c:out value="${qv.title}"/>
                                                     </div>
                                                     <div style="font-size:.82rem;color:#64748B;margin-bottom:12px;">
-                                                        ⏱ ${qv.timeLimitMinutes != null ? qv.timeLimitMinutes : 'Không giới hạn'} phút &bull; Tối đa ${qv.maxAttempts} lần
+                                                        ⏱ ${qv.timeLimitMinutes != null ? qv.timeLimitMinutes : 'Không giới hạn'} phút &bull; Không giới hạn lượt làm
                                                         <c:if test="${qv.myAttemptCount > 0}"> &bull; <strong>Đã làm ${qv.myAttemptCount} lần</strong></c:if>
                                                     </div>
                                                     <a class="study-btn study-btn--primary" href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${qv.quizId}">

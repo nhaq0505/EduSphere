@@ -742,13 +742,10 @@ public class QuizService {
                 });
 
         int attemptCount = attempts.countByQuiz_QuizIdAndStudent_UserId(quizId, studentId);
-        if (attemptCount >= quiz.getMaxAttempts())
-            throw conflict("Bạn đã đạt số lần làm tối đa (" + quiz.getMaxAttempts() + ").");
+        // Không giới hạn số lần làm bài: Học viên được phép làm lại thoải mái cho đến khi đạt điểm yêu cầu
 
-        // Check timing
+        // Check timing (bỏ kiểm tra thời điểm mở đề startTime, học viên có thể làm ngay khi công bố)
         LocalDateTime now = LocalDateTime.now();
-        if (quiz.getStartTime() != null && now.isBefore(quiz.getStartTime()))
-            throw conflict("Quiz chưa đến giờ bắt đầu.");
         if (quiz.getEndTime() != null && now.isAfter(quiz.getEndTime()))
             throw conflict("Quiz đã kết thúc.");
 
@@ -1097,14 +1094,10 @@ public class QuizService {
         if (form.getTimeLimitMinutes() != null && form.getTimeLimitMinutes() <= 0) {
             throw new CourseActionException(HttpStatus.BAD_REQUEST, "Thời gian làm bài phải lớn hơn 0 phút.");
         }
-        if (form.getMaxAttempts() != null && form.getMaxAttempts() < 1) {
-            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Số lần làm tối đa phải ít nhất là 1.");
-        }
-
         quiz.setTitle(form.getTitle().trim());
         quiz.setDescription(form.getDescription());
         quiz.setTimeLimitMinutes(form.getTimeLimitMinutes());
-        quiz.setMaxAttempts(form.getMaxAttempts() != null ? form.getMaxAttempts() : 1);
+        quiz.setMaxAttempts(form.getMaxAttempts() != null ? form.getMaxAttempts() : 999);
         quiz.setStartTime(start);
         quiz.setDueDate(due);
         quiz.setEndTime(end);

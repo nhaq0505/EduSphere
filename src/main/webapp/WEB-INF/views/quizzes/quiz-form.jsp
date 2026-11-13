@@ -320,7 +320,7 @@
 
                         <!-- ══ SECTION 2: CẤU HÌNH LÀM BÀI ══ -->
                         <div class="qf-section">
-                            <h2 class="qf-section-title">⏱️ 2. Thời gian & Lượt làm bài</h2>
+                            <h2 class="qf-section-title">⏱️ 2. Thời gian & Điểm đạt yêu cầu</h2>
 
                             <div class="qf-grid-2">
                                 <div class="qf-field">
@@ -332,28 +332,11 @@
                                 </div>
 
                                 <div class="qf-field">
-                                    <label class="qf-label" for="maxAttempts">Số lần làm tối đa</label>
-                                    <input class="qf-input" type="number" min="1" id="maxAttempts" name="maxAttempts"
-                                           placeholder="1"
-                                           value="${quizForm.maxAttempts != null ? quizForm.maxAttempts : 1}">
-                                    <p class="qf-hint">Mặc định là 1 lần. Nhập số lớn hơn nếu cho phép thi lại cải thiện điểm.</p>
-                                </div>
-                            </div>
-
-                            <div class="qf-grid-2">
-                                <div class="qf-field">
-                                    <label class="qf-label" for="startTime">Thời điểm mở đề thi</label>
-                                    <input class="qf-input" type="datetime-local" id="startTime" name="startTime"
-                                           value="<c:out value='${quizForm.startTime}'/>">
-                                    <p class="qf-hint">Bỏ trống nếu cho phép học viên bắt đầu làm ngay khi công bố.</p>
-                                </div>
-
-                                <div class="qf-field">
                                     <label class="qf-label" for="passingScore">Điểm đạt yêu cầu (%)</label>
                                     <input class="qf-input" type="number" id="passingScore" name="passingScore" min="0" max="100" step="1"
                                            placeholder="VD: 50 (đạt 50% tổng điểm)"
                                            value="${quizForm.passingScore}">
-                                    <p class="qf-hint">Bỏ trống nếu không bắt buộc điểm sàn để qua bài.</p>
+                                    <p class="qf-hint">Bỏ trống nếu không bắt buộc điểm sàn để qua bài. Học viên được làm lại thoải mái cho tới khi đạt.</p>
                                 </div>
                             </div>
                         </div>

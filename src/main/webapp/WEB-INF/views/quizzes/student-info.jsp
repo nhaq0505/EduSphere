@@ -39,7 +39,7 @@
                         <c:otherwise>Không giới hạn thời gian</c:otherwise>
                     </c:choose>
                 </span>
-                <span class="quiz-hero__chip">🔄 Tối đa ${quiz.maxAttempts} lần làm</span>
+                <span class="quiz-hero__chip">🔄 Không giới hạn lượt làm</span>
                 <c:if test="${quiz.passingScore != null}">
                     <span class="quiz-hero__chip">🎯 Điểm đạt: ${quiz.passingScore}%</span>
                 </c:if>
@@ -153,8 +153,26 @@
 
                     <c:set var="attemptCount" value="${fn:length(myAttempts)}"/>
                     <c:set var="hasInProgress" value="false"/>
+                    <c:set var="hasPassed" value="false"/>
+                    <c:set var="bestScore" value="0"/>
+                    <c:set var="bestScorePct" value="0"/>
                     <c:forEach var="a" items="${myAttempts}">
                         <c:if test="${a.status eq 'IN_PROGRESS'}"><c:set var="hasInProgress" value="true"/></c:if>
+                        <c:if test="${a.status eq 'SCORED' or a.status eq 'SUBMITTED'}">
+                            <c:if test="${a.maxScore != null and a.maxScore > 0 and a.score != null}">
+                                <c:set var="pct" value="${a.score / a.maxScore * 100}"/>
+                                <c:if test="${pct > bestScorePct}">
+                                    <c:set var="bestScorePct" value="${pct}"/>
+                                    <c:set var="bestScore" value="${a.score}"/>
+                                </c:if>
+                                <c:if test="${quiz.passingScore == null or pct >= quiz.passingScore}">
+                                    <c:set var="hasPassed" value="true"/>
+                                </c:if>
+                            </c:if>
+                            <c:if test="${quiz.passingScore == null and (a.maxScore == null or a.maxScore == 0)}">
+                                <c:set var="hasPassed" value="true"/>
+                            </c:if>
+                        </c:if>
                     </c:forEach>
 
                     <c:choose>
@@ -212,28 +230,70 @@
                             </c:forEach>
                         </c:when>
 
-                        <%-- 3. Đã hết lượt làm --%>
-                        <c:when test="${attemptCount >= quiz.maxAttempts}">
-                            <div class="quiz-notice-box quiz-notice-box--locked">
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <span style="font-size:1.2rem;">🔒</span>
+                        <%-- 3. Đã đạt yêu cầu bài kiểm tra --%>
+                        <c:when test="${hasPassed}">
+                            <div class="quiz-notice-box" style="background:#F0FDF4; border:1px solid #BBF7D0; color:#166534; padding:14px; border-radius:10px; margin-bottom:14px;">
+                                <div style="display:flex; align-items:flex-start; gap:10px;">
+                                    <span style="font-size:1.4rem; flex-shrink:0;">🎉</span>
                                     <div>
-                                        <strong>Đã hết số lượt làm bài</strong>
-                                        <div style="font-size:.82rem; margin-top:2px;">Bạn đã dùng hết ${quiz.maxAttempts} / ${quiz.maxAttempts} lượt làm cho bài kiểm tra này.</div>
+                                        <strong style="color:#15803D;">Bạn đã hoàn thành bài kiểm tra!</strong>
+                                        <div style="font-size:.84rem; margin-top:3px; color:#166534;">
+                                            Điểm cao nhất: <strong><fmt:formatNumber value="${bestScorePct}" maxFractionDigits="1"/>%</strong>
+                                            <c:if test="${quiz.passingScore != null}"> (Điểm yêu cầu: ${quiz.passingScore}%)</c:if>.
+                                        </div>
+                                        <div style="font-size:.8rem; margin-top:4px; color:#475569;">
+                                            Bạn có thể làm lại để cải thiện điểm số bất cứ lúc nào.
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <button class="quiz-btn quiz-btn--cta" disabled style="background:#CBD5E1; color:#64748B; cursor:not-allowed;">
-                                Đã hết lượt làm bài
-                            </button>
+                            <form method="post" action="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/start">
+                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                <button class="quiz-btn quiz-btn--primary quiz-btn--cta" type="submit"
+                                        onclick="return confirm('Bắt đầu làm lại bài kiểm tra? Kết quả cao hơn sẽ giúp bạn cải thiện thành tích.')">
+                                    🔄 Làm lại bài kiểm tra (Lần ${attemptCount + 1})
+                                </button>
+                            </form>
+                            <c:if test="${quiz.lesson != null}">
+                                <a href="${pageContext.request.contextPath}/courses/${courseId}/learn"
+                                   class="quiz-btn quiz-btn--outline quiz-btn--cta" style="margin-top:10px; text-decoration:none;">
+                                    📚 Tiếp tục học khóa học →
+                                </a>
+                            </c:if>
                         </c:when>
 
-                        <%-- 4. Đủ điều kiện và sẵn sàng làm bài --%>
+                        <%-- 4. Chưa đạt yêu cầu và đã làm bài trước đó --%>
+                        <c:when test="${attemptCount > 0}">
+                            <div class="quiz-notice-box" style="background:#FFFBEB; border:1px solid #FDE68A; color:#92400E; padding:14px; border-radius:10px; margin-bottom:14px;">
+                                <div style="display:flex; align-items:flex-start; gap:10px;">
+                                    <span style="font-size:1.4rem; flex-shrink:0;">⚠️</span>
+                                    <div>
+                                        <strong style="color:#B45309;">Chưa đạt điểm yêu cầu</strong>
+                                        <div style="font-size:.84rem; margin-top:3px; color:#92400E;">
+                                            Điểm cao nhất hiện tại: <strong><fmt:formatNumber value="${bestScorePct}" maxFractionDigits="1"/>%</strong>
+                                            <c:if test="${quiz.passingScore != null}"> (Cần tối thiểu ${quiz.passingScore}% để qua bài)</c:if>.
+                                        </div>
+                                        <div style="font-size:.8rem; margin-top:4px; color:#78350F;">
+                                            Bạn được làm lại không giới hạn cho tới khi đạt điểm. Cố lên nhé!
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <form method="post" action="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/start">
+                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                <button class="quiz-btn quiz-btn--primary quiz-btn--cta" type="submit"
+                                        onclick="return confirm('Bắt đầu làm bài kiểm tra lần ${attemptCount + 1}?')">
+                                    ▶ Làm lại bài kiểm tra (Lần ${attemptCount + 1})
+                                </button>
+                            </form>
+                        </c:when>
+
+                        <%-- 5. Lần đầu làm bài --%>
                         <c:otherwise>
-                            <div class="quiz-remaining-badge">
-                                Còn lại <strong>${quiz.maxAttempts - attemptCount}</strong> / ${quiz.maxAttempts} lần làm bài
+                            <div style="font-size:.84rem; color:#64748B; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                                <span>🔄</span> Không giới hạn số lần làm bài
                                 <c:if test="${quiz.timeLimitMinutes != null}">
-                                    <div style="font-size:.8rem; color:#64748B; margin-top:4px;">⏱ Thời gian làm: ${quiz.timeLimitMinutes} phút</div>
+                                    <span>· ⏱ ${quiz.timeLimitMinutes} phút</span>
                                 </c:if>
                             </div>
                             <form method="post" action="${pageContext.request.contextPath}/courses/${courseId}/quizzes/${quizId}/start">
