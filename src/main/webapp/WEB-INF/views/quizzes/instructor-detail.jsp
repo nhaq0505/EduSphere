@@ -41,7 +41,7 @@
         <c:if test="${not empty success}"><div class="ins-alert ins-alert--success">✅ <c:out value="${success}"/></div></c:if>
 
         <p>
-            Số lần làm tối đa: <strong>${quiz.maxAttempts}</strong>
+            Lượt làm bài: <strong>Không giới hạn</strong>
             <c:if test="${quiz.timeLimitMinutes != null}"> · Thời gian: <strong>${quiz.timeLimitMinutes} phút</strong></c:if>
         </p>
         <c:if test="${not empty quiz.description}"><p style="white-space:pre-wrap"><c:out value="${quiz.description}"/></p></c:if>

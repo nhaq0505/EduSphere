@@ -192,7 +192,7 @@
                 <h1 class="ins-page-head__title" style="margin:0 0 2px;"><c:out value="${quiz.title}"/></h1>
                 <p style="font-size:.85rem;color:#64748B;margin:0;">
                     <c:if test="${quiz.timeLimitMinutes != null}">⏱ ${quiz.timeLimitMinutes} phút · </c:if>
-                    🔄 Tối đa ${quiz.maxAttempts} lần làm ·
+                    🔄 Không giới hạn lượt làm ·
                     📊 ${fn:length(questions)} câu hỏi
                     <c:if test="${quiz.passingScore != null}"> · 🎯 Qua bài: ${quiz.passingScore}%</c:if>
                 </p>
@@ -548,9 +548,9 @@
                             </div>
                         </div>
 
-                        <%-- Thời gian --%>
+                        <%-- Thời gian & Điểm đạt --%>
                         <div class="qb-card">
-                            <p class="qb-card__title">⏱ Cài đặt thời gian</p>
+                            <p class="qb-card__title">⏱ Cài đặt thời gian & Điểm đạt</p>
                             <div class="qb-grid-2">
                                 <div class="qb-field">
                                     <label>Giới hạn thời gian (phút)</label>
@@ -560,29 +560,15 @@
                                     <p class="qb-hint">Ví dụ: 15, 30, 45, 60 phút. Để trống nếu không giới hạn.</p>
                                 </div>
                                 <div class="qb-field">
-                                    <label>Số lần làm tối đa</label>
-                                    <input class="qb-input" type="number" name="maxAttempts" min="1"
-                                           value="${quiz.maxAttempts != null ? quiz.maxAttempts : 1}">
-                                    <p class="qb-hint">Nhập 1 để chỉ cho phép làm 1 lần.</p>
-                                </div>
-                            </div>
-                            <div class="qb-field">
-                                <label>Thời điểm mở bài (để trống nếu mở ngay)</label>
-                                <input class="qb-input" type="datetime-local" name="startTime"
-                                       value="<c:if test='${quiz.startTime != null}'><c:out value='${quiz.startTime}'/></c:if>">
-                            </div>
-                        </div>
-
-                        <%-- Quy chế --%>
-                        <div class="qb-card">
-                            <p class="qb-card__title">🎯 Quy chế làm bài</p>
-                            <div class="qb-grid-2">
-                                <div class="qb-field">
                                     <label>Điểm đạt yêu cầu (%)</label>
                                     <input class="qb-input" type="number" name="passingScore"
                                            min="0" max="100" step="1"
                                            value="${quiz.passingScore}"
                                            placeholder="Để trống = không yêu cầu">
+                                    <p class="qb-hint">VD: 50 = phải đạt 50% tổng điểm mới tính hoàn thành. Học viên được làm lại không giới hạn cho tới khi đạt.</p>
+                                </div>
+                            </div>
+                        </div>
                                     <p class="qb-hint">VD: 50 = phải đạt 50% tổng điểm mới tính hoàn thành.</p>
                                 </div>
                                 <div>
@@ -644,8 +630,8 @@
                             </span>
                         </div>
                         <div class="qb-aside-stat">
-                            <span>Số lần làm</span>
-                            <span>${quiz.maxAttempts} lần</span>
+                            <span>Lượt làm bài</span>
+                            <span>Không giới hạn</span>
                         </div>
                         <c:if test="${quiz.passingScore != null}">
                             <div class="qb-aside-stat">
