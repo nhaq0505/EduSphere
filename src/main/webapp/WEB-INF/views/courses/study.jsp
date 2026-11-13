@@ -331,8 +331,19 @@
                            style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:#FAF5FF; border:1.5px solid #D8B4FE; color:#7E22CE; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
                             <span>❓</span> Danh sách Quiz của khóa học
                         </a>
-                        <a style="display:none">
-                        </a>
+                        <c:choose>
+                            <c:when test="${study.courseCompleted}">
+                                <a href="${pageContext.request.contextPath}/courses/${study.courseId}/certificate"
+                                   style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:linear-gradient(135deg,#0056d2,#1d4ed8); color:#ffffff; font-weight:700; text-decoration:none; border-radius:10px; box-shadow:0 4px 12px rgba(0,86,210,.25);">
+                                    <span>🎓</span> Xem Chứng chỉ khóa học
+                                </a>
+                            </c:when>
+                            <c:otherwise>
+                                <div style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:6px; font-size:.78rem; padding:8px 12px; background:#F8FAFC; border:1px dashed #CBD5E1; color:#475569; font-weight:600; border-radius:10px;">
+                                    <span>🎓</span> Hoàn thành 100% để nhận <strong>Chứng chỉ</strong>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
                         <div style="display:flex; gap:8px;">
                             <a href="${pageContext.request.contextPath}/courses/${study.courseId}/assignments"
                                style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; font-size:.82rem; padding:9px 10px; background:#EFF6FF; border:1.5px solid #BFDBFE; color:#2563EB; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
@@ -801,26 +812,39 @@
                             </div>
                         </c:if>
                     </div>
-                    <%-- ══ Banner Hoàn thành khóa học (chuyển về Dashboard xem giờ học) ══ --%>
+                    <%-- ══ Banner Nhận Chứng Chỉ & Xem Dashboard khi hoàn thành khóa học ══ --%>
                     <c:if test="${(study.courseCompleted or courseCompleted) and not study.previewMode}">
                         <div style="margin-top:20px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1.5px solid #60a5fa;border-radius:16px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-shadow:0 4px 16px rgba(37,99,235,.08);">
                             <div style="display:flex;align-items:center;gap:14px;">
                                 <div style="width:52px;height:52px;border-radius:14px;background:#0056d2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.75rem;flex-shrink:0;">
-                                    🎉
+                                    🎓
                                 </div>
                                 <div>
                                     <div style="font-size:1.05rem;font-weight:800;color:#1e3a8a;margin-bottom:3px;">
                                         Chúc mừng bạn đã hoàn thành khóa học!
                                     </div>
                                     <div style="font-size:.86rem;color:#334155;">
-                                        Tiến độ và tổng số giờ học của bạn đã được cập nhật trên Dashboard học viên.
+                                        Chứng chỉ điện tử của bạn đã sẵn sàng trong Kho chứng chỉ — bạn có thể xem hoặc tải ảnh chứng chỉ ngay bây giờ.
                                     </div>
                                 </div>
                             </div>
-                            <a href="${pageContext.request.contextPath}/student/dashboard"
-                               style="background:#0056d2;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-family:inherit;font-size:.9rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,86,210,.25);">
-                                📊 Xem Dashboard học tập →
-                            </a>
+                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/certificate/claim" style="margin:0;">
+                                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                    <button type="submit"
+                                            style="background:#0056d2;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,86,210,.25);">
+                                        🏅 Xem &amp; Nhận Chứng chỉ →
+                                    </button>
+                                </form>
+                                <a href="${pageContext.request.contextPath}/courses/${study.courseId}/certificate/download"
+                                   style="background:#ffffff;color:#0056d2;border:1.5px solid #0056d2;border-radius:10px;padding:10px 16px;font-family:inherit;font-size:.88rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                                    🖼️ Tải ảnh chứng chỉ
+                                </a>
+                                <a href="${pageContext.request.contextPath}/student/dashboard"
+                                   style="background:#f8fafc;color:#334155;border:1.5px solid #cbd5e1;border-radius:10px;padding:10px 16px;font-family:inherit;font-size:.88rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                                    📊 Dashboard
+                                </a>
+                            </div>
                         </div>
                     </c:if>
 
@@ -1170,13 +1194,13 @@
                                         </c:when>
                                         <%-- Bài cuối cùng của khóa học --%>
                                         <c:otherwise>
-                                            <a href="${pageContext.request.contextPath}/student/dashboard"
+                                            <a href="${pageContext.request.contextPath}/courses/${study.courseId}/certificate"
                                                id="rightQuizBtn"
                                                class="btn-quiz-cta ${isLessonTargetReached ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
                                                data-has-quiz="false"
-                                               data-target-url="${pageContext.request.contextPath}/student/dashboard">
-                                                <span id="rightQuizBtnIcon">📊</span>
-                                                <span id="rightQuizBtnLabel">Hoàn thành &amp; Xem Dashboard</span>
+                                               data-target-url="${pageContext.request.contextPath}/courses/${study.courseId}/certificate">
+                                                <span id="rightQuizBtnIcon">🎓</span>
+                                                <span id="rightQuizBtnLabel">Hoàn thành &amp; Nhận Chứng chỉ</span>
                                             </a>
                                         </c:otherwise>
                                     </c:choose>

@@ -8,6 +8,10 @@ import com.edusphere.service.course.CourseManagementService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,8 +19,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Controller
@@ -69,6 +75,45 @@ public class CertificateController {
     }
 
     /**
+     * Tải trực tiếp ảnh chứng chỉ (PNG độ phân giải cao) theo ID chứng chỉ
+     */
+    @GetMapping("/certificates/{certificateId}/download")
+    @ResponseBody
+    public ResponseEntity<byte[]> downloadCertificateImage(@PathVariable Integer certificateId,
+                                                           HttpServletRequest request) {
+        CertificateView cert = certificateService.getCertificateById(certificateId);
+        byte[] pngBytes = certificateService.renderCertificatePng(cert, buildBaseUrl(request));
+        String code = cert.getVerificationCode() != null ? cert.getVerificationCode() : String.valueOf(certificateId);
+        String filename = "Chung-chi-EduSphere-" + code + ".png";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.IMAGE_PNG);
+        headers.setContentDisposition(
+                ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build()
+        );
+        return ResponseEntity.ok().headers(headers).body(pngBytes);
+    }
+
+    /**
+     * Tải trực tiếp ảnh chứng chỉ của khóa học (tự động cấp nếu đã hoàn thành 100%)
+     */
+    @GetMapping("/courses/{courseId}/certificate/download")
+    public String downloadCourseCertificate(@PathVariable Integer courseId,
+                                            @AuthenticationPrincipal CustomUserDetails user,
+                                            RedirectAttributes flash) {
+        if (user == null) {
+            return "redirect:/login";
+        }
+        try {
+            CertificateView cert = certificateService.claimOrGetCertificate(user.getUserId(), courseId);
+            return "redirect:/certificates/" + cert.getCertificateId() + "/download";
+        } catch (CourseActionException ex) {
+            flash.addFlashAttribute("error", ex.getMessage());
+            return "redirect:/courses/" + courseId + "/learn";
+        }
+    }
+
+    /**
      * Trang xác thực chứng chỉ công khai qua mã Verification Code
      */
     @GetMapping("/certificates/verify/{verificationCode}")
@@ -104,7 +149,7 @@ public class CertificateController {
     }
 
     /**
-     * Học viên bấm nút "Nhận tín chỉ & Chứng chỉ" sau khi hoàn thành khóa học
+     * Học viên bấm nút "Nhận Chứng chỉ" sau khi hoàn thành khóa học
      */
     @PostMapping("/courses/{courseId}/certificate/claim")
     public String claimCertificate(@PathVariable Integer courseId,
@@ -116,8 +161,7 @@ public class CertificateController {
         try {
             CertificateView cert = certificateService.claimOrGetCertificate(user.getUserId(), courseId);
             flash.addFlashAttribute("success",
-                    "🎉 Chúc mừng! Bạn đã nhận được chứng chỉ hoàn thành khóa học và tích lũy thêm "
-                            + cert.getCreditsEarned() + " tín chỉ!");
+                    "🎉 Chúc mừng! Bạn đã nhận được chứng chỉ hoàn thành khóa học \"" + cert.getCourseTitle() + "\"!");
             return "redirect:/certificates/" + cert.getCertificateId();
         } catch (CourseActionException ex) {
             flash.addFlashAttribute("error", ex.getMessage());

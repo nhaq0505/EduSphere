@@ -632,6 +632,14 @@
                                     <span>▶ Bắt đầu học ngay</span>
                                     <span aria-hidden="true">→</span>
                                 </a>
+                                <c:if test="${not empty myCertificateId}">
+                                    <a class="cd-cta-btn cd-cta-btn--outline" href="${cp}/certificates/${myCertificateId}" style="border-color:#2563eb;color:#2563eb;font-weight:700;">
+                                        <span>🎓 Xem Chứng chỉ đạt được</span>
+                                    </a>
+                                    <a class="cd-cta-btn cd-cta-btn--outline" href="${cp}/certificates/${myCertificateId}/download" style="border-color:#059669;color:#059669;font-weight:700;">
+                                        <span>🖼️ Tải ảnh Chứng chỉ (PNG)</span>
+                                    </a>
+                                </c:if>
                                 <a class="cd-cta-btn cd-cta-btn--outline" href="${cp}/my-courses">
                                     <span>🔖 Xem khóa học của tôi</span>
                                 </a>

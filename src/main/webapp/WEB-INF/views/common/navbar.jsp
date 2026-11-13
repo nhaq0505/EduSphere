@@ -10,7 +10,8 @@
     <c:set var="currentUri" value="${pageContext.request.requestURI}"/>
 </c:if>
 <c:set var="isHome" value="${empty currentUri or currentUri == cp or currentUri == cp.concat('/') or fn:endsWith(currentUri, '/index.jsp')}"/>
-<c:set var="isCourses" value="${fn:contains(currentUri, '/courses') and not fn:contains(currentUri, '/my-courses')}"/>
+<c:set var="isCourses" value="${fn:contains(currentUri, '/courses') and not fn:contains(currentUri, '/my-courses') and not fn:contains(currentUri, '/certificate')}"/>
+<c:set var="isCertificates" value="${fn:contains(currentUri, '/certificate') or param.tab == 'certificates' or activeTab == 'certificates'}"/>
 <c:set var="isPlans" value="${fn:contains(currentUri, '/study/') or fn:contains(currentUri, '/planning')}"/>
 
 <header class="hn-header">
@@ -29,6 +30,7 @@
             <sec:authorize access="hasRole('STUDENT')">
                 <a class="hn-nav__link" href="${cp}/student/dashboard">Dashboard</a>
                 <a class="hn-nav__link" href="${cp}/my-courses">Khóa học của tôi</a>
+                <a class="hn-nav__link ${isCertificates ? 'hn-nav__link--active' : ''}" href="${cp}/certificates">Kho chứng chỉ</a>
             </sec:authorize>
             <sec:authorize access="hasRole('INSTRUCTOR')">
                 <a class="hn-nav__link" href="${cp}/instructor/courses">Giảng viên</a>
@@ -116,7 +118,7 @@
                                 </a>
                                 <a class="hn-user-dropdown__item" href="${cp}/certificates">
                                     <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M12 15l-2 5 4-2 4 2-2-5" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="9" r="6" stroke="currentColor" stroke-width="1.7"/></svg>
-                                    Kho tín chỉ &amp; Chứng chỉ
+                                    Kho chứng chỉ
                                 </a>
                             </sec:authorize>
                             <sec:authorize access="hasRole('INSTRUCTOR')">

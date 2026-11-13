@@ -801,25 +801,36 @@
             </div>
 
             <!-- Share & Download Buttons -->
-            <div class="cert-actions">
-                <button type="button" class="cert-btn cert-btn--primary" onclick="shareCertificate()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/>
-                        <polyline points="16 6 12 2 8 6"/>
-                        <line x1="12" y1="2" x2="12" y2="15"/>
-                    </svg>
-                    Share Certificate
-                </button>
-                <button type="button" class="cert-btn cert-btn--outline" onclick="window.print()">
+            <div class="cert-actions" style="flex-wrap:wrap;">
+                <a class="cert-btn cert-btn--primary"
+                   href="${cp}/certificates/${cert.certificateId}/download"
+                   download="Chung-chi-EduSphere-${cert.verificationCode}.png"
+                   onclick="showCustomToast('✅ Đang tải ảnh chứng chỉ (PNG) về máy...')">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                         <polyline points="7 10 12 15 17 10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    Download Certificate
+                    Tải ảnh chứng chỉ (PNG)
+                </a>
+                <button type="button" class="cert-btn cert-btn--outline" onclick="window.print()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 6 2 18 2 18 9"/>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                        <rect x="6" y="14" width="12" height="8"/>
+                    </svg>
+                    In / Lưu PDF
                 </button>
-                <a class="cert-btn cert-btn--outline" href="${cp}/my-courses?tab=certificates">
-                    ← Kho tín chỉ
+                <button type="button" class="cert-btn cert-btn--outline" onclick="shareCertificate()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/>
+                        <polyline points="16 6 12 2 8 6"/>
+                        <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                    Chia sẻ chứng chỉ
+                </button>
+                <a class="cert-btn cert-btn--outline" href="${cp}/certificates">
+                    ← Kho chứng chỉ
                 </a>
             </div>
         </div>
@@ -832,7 +843,7 @@
 function shareCertificate() {
     const verifyUrl = window.location.origin + '${cp}/certificates/verify/${cert.verificationCode}';
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(verifyUrl).then(showToast).catch(() => promptCopy(verifyUrl));
+        navigator.clipboard.writeText(verifyUrl).then(() => showCustomToast('✅ Đã sao chép đường dẫn xác thực chứng chỉ vào bộ nhớ tạm!')).catch(() => promptCopy(verifyUrl));
     } else {
         promptCopy(verifyUrl);
     }
@@ -840,8 +851,9 @@ function shareCertificate() {
 function promptCopy(url) {
     window.prompt('Sao chép liên kết xác thực chứng chỉ dưới đây:', url);
 }
-function showToast() {
+function showCustomToast(msg) {
     const t = document.getElementById('certToast');
+    if (msg) t.textContent = msg;
     t.style.display = 'block';
     setTimeout(() => { t.style.display = 'none'; }, 3200);
 }

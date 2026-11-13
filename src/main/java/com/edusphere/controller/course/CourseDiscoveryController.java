@@ -101,7 +101,7 @@ public class CourseDiscoveryController {
                         model.addAttribute("commentSort", sort);
                     }
                     if (certificateService != null && loggedIn && enrolled) {
-                        certificateService.findExistingCertificate(currentUserId, courseId)
+                        certificateService.issueCertificateIfEligible(currentUserId, courseId)
                                 .ifPresent(cert -> model.addAttribute("myCertificateId", cert.getCertificateId()));
                     }
                     return "courses/detail";

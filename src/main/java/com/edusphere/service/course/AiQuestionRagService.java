@@ -74,9 +74,23 @@ public class AiQuestionRagService {
             "gemini-flash-latest"
     );
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(20))
-            .build();
+    private volatile HttpClient httpClient;
+
+    private HttpClient getHttpClient() {
+        HttpClient client = this.httpClient;
+        if (client == null) {
+            synchronized (this) {
+                client = this.httpClient;
+                if (client == null) {
+                    client = HttpClient.newBuilder()
+                            .connectTimeout(Duration.ofSeconds(20))
+                            .build();
+                    this.httpClient = client;
+                }
+            }
+        }
+        return client;
+    }
 
     /**
      * Thực thi toàn bộ luồng RAG (Collect -> Chunk -> Retrieve Top-K -> Call LLM) để sinh danh sách câu hỏi nháp.
@@ -485,7 +499,7 @@ public class AiQuestionRagService {
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
                     .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            HttpResponse<String> response = getHttpClient().send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             lastStatus = response.statusCode();
             lastBody = response.body();
 
@@ -534,7 +548,7 @@ public class AiQuestionRagService {
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
                 .build();
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> response = getHttpClient().send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             log.warn("OpenAI/Groq API trả về HTTP {}: {}", response.statusCode(), response.body());
             throw new CourseActionException(HttpStatus.BAD_GATEWAY,

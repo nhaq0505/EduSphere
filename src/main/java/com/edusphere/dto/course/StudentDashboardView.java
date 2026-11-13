@@ -19,6 +19,8 @@ public class StudentDashboardView {
     private final int enrolledCoursesCount;
     private final int completedCoursesCount;
     private final int inProgressCoursesCount;
+    private final int certificatesCount;
+    private final List<CertificateView> certificates;
 
     private final boolean hasRatings;
     private final String averageRatingFormatted;
@@ -46,5 +48,6 @@ public class StudentDashboardView {
         private final String studiedHoursFormatted;
         private final String targetHoursFormatted;
         private final boolean completed;
+        private final Integer certificateId;
     }
 }

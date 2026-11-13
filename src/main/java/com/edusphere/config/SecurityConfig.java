@@ -87,7 +87,7 @@ public class SecurityConfig {
                     "/uploads/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/courses", "/courses/{courseId}").permitAll()
-                .requestMatchers(HttpMethod.GET, "/certificates/verify/**", "/certificates/{certificateId}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/certificates/verify/**", "/certificates/{certificateId}", "/certificates/{certificateId}/download").permitAll()
                 .requestMatchers(HttpMethod.POST, "/payments/payos/webhook").permitAll()
                 .requestMatchers(HttpMethod.POST, "/webhooks/bunny").permitAll()
                 // Ghi danh & Vào học: hỗ trợ Học viên, Giảng viên (trải nghiệm khóa học) & Quản trị viên
