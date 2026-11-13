@@ -8,7 +8,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Khóa học &amp; Kho tín chỉ của tôi — EduSphere</title>
+    <title>Khóa học &amp; Kho chứng chỉ của tôi — EduSphere</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -194,9 +194,9 @@
             border-radius: 50%;
             border: 1.5px solid #475569;
             background: #ffffff;
-            font-size: 8px;
+            font-size: 9px;
             font-weight: 800;
-            color: #1e293b;
+            color: #0F7DD8;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -205,21 +205,22 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 0.62rem;
+            font-size: 0.72rem;
             font-weight: 800;
-            color: #00274c;
-            letter-spacing: 0.05em;
+            color: #0F7DD8;
+            letter-spacing: -0.01em;
         }
         .cb-card__preview-brand span.box {
-            background: #00274c;
-            color: #ffcb05;
-            width: 16px;
-            height: 16px;
+            background: #E8F4FD;
+            border: 1px solid #cfe8fc;
+            color: #0F7DD8;
+            width: 20px;
+            height: 20px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 2px;
-            font-size: 0.6rem;
+            border-radius: 5px;
+            font-size: 0.72rem;
         }
         .cb-card__preview-course {
             font-size: 0.72rem;
@@ -457,7 +458,6 @@
                             <c:if test="${not course.completed and course.enrollmentStatus == 'ACTIVE'}">
                                 <article class="mc-card">
                                     <div class="mc-card__thumb">
-                                        <span class="mc-card__credit-pill">🎓 <c:out value="${course.credits}"/> Tín chỉ</span>
                                         <span class="mc-card__thumb-icon">📖</span>
                                         <span class="mc-card__status mc-card__status--active">▶ Đang học</span>
                                     </div>
@@ -502,7 +502,7 @@
                     <div class="mc-empty">
                         <div class="mc-empty__icon">🎓</div>
                         <h2>Chưa có khóa học nào hoàn thành</h2>
-                        <p>Hoàn thành 100% các bài giảng trong khóa học để nhận tín chỉ và chứng chỉ điện tử.</p>
+                        <p>Hoàn thành 100% các bài giảng trong khóa học để nhận chứng chỉ điện tử.</p>
                     </div>
                 </c:when>
                 <c:otherwise>
@@ -511,7 +511,7 @@
                             <c:if test="${course.completed}">
                                 <article class="mc-card">
                                     <div class="mc-card__thumb">
-                                        <span class="mc-card__credit-pill">🎓 +<c:out value="${course.credits}"/> Tín chỉ</span>
+                                        <span class="mc-card__credit-pill">🎓 1 Chứng chỉ</span>
                                         <span class="mc-card__thumb-icon">🏆</span>
                                         <span class="mc-card__status mc-card__status--done">✅ Hoàn thành</span>
                                     </div>
@@ -525,7 +525,7 @@
                                         <div class="mc-card__progress-wrap">
                                             <div class="mc-card__progress-head">
                                                 <span>Đã hoàn thành 100%</span>
-                                                <span>+<c:out value="${course.credits}"/> Tín chỉ</span>
+                                                <span>1 Chứng chỉ</span>
                                             </div>
                                             <div class="mc-card__progress-bar">
                                                 <div class="mc-card__progress-fill" style="width:100%"></div>
@@ -588,7 +588,6 @@
                         <c:forEach var="course" items="${courses}">
                             <article class="mc-card">
                                 <div class="mc-card__thumb">
-                                    <span class="mc-card__credit-pill">🎓 <c:out value="${course.credits}"/> Tín chỉ</span>
                                     <span class="mc-card__thumb-icon">📖</span>
                                     <c:choose>
                                         <c:when test="${course.completed}">
@@ -676,11 +675,11 @@
                                 <a class="cb-card__preview" href="${cp}/certificates/${cert.certificateId}" title="Xem chi tiết chứng chỉ">
                                     <div class="cb-card__preview-inner">
                                         <div class="cb-card__preview-ribbon">
-                                            <div class="cb-card__preview-seal">E</div>
+                                            <div class="cb-card__preview-seal">🎓</div>
                                         </div>
                                         <div class="cb-card__preview-brand">
-                                            <span class="box">E</span>
-                                            <span>EDUSPHERE ACADEMY</span>
+                                            <span class="box">🎓</span>
+                                            <span>EduSphere</span>
                                         </div>
                                         <div class="cb-card__preview-course">
                                             <c:out value="${cert.courseTitle}"/>

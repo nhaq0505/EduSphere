@@ -381,7 +381,7 @@ public class CertificateService {
             list.add("Nắm vững kiến thức nền tảng và cốt lõi của " + title);
             list.add("Vận dụng kỹ năng thực hành vào bài tập và dự án thực tế");
             list.add("Phân tích, đánh giá và giải quyết bài toán chuyên môn một cách hệ thống");
-            list.add("Hoàn thành đầy đủ chuẩn đầu ra học phần tích lũy tín chỉ EduSphere");
+            list.add("Hoàn thành đầy đủ chuẩn đầu ra khóa học trên hệ thống EduSphere");
         }
         return list;
     }
@@ -493,24 +493,13 @@ public class CertificateService {
             // Chữ COURSE CERTIFICATE trên Ribbon
             g.setColor(new Color(0x37, 0x41, 0x51));
             g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
-            drawCenteredString(g, "COURSE", ribX + ribW / 2, ribY + 86);
-            drawCenteredString(g, "CERTIFICATE", ribX + ribW / 2, ribY + 120);
-
-            // Huy hiệu VERIFIED trên Ribbon
-            int pillW = 210;
-            int pillH = 40;
-            int pillX = ribX + (ribW - pillW) / 2;
-            int pillY = ribY + 155;
-            g.setColor(new Color(0x1E, 0x3A, 0x8A));
-            g.fillRoundRect(pillX, pillY, pillW, pillH, 40, 40);
-            g.setColor(new Color(0xFD, 0xE0, 0x47));
-            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
-            drawCenteredString(g, "★ VERIFIED ★", ribX + ribW / 2, pillY + 26);
+            drawCenteredString(g, "COURSE", ribX + ribW / 2, ribY + 96);
+            drawCenteredString(g, "CERTIFICATE", ribX + ribW / 2, ribY + 132);
 
             // Con dấu tròn (Circular Seal)
             int sealR = 112;
             int sealCx = ribX + ribW / 2;
-            int sealCy = ribY + 370;
+            int sealCy = ribY + 320;
             g.setColor(Color.WHITE);
             g.fillOval(sealCx - sealR, sealCy - sealR, sealR * 2, sealR * 2);
 
@@ -531,7 +520,7 @@ public class CertificateService {
             g.drawLine(sealCx - 78, sealCy - 20, sealCx + 78, sealCy - 20);
             g.drawLine(sealCx - 78, sealCy + 22, sealCx + 78, sealCy + 22);
 
-            g.setColor(new Color(0x11, 0x18, 0x27));
+            g.setColor(new Color(0x0F, 0x7D, 0xD8));
             g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
             drawCenteredString(g, "EduSphere", sealCx, sealCy + 10);
 
@@ -543,21 +532,43 @@ public class CertificateService {
             int leftX = 115;
             int maxContentW = 1130;
 
-            // Thương hiệu EduSphere Academy
-            g.setColor(new Color(0x00, 0x27, 0x4C));
-            g.fillRoundRect(leftX, 115, 76, 76, 10, 10);
-            g.setColor(new Color(0xFF, 0xCB, 0x05));
-            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 46));
-            drawCenteredString(g, "E", leftX + 38, 169);
+            // Thương hiệu EduSphere đồng bộ với Logo website (#E8F4FD nền + mũ tốt nghiệp + chữ #0F7DD8)
+            g.setColor(new Color(0xE8, 0xF4, 0xFD));
+            g.fillRoundRect(leftX, 115, 76, 76, 18, 18);
+            g.setColor(new Color(0xCF, 0xE8, 0xFC));
+            g.setStroke(new BasicStroke(2f));
+            g.drawRoundRect(leftX, 115, 76, 76, 18, 18);
 
-            g.setColor(new Color(0x00, 0x27, 0x4C));
-            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
-            g.drawString("EDUSPHERE ACADEMY", leftX + 98, 148);
+            // Vẽ biểu tượng mũ tốt nghiệp (🎓) bên trong ô logo
+            int capCx = leftX + 38;
+            int capCy = 150;
+            Polygon capTop = new Polygon(
+                    new int[]{capCx, capCx + 24, capCx, capCx - 24},
+                    new int[]{capCy - 14, capCy - 3, capCy + 8, capCy - 3},
+                    4
+            );
+            g.setColor(new Color(0x1E, 0x29, 0x3B));
+            g.fillPolygon(capTop);
+            Polygon capBase = new Polygon(
+                    new int[]{capCx - 13, capCx + 13, capCx + 11, capCx, capCx - 11},
+                    new int[]{capCy + 4, capCy + 4, capCy + 16, capCy + 20, capCy + 16},
+                    5
+            );
+            g.setColor(new Color(0x33, 0x41, 0x55));
+            g.fillPolygon(capBase);
+            g.setColor(new Color(0xF5, 0x9E, 0x0B));
+            g.setStroke(new BasicStroke(2.5f));
+            g.drawLine(capCx + 18, capCy, capCx + 18, capCy + 15);
+            g.fillOval(capCx + 15, capCy + 14, 6, 6);
+
+            g.setColor(new Color(0x0F, 0x7D, 0xD8));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 34));
+            g.drawString("EduSphere", leftX + 96, 150);
 
             String catUpper = (cert.getCategoryName() != null ? cert.getCategoryName() : "CHUYÊN NGÀNH").toUpperCase();
             g.setColor(new Color(0x64, 0x74, 0x8B));
             g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 17));
-            g.drawString(catUpper + " • ONLINE EDUCATION PLATFORM", leftX + 98, 178);
+            g.drawString(catUpper + " • ONLINE EDUCATION PLATFORM", leftX + 96, 178);
 
             // Ngày cấp
             g.setColor(new Color(0x6B, 0x72, 0x80));
