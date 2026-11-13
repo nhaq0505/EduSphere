@@ -492,23 +492,12 @@
                                            action="${pageContext.request.contextPath}/instructor/courses/${course.courseId}/lessons/${lesson.lessonId}/materials"
                                            htmlEscape="true">
                                     <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                    <div class="ins-form-grid" style="margin-bottom:16px">
-                                        <div class="ins-field">
-                                            <label for="mat-title">Tên tài liệu / Tiêu đề file <span style="color:#EF4444">*</span></label>
-                                            <form:input path="title" id="mat-title" maxlength="255"
-                                                        placeholder="VD: Slide bài giảng (PDF), Source code mẫu (.zip)..."/>
-                                            <form:errors path="title" cssClass="ins-field__error"/>
-                                        </div>
-                                        <div class="ins-field">
-                                            <label for="mat-type">Loại tài liệu <span style="color:#EF4444">*</span></label>
-                                            <form:select path="type" id="mat-type">
-                                                <form:option value="" label="Chọn loại"/>
-                                                <form:option value="DOCUMENT" label="📄 Tài liệu (PDF, Word, Slides, ZIP)"/>
-                                                <form:option value="LINK"     label="🔗 Liên kết ngoài / GitHub"/>
-                                                <form:option value="VIDEO"    label="🎬 Video bổ trợ"/>
-                                            </form:select>
-                                            <form:errors path="type" cssClass="ins-field__error"/>
-                                        </div>
+                                    <input type="hidden" name="type" id="mat-type" value="DOCUMENT">
+                                    <div class="ins-field" style="margin-bottom:16px">
+                                        <label for="mat-title">Tên tài liệu / Tiêu đề file <span style="color:#EF4444">*</span></label>
+                                        <form:input path="title" id="mat-title" maxlength="255"
+                                                    placeholder="VD: Slide bài giảng (PDF), Source code mẫu (.zip)..."/>
+                                        <form:errors path="title" cssClass="ins-field__error"/>
                                     </div>
                                     <div class="ins-field">
                                         <label for="mat-url">Đường dẫn URL hoặc Tải từ máy tính <span style="color:#EF4444">*</span></label>

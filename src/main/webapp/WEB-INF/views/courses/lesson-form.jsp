@@ -7,7 +7,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bước 3 & 4: Thiết lập Bài học & Cấu hình nâng cao — EduSphere</title>
+    <title>Thiết lập Bài học — EduSphere</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/instructor.css">
@@ -80,11 +80,11 @@
                 <div class="ins-form-card__eyebrow">📚 Khóa học: <c:out value="${course.title}"/></div>
                 <h1>
                     <c:choose>
-                        <c:when test="${empty lessonId}">Thêm bài học mới (Bước 3 & 4)</c:when>
+                        <c:when test="${empty lessonId}">Thêm bài học mới</c:when>
                         <c:otherwise>Chỉnh sửa bài học</c:otherwise>
                     </c:choose>
                 </h1>
-                <p>Chọn loại nội dung (Video, Văn bản, Bài tập), nhập tài nguyên học tập và cấu hình điều kiện truy cập.</p>
+                <p>Chọn loại nội dung (Video, Văn bản, Bài tập) và nhập tài nguyên học tập cho bài học.</p>
             </div>
             <div class="ins-form-card__body">
                 <c:if test="${course.status eq 'PUBLISHED' or course.status eq 'APPROVED'}">
@@ -268,22 +268,11 @@
                             </div>
                         </c:if>
 
-                        <div class="ins-form-grid" style="margin-bottom:16px;">
-                            <div class="ins-field">
-                                <label for="mat-title">Tên tài liệu / Tiêu đề file</label>
-                                <form:input path="materialTitle" id="mat-title" maxlength="255"
-                                            placeholder="VD: Slide bài giảng (PDF), Source code mẫu (.zip)..."/>
-                                <span class="ins-field__hint">Để trống sẽ tự động lấy theo tên file bạn tải lên.</span>
-                            </div>
-                            <div class="ins-field">
-                                <label for="mat-type">Loại tài liệu</label>
-                                <form:select path="materialType" id="mat-type">
-                                    <form:option value="" label="Chọn loại"/>
-                                    <form:option value="DOCUMENT" label="📄 Tài liệu (PDF, Word, Slides, ZIP)"/>
-                                    <form:option value="LINK"     label="🔗 Liên kết ngoài / GitHub"/>
-                                    <form:option value="VIDEO"    label="🎬 Video bổ trợ"/>
-                                </form:select>
-                            </div>
+                        <div class="ins-field" style="margin-bottom:16px;">
+                            <label for="mat-title">Tên tài liệu / Tiêu đề file</label>
+                            <form:input path="materialTitle" id="mat-title" maxlength="255"
+                                        placeholder="VD: Slide bài giảng (PDF), Source code mẫu (.zip)..."/>
+                            <span class="ins-field__hint">Để trống sẽ tự động lấy theo tên file bạn tải lên.</span>
                         </div>
 
                         <div class="ins-field">
@@ -301,54 +290,6 @@
 
                             <div id="matStatus" class="upload-status" style="margin-top:6px;"></div>
                             <span class="ins-field__hint">Hỗ trợ tải trực tiếp tệp từ máy tính hoặc dán link Google Drive, Dropbox, GitHub... Tài liệu sẽ được lưu cùng bài học.</span>
-                        </div>
-                    </div>
-
-                    <c:if test="${not empty lessonId}">
-                        <div class="ins-field" style="max-width:220px; margin-top:16px;">
-                            <label for="orderIndex">Vị trí bài học trong khóa</label>
-                            <form:input path="orderIndex" id="orderIndex" type="number"
-                                        min="1" max="${maxOrder}"/>
-                            <span class="ins-field__hint">Từ 1 đến ${maxOrder}</span>
-                            <form:errors path="orderIndex" cssClass="ins-field__error"/>
-                        </div>
-                    </c:if>
-
-                    <!-- Bước 4: Cấu hình Nâng cao (Lesson Settings) -->
-                    <div class="advanced-box">
-                        <div class="advanced-box__title">⚙️ Bước 4: Cấu hình Nâng cao cho Bài học</div>
-
-                        <div class="ins-field" style="margin-bottom:14px;">
-                            <label class="switch-label">
-                                <form:checkbox path="isPreview" id="isPreview"/>
-                                <span>👁️ Cho phép xem trước miễn phí (Free Preview) trước khi mua khóa học</span>
-                            </label>
-                            <span class="ins-field__hint" style="margin-left:26px;">Học viên chưa đăng ký/mua khóa học vẫn có thể xem bài này để trải nghiệm chất lượng giảng dạy.</span>
-                        </div>
-
-                        <div class="ins-form-grid" style="margin-top:14px;">
-                            <div class="ins-field">
-                                <label for="unlockDaysAfterEnroll">⏳ Mở khóa tuần tự (Drip Content - Số ngày sau ghi danh)</label>
-                                <form:input path="unlockDaysAfterEnroll" id="unlockDaysAfterEnroll" type="number" min="0" placeholder="VD: 3"/>
-                                <span class="ins-field__hint">Bỏ trống hoặc nhập 0 nếu mở ngay lập tức khi đăng ký.</span>
-                            </div>
-
-                            <div class="ins-field">
-                                <label for="prerequisiteLessonId">🔗 Điều kiện tiên quyết (Prerequisite Lesson)</label>
-                                <form:select path="prerequisiteLessonId" id="prerequisiteLessonId">
-                                    <form:option value="" label="-- Không yêu cầu bài trước --"/>
-                                    <c:forEach var="exist" items="${existingLessons}">
-                                        <form:option value="${exist.lessonId}" label="Bài ${exist.orderIndex}: ${exist.title}"/>
-                                    </c:forEach>
-                                </form:select>
-                                <span class="ins-field__hint">Học viên phải hoàn thành bài này trước khi mở bài học hiện tại.</span>
-                            </div>
-                        </div>
-
-                        <div class="ins-field" style="margin-top:14px;">
-                            <label for="instructorNotes">🗒️ Ghi chú riêng cho Giảng viên (Instructor Notes)</label>
-                            <form:textarea path="instructorNotes" id="instructorNotes" rows="2"
-                                           placeholder="Ghi chú kế hoạch giảng dạy, câu hỏi thảo luận, tài liệu tham khảo nội bộ (học viên không thấy)..."/>
                         </div>
                     </div>
 
@@ -579,8 +520,9 @@ function uploadMaterialFile(inputElem) {
             if (!document.getElementById('mat-title').value.trim()) {
                 document.getElementById('mat-title').value = data.originalName;
             }
-            if (!document.getElementById('mat-type').value) {
-                document.getElementById('mat-type').value = 'DOCUMENT';
+            var matTypeElem = document.getElementById('mat-type');
+            if (matTypeElem && !matTypeElem.value) {
+                matTypeElem.value = 'DOCUMENT';
             }
             var origInput = document.getElementById('mat-original-name');
             if (origInput) origInput.value = data.originalName;
