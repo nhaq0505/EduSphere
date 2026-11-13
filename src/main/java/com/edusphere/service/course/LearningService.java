@@ -291,6 +291,7 @@ public class LearningService {
         result.put("quizUnlocked", Boolean.TRUE.equals(saved.getQuizUnlocked()));
         result.put("totalWatchedSeconds", totalWatchedSecs);
         result.put("effectiveDuration", effectiveDuration);
+        result.put("minWatchPercent", minWatchReq);
         return result;
     }
 

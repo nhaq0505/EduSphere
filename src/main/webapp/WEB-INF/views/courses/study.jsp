@@ -112,11 +112,12 @@
 <body>
 <jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 
+<c:set var="targetMinWatchPct" value="${study.currentMinWatchPercent > 0 ? study.currentMinWatchPercent : 80}"/>
 <c:set var="curWatchPct" value="${study.currentWatchPercent >= 0 ? study.currentWatchPercent : 0}"/>
 <c:set var="hasVideo" value="${not empty study.currentVideoUrl and fn:trim(study.currentVideoUrl) ne ''}"/>
 <c:set var="hasLessonQuizzes" value="${not empty study.currentLessonQuizzes}"/>
-<c:set var="isLessonTargetReached" value="${(not hasVideo) or (curWatchPct >= 80) or study.currentLesson.completed or study.currentQuizUnlocked}"/>
-<c:set var="isQuizUnlocked" value="${(not hasVideo) or study.currentQuizUnlocked or (curWatchPct >= 80)}"/>
+<c:set var="isLessonTargetReached" value="${(not hasVideo) or (curWatchPct >= targetMinWatchPct) or study.currentLesson.completed}"/>
+<c:set var="isQuizUnlocked" value="${(not hasVideo) or study.currentQuizUnlocked or (curWatchPct >= targetMinWatchPct)}"/>
 
 <div class="study-page-wrapper"
      id="studyApp"
@@ -126,6 +127,7 @@
      data-video-status="<c:out value='${study.currentVideoStatus}'/>"
      data-last-pos="${study.currentLastPosition}"
      data-watch-pct="${curWatchPct}"
+     data-min-watch-pct="${targetMinWatchPct}"
      data-quiz-unlocked="${isQuizUnlocked}"
      data-has-quiz="${hasLessonQuizzes}"
      data-next-lesson-url="<c:if test='${not empty study.nextLessonId}'>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}</c:if>"
@@ -344,16 +346,6 @@
                                 </div>
                             </c:otherwise>
                         </c:choose>
-                        <div style="display:flex; gap:8px;">
-                            <a href="${pageContext.request.contextPath}/courses/${study.courseId}/assignments"
-                               style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; font-size:.82rem; padding:9px 10px; background:#EFF6FF; border:1.5px solid #BFDBFE; color:#2563EB; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
-                                <span>📝</span> Bài tập
-                            </a>
-                            <a href="${pageContext.request.contextPath}/courses/${study.courseId}/results"
-                               style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; font-size:.82rem; padding:9px 10px; background:#ECFDF5; border:1.5px solid #A7F3D0; color:#059669; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
-                                <span>📊</span> Kết quả
-                            </a>
-                        </div>
                         <a href="${pageContext.request.contextPath}/courses/${study.courseId}#course-reviews"
                            style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:#FFFBEB; border:1.5px solid #FDE68A; color:#B45309; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
                             <span>⭐</span> Đánh giá khóa học
@@ -412,10 +404,16 @@
                                     <div class="watch-progress-subtitle ${isQuizUnlocked ? 'unlocked-text' : ''}" id="watchProgressSubtitle">
                                         <c:choose>
                                             <c:when test="${isQuizUnlocked}">
-                                                🎉 Chúc mừng! Bạn đã mở khóa bài kiểm tra
+                                                <c:choose>
+                                                    <c:when test="${hasLessonQuizzes}">🎉 Chúc mừng! Bạn đã mở khóa bài kiểm tra</c:when>
+                                                    <c:otherwise>🎉 Chúc mừng! Bạn đã hoàn thành chỉ tiêu video</c:otherwise>
+                                                </c:choose>
                                             </c:when>
                                             <c:otherwise>
-                                                Bạn cần xem ít nhất 80% video để mở khóa bài kiểm tra
+                                                <c:choose>
+                                                    <c:when test="${hasLessonQuizzes}">Bạn cần xem ít nhất ${targetMinWatchPct}% video để mở khóa bài kiểm tra</c:when>
+                                                    <c:otherwise>Bạn cần xem ít nhất ${targetMinWatchPct}% video để hoàn thành bài học</c:otherwise>
+                                                </c:choose>
                                             </c:otherwise>
                                         </c:choose>
                                     </div>
@@ -687,7 +685,7 @@
                         <c:if test="${hasExercises}">
                             <div class="tab-panel" id="panel-exercise">
                                 <c:set var="isVideoLesson" value="${hasVideo}"/>
-                                <c:set var="tabQuizUnlocked" value="${not isVideoLesson or study.currentQuizUnlocked or curWatchPct >= 80 or study.previewMode}"/>
+                                <c:set var="tabQuizUnlocked" value="${not isVideoLesson or study.currentQuizUnlocked or curWatchPct >= targetMinWatchPct or study.previewMode}"/>
 
                                 <c:choose>
                                     <c:when test="${isVideoLesson and not tabQuizUnlocked and not study.previewMode}">
@@ -695,8 +693,8 @@
                                             <div style="font-size: 2.4rem; margin-bottom: 10px;">🔒</div>
                                             <p style="font-weight: 800; font-size: 1.05rem; margin: 0 0 6px; color:#991B1B;">Bài kiểm tra đang bị khóa</p>
                                             <p style="font-size: 0.88rem; margin: 0 0 16px; color:#4B5563;">
-                                                Bạn cần xem ít nhất <strong>80%</strong> video bài giảng để mở khóa bài kiểm tra.
-                                                <br><span style="color:#2563EB;font-weight:700;">Tiến độ hiện tại: <span id="gateWatchPct">${curWatchPct}</span>% / 80%</span>
+                                                Bạn cần xem ít nhất <strong>${targetMinWatchPct}%</strong> video bài giảng để mở khóa bài kiểm tra.
+                                                <br><span style="color:#2563EB;font-weight:700;">Tiến độ hiện tại: <span id="gateWatchPct">${curWatchPct}</span>% / <span id="gateTargetPct">${targetMinWatchPct}</span>%</span>
                                             </p>
                                             <button class="study-btn study-btn--outline" onclick="switchTab('lesson')">← Quay lại xem video</button>
                                         </div>
@@ -1116,8 +1114,8 @@
                                     </c:when>
                                     <c:otherwise>
                                         <c:choose>
-                                            <c:when test="${hasLessonQuizzes}">Xem ít nhất 80% video để mở khóa bài kiểm tra</c:when>
-                                            <c:otherwise>Xem ít nhất 80% video để hoàn thành bài học</c:otherwise>
+                                            <c:when test="${hasLessonQuizzes}">Xem ít nhất ${targetMinWatchPct}% video để mở khóa bài kiểm tra</c:when>
+                                            <c:otherwise>Xem ít nhất ${targetMinWatchPct}% video để hoàn thành bài học</c:otherwise>
                                         </c:choose>
                                     </c:otherwise>
                                 </c:choose>
@@ -1144,7 +1142,7 @@
                                             Chúc mừng bạn đã mở khóa bài Quiz! Bạn có thể làm bài ngay bây giờ.
                                         </c:when>
                                         <c:otherwise>
-                                            Bạn chỉ cần xem thêm ${80 - curWatchPct > 0 ? (80 - curWatchPct) : 0}% nữa là có thể làm bài Quiz rồi!
+                                            Bạn chỉ cần xem thêm ${targetMinWatchPct - curWatchPct > 0 ? (targetMinWatchPct - curWatchPct) : 0}% nữa là có thể làm bài Quiz rồi!
                                         </c:otherwise>
                                     </c:choose>
                                 </c:when>
@@ -1154,7 +1152,7 @@
                                             Chúc mừng bạn đã hoàn thành bài học. Bạn có thể học bài tiếp theo.
                                         </c:when>
                                         <c:otherwise>
-                                            Bạn chỉ cần xem thêm ${80 - curWatchPct > 0 ? (80 - curWatchPct) : 0}% nữa là có thể học bài tiếp theo rồi!
+                                            Bạn chỉ cần xem thêm ${targetMinWatchPct - curWatchPct > 0 ? (targetMinWatchPct - curWatchPct) : 0}% nữa là có thể học bài tiếp theo rồi!
                                         </c:otherwise>
                                     </c:choose>
                                 </c:otherwise>
@@ -1185,7 +1183,7 @@
                                             <a href="<c:choose><c:when test='${isLessonTargetReached}'>${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}</c:when><c:otherwise>javascript:void(0)</c:otherwise></c:choose>"
                                                id="rightQuizBtn"
                                                class="btn-quiz-cta ${isLessonTargetReached ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
-                                               ${isLessonTargetReached ? '' : 'aria-disabled="true" onclick="alert(\'🔒 Bạn cần xem ít nhất 80% video để hoàn thành bài học trước khi sang bài tiếp theo.\'); return false;"'}
+                                               ${isLessonTargetReached ? '' : 'aria-disabled="true" onclick="alert(\'🔒 Bạn cần xem ít nhất ' += targetMinWatchPct += '% video để hoàn thành bài học trước khi sang bài tiếp theo.\'); return false;"'}
                                                data-has-quiz="false"
                                                data-target-url="${pageContext.request.contextPath}/courses/${study.courseId}/lessons/${study.nextLessonId}">
                                                 <span id="rightQuizBtnIcon">${isLessonTargetReached ? '▶' : '🔒'}</span>
