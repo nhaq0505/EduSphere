@@ -644,7 +644,8 @@
     </c:if>
     <c:if test="${verifiedBanner}">
         <div class="cert-alert cert-alert--success">
-            <span>✅ Chứng chỉ xác thực hợp lệ trên hệ thống đào tạo trực tuyến EduSphere (Mã xác thực: <strong><c:out value="${cert.verificationCode}"/></strong>).</span>
+            <span aria-hidden="true" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;">✅</span>
+            <span>Chứng chỉ xác thực hợp lệ trên hệ thống đào tạo trực tuyến EduSphere (Mã xác thực: <strong><c:out value="${cert.verificationCode}"/></strong>).</span>
         </div>
     </c:if>
 
@@ -671,7 +672,8 @@
                     <h2>Completed by <c:out value="${cert.studentName}"/></h2>
                     <p class="cert-verified-meta"><c:out value="${cert.formattedIssuedDateEn}"/></p>
                     <div class="cert-verified-credits">
-                        🎓 1 Chứng chỉ tích lũy ( Certificate )
+                        <span aria-hidden="true" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;">🎓</span>
+                        <span>1 Chứng chỉ tích lũy ( Certificate )</span>
                     </div>
                     <p class="cert-verified-meta"><c:out value="${cert.totalHours}"/> hours (approximately)</p>
                     <p class="cert-verified-meta">Grade Achieved: <c:out value="${cert.gradePercent}"/>%</p>
