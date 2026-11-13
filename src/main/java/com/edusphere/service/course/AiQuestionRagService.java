@@ -56,13 +56,12 @@ public class AiQuestionRagService {
     private static final int CHUNK_SIZE = 750;
     private static final int CHUNK_OVERLAP = 120;
     private static final int TOP_K_CHUNKS = 6;
-    private static final String HARDCODED_GEMINI_API_KEY = "AIzaSyD1oB9-36bcsb463dN8q7JFSl5tMVvdM04";
 
     private final CourseRepository courseRepository;
     private final LessonRepository lessonRepository;
     private final ObjectMapper objectMapper;
 
-    @Value("${ai.rag.api-key:AIzaSyD1oB9-36bcsb463dN8q7JFSl5tMVvdM04}")
+    @Value("${ai.rag.api-key:}")
     private String defaultApiKey;
 
     @Value("${ai.rag.model:gemini-2.5-flash}")
@@ -491,10 +490,12 @@ public class AiQuestionRagService {
         String lastBody = "";
 
         for (String candidateModel : candidateModels) {
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + candidateModel + ":generateContent?key=" + apiKey;
+            // Gửi khóa qua header thay vì query string để khóa không lọt vào log hay thông báo lỗi
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + candidateModel + ":generateContent";
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Content-Type", "application/json; charset=UTF-8")
+                    .header("x-goog-api-key", apiKey)
                     .timeout(Duration.ofSeconds(60))
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
                     .build();
@@ -518,8 +519,23 @@ public class AiQuestionRagService {
             }
         }
 
-        throw new CourseActionException(HttpStatus.BAD_GATEWAY,
-                "Gemini API trả về lỗi (HTTP " + lastStatus + "). Vui lòng kiểm tra lại API Key hoặc thử lại sau.");
+        throw new CourseActionException(HttpStatus.BAD_GATEWAY, geminiErrorMessage(lastStatus, lastBody));
+    }
+
+    /** Thông báo lỗi dễ hiểu theo lý do Google trả về. */
+    static String geminiErrorMessage(int status, String body) {
+        String lower = body == null ? "" : body.toLowerCase(Locale.ROOT);
+        if (lower.contains("leaked")) {
+            return "API Key Gemini đã bị Google khóa vì bị lộ công khai. Hãy tạo khóa mới trong Google AI Studio "
+                    + "và cấu hình lại (biến môi trường AI_RAG_API_KEY) hoặc nhập khóa mới trong form.";
+        }
+        if (lower.contains("api_key_invalid") || lower.contains("api key not valid")) {
+            return "API Key Gemini không hợp lệ. Vui lòng kiểm tra lại khóa.";
+        }
+        if (status == 429 || lower.contains("resource_exhausted")) {
+            return "Gemini đang vượt hạn mức sử dụng (HTTP 429). Vui lòng thử lại sau ít phút.";
+        }
+        return "Gemini API trả về lỗi (HTTP " + status + "). Vui lòng kiểm tra lại API Key hoặc thử lại sau.";
     }
 
     /**
@@ -714,17 +730,7 @@ public class AiQuestionRagService {
         if (apiKeyInput != null && !apiKeyInput.isBlank()) {
             return apiKeyInput.trim();
         }
-        if (defaultApiKey != null && !defaultApiKey.isBlank()) {
-            return defaultApiKey.trim();
-        }
-        return HARDCODED_GEMINI_API_KEY;
-    }
-
-    /**
-     * Lấy API Key mặc định đã cấu hình trên hệ thống (nếu có) để hỗ trợ hiển thị sẵn trên giao diện giảng viên.
-     */
-    public String getDefaultApiKey() {
-        return resolveApiKey(null);
+        return defaultApiKey == null ? "" : defaultApiKey.trim();
     }
 
     private String cleanJsonFence(String raw) {

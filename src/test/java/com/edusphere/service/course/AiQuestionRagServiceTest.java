@@ -84,4 +84,16 @@ class AiQuestionRagServiceTest {
         assertEquals("A", q.getCorrectAnswer());
         assertEquals("[Nguồn #1 - Bài 2: Spring Transaction]", q.getSourceExcerpt());
     }
+
+    @Test
+    void geminiErrorMessage_explainsLeakedInvalidAndQuotaErrors() {
+        String leaked = "{\"error\":{\"code\":403,\"message\":\"Your API key was reported as leaked. Please use another API key.\",\"status\":\"PERMISSION_DENIED\"}}";
+        assertTrue(AiQuestionRagService.geminiErrorMessage(403, leaked).contains("bị lộ"));
+
+        String invalid = "{\"error\":{\"code\":400,\"message\":\"API key not valid. Please pass a valid API key.\",\"details\":[{\"reason\":\"API_KEY_INVALID\"}]}}";
+        assertTrue(AiQuestionRagService.geminiErrorMessage(400, invalid).contains("không hợp lệ"));
+
+        assertTrue(AiQuestionRagService.geminiErrorMessage(429, "{}").contains("hạn mức"));
+        assertTrue(AiQuestionRagService.geminiErrorMessage(500, null).contains("HTTP 500"));
+    }
 }

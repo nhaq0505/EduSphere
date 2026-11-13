@@ -121,11 +121,6 @@ public class QuestionBankController {
         model.addAttribute("selectedCategoryId", categoryId);
         model.addAttribute("courses", courseRepository.findByInstructor_UserIdOrderByCreatedAtDesc(instructorId));
         model.addAttribute("bankLessons", bankLessons);
-        String sessionKey = (String) session.getAttribute("INSTRUCTOR_AI_API_KEY");
-        if (sessionKey == null || sessionKey.isBlank()) {
-            sessionKey = aiQuestionRagService.getDefaultApiKey();
-        }
-        model.addAttribute("savedAiApiKey", sessionKey);
         model.addAttribute("savedAiModel", session.getAttribute("INSTRUCTOR_AI_MODEL"));
         return "quizzes/bank-detail";
     }
