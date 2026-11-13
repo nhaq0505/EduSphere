@@ -445,11 +445,22 @@
                                             </div>
                                             <div style="display:flex; align-items:center; gap:8px;">
                                                 <c:if test="${fn:startsWith(mat.fileUrl,'http://') || fn:startsWith(mat.fileUrl,'https://') || fn:startsWith(mat.fileUrl,'/')}">
+                                                    <c:set var="insMatUrl" value="${mat.fileUrl}"/>
+                                                    <c:if test="${not empty insMatUrl and not (fn:startsWith(insMatUrl, 'http://') or fn:startsWith(insMatUrl, 'https://'))}">
+                                                        <c:choose>
+                                                            <c:when test="${not empty pageContext.request.contextPath and fn:startsWith(insMatUrl, pageContext.request.contextPath)}">
+                                                                <%-- Already has context path --%>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <c:set var="insMatUrl" value="${pageContext.request.contextPath}${insMatUrl}"/>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </c:if>
                                                     <button type="button" class="ins-link-btn" style="color:#2563EB; font-weight:700; background:#EFF6FF; border:1px solid #BFDBFE; padding:5px 12px; border-radius:6px; cursor:pointer;"
-                                                            onclick="openMaterialPreview('<c:out value="${mat.title}" escapeXml="true"/>', '<c:out value="${mat.fileUrl}" escapeXml="true"/>', '<c:out value="${mat.type}"/>', '<c:out value="${mat.originalFileName}" escapeXml="true"/>')">
+                                                            onclick="openMaterialPreview('<c:out value="${mat.title}" escapeXml="true"/>', '<c:out value="${insMatUrl}" escapeXml="true"/>', '<c:out value="${mat.type}"/>', '<c:out value="${mat.originalFileName}" escapeXml="true"/>')">
                                                         👁️ Xem trên web
-                                                    </button>
-                                                    <a class="ins-link-btn" href="${mat.fileUrl}" download="<c:out value='${mat.title}'/>" target="_blank" rel="noopener noreferrer"
+                                                     </button>
+                                                    <a class="ins-link-btn" href="<c:out value='${insMatUrl}'/>" download="<c:out value='${mat.title}'/>" target="_blank" rel="noopener noreferrer"
                                                        style="padding:5px 10px; border:1px solid #CBD5E1; border-radius:6px;">
                                                         ⬇️ Tải
                                                     </a>
@@ -667,6 +678,19 @@ function uploadMaterialFile(inputElem) {
 }
 
 function openMaterialPreview(title, url, type, origName) {
+    if (!url) return;
+
+    // Chuẩn hóa URL tài liệu: khử trùng lặp contextPath và đảm bảo đúng endpoint static /uploads/
+    var ctx = '${pageContext.request.contextPath}';
+    if (ctx && ctx.length > 0) {
+        while (url.indexOf(ctx + ctx + '/') === 0) {
+            url = url.substring(ctx.length);
+        }
+        if (url.indexOf('/') === 0 && url.indexOf(ctx + '/') !== 0 && !url.match(/^https?:\/\//i)) {
+            url = ctx + url;
+        }
+    }
+
     var modal = document.getElementById('materialPreviewModal');
     var titleElem = document.getElementById('matModalTitle');
     var subElem = document.getElementById('matModalSub');
@@ -674,10 +698,21 @@ function openMaterialPreview(title, url, type, origName) {
     var downloadBtn = document.getElementById('matModalDownloadBtn');
     var contentElem = document.getElementById('matModalContent');
 
+    var cleanFileName = origName;
+    if (!cleanFileName && url) {
+        var parts = url.split('/');
+        var rawName = parts[parts.length - 1].split('?')[0];
+        try {
+            cleanFileName = decodeURIComponent(rawName).replace(/^\d+_[a-f0-9]+_/i, '');
+        } catch (e) {
+            cleanFileName = rawName.replace(/^\d+_[a-f0-9]+_/i, '');
+        }
+    }
+
     titleElem.textContent = title;
-    subElem.textContent = origName ? ('Tệp: ' + origName) : url;
+    subElem.textContent = cleanFileName ? ('Tệp: ' + cleanFileName) : url;
     downloadBtn.href = url;
-    downloadBtn.setAttribute('download', origName || title);
+    downloadBtn.setAttribute('download', cleanFileName || origName || title);
 
     var lowerUrl = url.toLowerCase();
     var lowerOrig = (origName || '').toLowerCase();
