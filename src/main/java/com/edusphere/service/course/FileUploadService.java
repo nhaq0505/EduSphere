@@ -111,5 +111,31 @@ public class FileUploadService {
             return null;
         }
     }
+
+    /**
+     * Kiểm tra một đường dẫn tài nguyên (file/video) có còn tồn tại trên hệ thống lưu trữ hay không.
+     * - Với đường dẫn nội bộ (/uploads/...): kiểm tra trực tiếp file trên đĩa.
+     * - Với URL bên ngoài (http/https như Bunny Stream, YouTube, Google Drive): coi là hợp lệ nếu URL không rỗng.
+     */
+    public boolean resourceExists(String url) {
+        if (url == null || url.isBlank()) {
+            return false;
+        }
+        String trimmed = url.trim();
+        int idx = trimmed.indexOf("/uploads/");
+        if (idx >= 0) {
+            String rel = trimmed.substring(idx + "/uploads/".length());
+            if (rel.isBlank() || rel.contains("..")) {
+                return false;
+            }
+            try {
+                Path p = Paths.get(baseUploadDir).resolve(rel.replace('/', File.separatorChar));
+                return Files.exists(p) && Files.isRegularFile(p);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return trimmed.startsWith("http://") || trimmed.startsWith("https://");
+    }
 }
 

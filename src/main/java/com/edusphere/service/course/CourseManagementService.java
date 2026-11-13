@@ -51,6 +51,13 @@ public class CourseManagementService {
     @Autowired(required = false)
     private CertificateService certificateService;
 
+    @Autowired(required = false)
+    private CourseChangeLogService changeLogService;
+
+    public void setChangeLogService(CourseChangeLogService changeLogService) {
+        this.changeLogService = changeLogService;
+    }
+
     public CourseManagementService(CourseRepository courses, CourseReviewRepository reviews,
                                    EnrollmentRepository enrollments, CategoryRepository categories,
                                    UserRepository users, LessonRepository lessons) {
@@ -166,17 +173,22 @@ public class CourseManagementService {
         Course course = new Course();
         course.setInstructor(user(instructorId));
         applyForm(course, form);
-        return courses.save(course).getCourseId();
+        Course saved = courses.save(course);
+        if (changeLogService != null) {
+            changeLogService.recordCourseCreate(saved);
+        }
+        return saved.getCourseId();
     }
 
     @Transactional
     public void edit(Integer id, Integer instructorId, CourseForm form) {
         Course course = lockedOwnedCourse(id, instructorId);
         if (!canEdit(course)) throw conflict("Khóa học đang chờ duyệt hoặc đã lưu trữ, không thể chỉnh sửa.");
+        var before = changeLogService != null ? changeLogService.snapshotCourse(course) : null;
         applyForm(course, form);
-        course.setVersionNo(course.getVersionNo() + 1);
         if ("PUBLISHED".equals(course.getStatus()) || "APPROVED".equals(course.getStatus())
                 || "UPDATING".equals(course.getStatus())) {
+            course.setVersionNo((course.getVersionNo() == null ? 1 : course.getVersionNo()) + 1);
             course.setStatus("UPDATING");
             course.setSubmittedAt(null);
         } else {
@@ -186,6 +198,9 @@ public class CourseManagementService {
             course.setPublishedAt(null);
         }
         course.setUpdatedAt(LocalDateTime.now());
+        if (changeLogService != null) {
+            changeLogService.recordCourseUpdate(course, before, changeLogService.snapshotCourse(course));
+        }
     }
 
     @Transactional
@@ -206,9 +221,13 @@ public class CourseManagementService {
                 .anyMatch(l -> !isLessonComplete(l));
         if (hasIncompleteLesson)
             throw conflict("Tất cả các bài học phải có tiêu đề và nội dung hoàn chỉnh trước khi gửi duyệt.");
+        String oldStatus = course.getStatus();
         course.setStatus("SUBMITTED");
         course.setSubmittedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
+        if (changeLogService != null) {
+            changeLogService.recordCourseStatusChange(course, course.getInstructor(), "INSTRUCTOR", oldStatus, "SUBMITTED", null);
+        }
     }
 
     @Transactional
@@ -224,11 +243,15 @@ public class CourseManagementService {
                 .anyMatch(l -> !isLessonComplete(l));
         if (hasIncompleteLesson)
             throw conflict("Tất cả các bài học phải có tiêu đề và nội dung hoàn chỉnh trước khi gửi duyệt.");
+        String oldStatus = course.getStatus();
         String note = changeNote == null ? null : changeNote.trim();
         course.setChangeNote(note != null && !note.isEmpty() ? note : null);
         course.setStatus("SUBMITTED");
         course.setSubmittedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
+        if (changeLogService != null) {
+            changeLogService.recordCourseStatusChange(course, course.getInstructor(), "INSTRUCTOR", oldStatus, "SUBMITTED", course.getChangeNote());
+        }
     }
 
     @Transactional(readOnly = true)
@@ -258,16 +281,21 @@ public class CourseManagementService {
         String reason = comment == null ? "" : comment.trim();
         if ("REJECTED".equals(decision) && reason.isEmpty()) throw conflict("Cần nhập lý do từ chối.");
         if (reason.length() > 2000) throw conflict("Nhận xét tối đa 2000 ký tự.");
+        String oldStatus = course.getStatus();
+        Users adminUser = user(adminId);
         CourseReview review = new CourseReview();
         review.setCourse(course);
         review.setCourseVersion(course.getVersionNo());
-        review.setAdmin(user(adminId));
+        review.setAdmin(adminUser);
         review.setDecision(decision);
         review.setComment(reason.isEmpty() ? null : reason);
         reviews.save(review);
         course.setStatus(decision);
         course.setApprovedAt("APPROVED".equals(decision) ? LocalDateTime.now() : null);
         course.setUpdatedAt(LocalDateTime.now());
+        if (changeLogService != null) {
+            changeLogService.recordCourseStatusChange(course, adminUser, "ADMINISTRATOR", oldStatus, decision, reason);
+        }
     }
 
     @Transactional
@@ -275,6 +303,7 @@ public class CourseManagementService {
         Course course = lockedOwnedCourse(id, instructorId);
         if (!"APPROVED".equals(course.getStatus()) || course.getApprovedAt() == null)
             throw conflict("Khóa học phải được quản trị viên phê duyệt trước khi công bố.");
+        String oldStatus = course.getStatus();
         course.setStatus("PUBLISHED");
         course.setPublishedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
@@ -289,6 +318,9 @@ public class CourseManagementService {
                 enrollment.setStatus("ACTIVE");
                 enrollment.setCompletedAt(null);
             });
+        }
+        if (changeLogService != null) {
+            changeLogService.recordCourseStatusChange(course, course.getInstructor(), "INSTRUCTOR", oldStatus, "PUBLISHED", null);
         }
     }
 
@@ -297,6 +329,7 @@ public class CourseManagementService {
         Course course = lockedOwnedCourse(id, instructorId);
         if (!"APPROVED".equals(course.getStatus()) || course.getApprovedAt() == null)
             throw conflict("Khóa học phải được quản trị viên phê duyệt trước khi tái công bố.");
+        String oldStatus = course.getStatus();
         course.setStatus("PUBLISHED");
         course.setPublishedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
@@ -312,6 +345,9 @@ public class CourseManagementService {
                 enrollment.setCompletedAt(null);
             });
         }
+        if (changeLogService != null) {
+            changeLogService.recordCourseStatusChange(course, course.getInstructor(), "INSTRUCTOR", oldStatus, "PUBLISHED", "Tái công bố khóa học");
+        }
     }
 
     @Transactional
@@ -319,17 +355,25 @@ public class CourseManagementService {
         Course course = lockedOwnedCourse(id, instructorId);
         if (!"PUBLISHED".equals(course.getStatus()))
             throw conflict("Chỉ có thể ẩn khóa học đang được công bố.");
+        String oldStatus = course.getStatus();
         course.setStatus("APPROVED");
         course.setUpdatedAt(LocalDateTime.now());
+        if (changeLogService != null) {
+            changeLogService.recordCourseStatusChange(course, course.getInstructor(), "INSTRUCTOR", oldStatus, "APPROVED", "Tạm ẩn khóa học");
+        }
     }
 
     @Transactional
     public void archive(Integer id, Integer instructorId) {
         Course course = lockedOwnedCourse(id, instructorId);
         if (!"PUBLISHED".equals(course.getStatus())) throw conflict("Chỉ có thể lưu trữ khóa học đã công bố.");
+        String oldStatus = course.getStatus();
         course.setStatus("ARCHIVED");
         course.setArchivedAt(LocalDateTime.now());
         course.setUpdatedAt(LocalDateTime.now());
+        if (changeLogService != null) {
+            changeLogService.recordCourseStatusChange(course, course.getInstructor(), "INSTRUCTOR", oldStatus, "ARCHIVED", null);
+        }
     }
 
     @Transactional

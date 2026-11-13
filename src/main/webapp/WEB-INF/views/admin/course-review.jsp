@@ -1,4 +1,4 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
@@ -62,21 +62,21 @@
                                     <div>
                                         <h2 class="adm-review-card__title"><c:out value="${course.title}"/></h2>
                                         <div class="adm-review-card__meta">
-                                            <span>👤 <c:out value="${course.instructorName}"/></span>
+                                            <span>Giảng viên: <strong><c:out value="${course.instructorName}"/></strong></span>
                                             <c:if test="${not empty course.categoryName}">
-                                                <span>📂 <c:out value="${course.categoryName}"/></span>
+                                                <span>Danh mục: <c:out value="${course.categoryName}"/></span>
                                             </c:if>
-                                            <span>🔢 Phiên bản <c:out value="${course.versionNo}"/></span>
-                                            <span>📚 <strong>${course.lessonCount}</strong> bài học</span>
-                                            <span>💰
+                                            <span>Phiên bản v<c:out value="${course.versionNo}"/></span>
+                                            <span><strong>${course.lessonCount}</strong> bài học</span>
+                                            <span>Học phí:
                                                 <c:choose>
-                                                    <c:when test="${course.price == 0}">Miễn phí</c:when>
-                                                    <c:otherwise><fmt:formatNumber value="${course.price}" type="number" maxFractionDigits="0"/>đ</c:otherwise>
+                                                    <c:when test="${course.price == null or course.price <= 0}">Miễn phí</c:when>
+                                                    <c:otherwise><fmt:formatNumber value="${course.price}" type="number" maxFractionDigits="0"/> VNĐ</c:otherwise>
                                                 </c:choose>
                                             </span>
                                         </div>
                                     </div>
-                                    <span class="adm-pending-badge">⏳ Chờ duyệt</span>
+                                    <span class="adm-pending-badge">Chờ duyệt</span>
                                 </div>
                                 <c:if test="${not empty course.description}">
                                     <div class="adm-review-card__desc"><c:out value="${course.description}"/></div>
@@ -87,12 +87,20 @@
                             <div class="adm-review-card__actions">
                                 <!-- Xem chi tiết -->
                                 <div class="adm-review-form" style="flex:0 0 auto; align-items:flex-start;">
-                                    <div class="adm-review-form__label">🔍 Xem chi tiết</div>
+                                    <div class="adm-review-form__label">Xem chi tiết</div>
                                     <p>Xem toàn bộ nội dung, bài học và tài liệu trước khi duyệt.</p>
-                                    <a class="hn-btn hn-btn--outline adm-btn-sm"
-                                       href="${pageContext.request.contextPath}/admin/courses/${course.courseId}/review">
-                                        Xem nội dung chi tiết →
-                                    </a>
+                                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                        <a class="hn-btn hn-btn--outline adm-btn-sm"
+                                           href="${pageContext.request.contextPath}/admin/courses/${course.courseId}/review">
+                                            Xem nội dung chi tiết →
+                                        </a>
+                                        <c:if test="${course.versionNo != null and course.versionNo > 1 or course.publishedAt != null}">
+                                            <a class="hn-btn hn-btn--outline adm-btn-sm"
+                                               href="${pageContext.request.contextPath}/admin/course-change-logs/course/${course.courseId}">
+                                                Lịch sử thay đổi
+                                            </a>
+                                        </c:if>
+                                    </div>
                                 </div>
 
                                 <!-- Phê duyệt -->

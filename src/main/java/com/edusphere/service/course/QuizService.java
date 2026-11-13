@@ -75,6 +75,13 @@ public class QuizService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private CertificateService certificateService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private CourseChangeLogService changeLogService;
+
+    public void setChangeLogService(CourseChangeLogService changeLogService) {
+        this.changeLogService = changeLogService;
+    }
+
     public QuizService(QuizRepository quizzes, QuestionRepository questions,
                        AnswerOptionRepository answerOptions, QuizAttemptRepository attempts,
                        QuizAnswerRepository answers, QuizAnswerOptionRepository answerOptionLinks,
@@ -149,7 +156,11 @@ public class QuizService {
         quiz.setCourse(course);
         quiz.setCreatedBy(user(instructorId));
         applyForm(quiz, form);
-        return quizzes.save(quiz).getQuizId();
+        Quiz saved = quizzes.save(quiz);
+        if (changeLogService != null) {
+            changeLogService.recordQuizCreate(course, saved);
+        }
+        return saved.getQuizId();
     }
 
     @Transactional(readOnly = true)
@@ -217,6 +228,7 @@ public class QuizService {
         q = questions.save(q);
 
         // Save options for choice-type questions
+        List<AnswerOption> savedOptions = new java.util.ArrayList<>();
         if (Set.of("SINGLE_CHOICE", "MULTIPLE_CHOICE").contains(form.getType())) {
             List<String> contents = form.getOptionContents();
             List<Boolean> corrects = form.getOptionCorrects();
@@ -228,21 +240,28 @@ public class QuizService {
                 opt.setContent(c.trim());
                 opt.setCorrect(corrects != null && i < corrects.size() && Boolean.TRUE.equals(corrects.get(i)));
                 opt.setOrderIndex(i + 1);
-                answerOptions.save(opt);
+                savedOptions.add(answerOptions.save(opt));
             }
+        }
+        if (changeLogService != null) {
+            changeLogService.recordQuestionCreate(quiz.getCourse(), quiz, q, savedOptions);
         }
     }
 
     @Transactional
     public void updateQuiz(Integer courseId, Integer quizId, Integer instructorId, QuizForm form) {
         Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
+        var before = changeLogService != null ? changeLogService.snapshotQuiz(quiz) : null;
         applyForm(quiz, form);
+        if (changeLogService != null) {
+            changeLogService.recordQuizUpdate(quiz.getCourse(), quiz, before, changeLogService.snapshotQuiz(quiz));
+        }
     }
 
     @Transactional
     public void updateQuestion(Integer courseId, Integer quizId, Integer questionId,
                                Integer instructorId, QuestionForm form) {
-        getQuizForInstructor(courseId, quizId, instructorId);
+        Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
         Question q = questions.findById(questionId)
                 .orElseThrow(() -> notFound("Không tìm thấy câu hỏi."));
         if (!q.getQuiz().getQuizId().equals(quizId))
@@ -251,6 +270,9 @@ public class QuizService {
         if (form.getScore() == null || form.getScore().compareTo(BigDecimal.ZERO) <= 0) {
             throw new CourseActionException(HttpStatus.BAD_REQUEST, "Điểm câu hỏi phải lớn hơn 0.");
         }
+
+        List<AnswerOption> priorOpts = answerOptions.findByQuestion_QuestionIdOrderByOrderIndexAsc(questionId);
+        var beforeSnapshot = changeLogService != null ? changeLogService.snapshotQuestion(q, priorOpts) : null;
 
         q.setContent(form.getContent().trim());
         q.setType(form.getType());
@@ -329,6 +351,12 @@ public class QuizService {
             }
         }
         questions.save(q);
+        if (changeLogService != null) {
+            List<AnswerOption> afterOpts = answerOptions.findByQuestion_QuestionIdOrderByOrderIndexAsc(questionId);
+            changeLogService.recordQuestionUpdate(
+                    quiz.getCourse(), quiz, q,
+                    beforeSnapshot, changeLogService.snapshotQuestion(q, afterOpts));
+        }
     }
 
     /** Xóa toàn bộ câu hỏi trong quiz (dùng khi sinh lại đề từ đầu) */
@@ -408,6 +436,9 @@ public class QuizService {
 
         quiz.setBank(bank);
         quizzes.save(quiz);
+        if (changeLogService != null) {
+            changeLogService.recordQuestionsImported(quiz.getCourse(), quiz, sampled.size(), "Tự động bốc từ ngân hàng");
+        }
         return sampled.size();
     }
 
@@ -456,6 +487,9 @@ public class QuizService {
 
         quiz.setBank(bank);
         quizzes.save(quiz);
+        if (changeLogService != null) {
+            changeLogService.recordQuestionsImported(quiz.getCourse(), quiz, added, "Chọn câu hỏi từ ngân hàng");
+        }
         return added;
     }
 
@@ -513,11 +547,13 @@ public class QuizService {
 
     @Transactional
     public void deleteQuestion(Integer courseId, Integer quizId, Integer questionId, Integer instructorId) {
-        getQuizForInstructor(courseId, quizId, instructorId);
+        Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
         Question q = questions.findById(questionId)
                 .orElseThrow(() -> notFound("Không tìm thấy câu hỏi."));
         if (!q.getQuiz().getQuizId().equals(quizId))
             throw notFound("Câu hỏi không thuộc quiz này.");
+
+        var beforeSnapshot = changeLogService != null ? changeLogService.snapshotQuestion(q, q.getOptions()) : null;
 
         List<Integer> optionIds = q.getOptions().stream()
                 .map(AnswerOption::getOptionId)
@@ -558,6 +594,9 @@ public class QuizService {
             remaining.get(i).setOrderIndex(i + 1);
         }
         questions.saveAllAndFlush(remaining);
+        if (changeLogService != null) {
+            changeLogService.recordQuestionDelete(quiz.getCourse(), quiz, beforeSnapshot);
+        }
     }
 
     @Transactional
@@ -596,7 +635,11 @@ public class QuizService {
             throw conflict("Chỉ có thể công bố quiz ở trạng thái Bản nháp.");
         if (questions.countByQuiz_QuizId(quizId) == 0)
             throw conflict("Quiz phải có ít nhất một câu hỏi trước khi công bố.");
+        String oldStatus = quiz.getStatus();
         quiz.setStatus("PUBLISHED");
+        if (changeLogService != null) {
+            changeLogService.recordQuizStatusChange(quiz.getCourse(), quiz, oldStatus, "PUBLISHED");
+        }
     }
 
     /** Khôi phục quiz từ ARCHIVED về PUBLISHED */
@@ -605,7 +648,11 @@ public class QuizService {
         Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
         if (!"ARCHIVED".equals(quiz.getStatus()))
             throw conflict("Chỉ có thể khôi phục quiz đã lưu trữ.");
+        String oldStatus = quiz.getStatus();
         quiz.setStatus("PUBLISHED");
+        if (changeLogService != null) {
+            changeLogService.recordQuizStatusChange(quiz.getCourse(), quiz, oldStatus, "PUBLISHED");
+        }
     }
 
     @Transactional
@@ -613,7 +660,11 @@ public class QuizService {
         Quiz quiz = getQuizForInstructor(courseId, quizId, instructorId);
         if (!"PUBLISHED".equals(quiz.getStatus()))
             throw conflict("Chỉ có thể lưu trữ quiz đã công bố.");
+        String oldStatus = quiz.getStatus();
         quiz.setStatus("ARCHIVED");
+        if (changeLogService != null) {
+            changeLogService.recordQuizStatusChange(quiz.getCourse(), quiz, oldStatus, "ARCHIVED");
+        }
     }
 
     @Transactional(readOnly = true)

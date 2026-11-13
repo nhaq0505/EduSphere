@@ -122,8 +122,13 @@ public class LessonManagementController {
         form.setLessonType(lesson.getLessonType() != null ? lesson.getLessonType() : "ARTICLE");
         form.setVideoUrl(lesson.getVideoUrl());
         form.setVideoDuration(lesson.getVideoDuration());
-        form.setAllowSeek(lesson.getAllowSeek() != null ? lesson.getAllowSeek() : true);
-        form.setQuizRequiresVideo(Boolean.TRUE.equals(lesson.getQuizRequiresVideo()));
+        boolean quizReqVideo = Boolean.TRUE.equals(lesson.getQuizRequiresVideo());
+        boolean allowSeek = lesson.getAllowSeek() != null ? lesson.getAllowSeek() : !quizReqVideo;
+        if (quizReqVideo && allowSeek) {
+            allowSeek = false;
+        }
+        form.setAllowSeek(allowSeek);
+        form.setQuizRequiresVideo(quizReqVideo);
         form.setMinWatchPercent(lesson.getMinWatchPercent() != null ? lesson.getMinWatchPercent() : 0);
         form.setIsPreview(Boolean.TRUE.equals(lesson.getIsPreview()));
         form.setUnlockDaysAfterEnroll(lesson.getUnlockDaysAfterEnroll());
@@ -200,6 +205,26 @@ public class LessonManagementController {
         } else {
             flash.addFlashAttribute("success", "Đã thêm tài liệu cho bài học.");
         }
+        return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
+    }
+
+    @PostMapping("/{lessonId}/materials/{materialId}/edit")
+    public String updateMaterial(@PathVariable Integer courseId,
+                                 @PathVariable Integer lessonId,
+                                 @PathVariable Integer materialId,
+                                 @Valid @ModelAttribute("materialForm") MaterialForm form,
+                                 BindingResult errors,
+                                 @AuthenticationPrincipal CustomUserDetails instructor,
+                                 Model model,
+                                 RedirectAttributes flash) {
+        if (errors.hasErrors()) {
+            service.editableForDisplay(courseId, instructor.getUserId());
+            detail(courseId, lessonId, instructor, model);
+            model.addAttribute("materialForm", form);
+            return "courses/instructor-lesson-detail";
+        }
+        service.updateMaterial(courseId, lessonId, materialId, instructor.getUserId(), form);
+        flash.addFlashAttribute("success", "Đã cập nhật tài liệu.");
         return "redirect:/instructor/courses/" + courseId + "/lessons/" + lessonId;
     }
 

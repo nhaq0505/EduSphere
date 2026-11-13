@@ -174,6 +174,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
             syncTrueFalseAnswers();
             ensureDefaultCategories();
             ensureStudentStudyLogsTable();
+            ensureCourseChangeLogsTable();
             log.info("[DbAutoMigration] Tự động migration schema, CHECK constraints và dữ liệu nền hoàn tất.");
         } catch (Exception ex) {
             log.warn("[DbAutoMigration] Bỏ qua đồng bộ SQL Server đặc thù: {}", ex.getMessage());
@@ -468,6 +469,40 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         END
                     ) > 0;
                 END
+            END
+            """);
+    }
+
+    /**
+     * Tự động tạo bảng course_change_logs (nếu chưa có) để lưu toàn bộ lịch sử thay đổi khóa học cho Admin.
+     */
+    private void ensureCourseChangeLogsTable() {
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.course_change_logs', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.course_change_logs (
+                    log_id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    course_id INT NOT NULL,
+                    course_title NVARCHAR(255) NULL,
+                    actor_id INT NOT NULL,
+                    actor_name NVARCHAR(255) NULL,
+                    actor_email NVARCHAR(255) NULL,
+                    actor_role NVARCHAR(30) NULL CONSTRAINT DF_ccl_actor_role DEFAULT N'INSTRUCTOR',
+                    entity_type NVARCHAR(40) NOT NULL,
+                    entity_id INT NULL,
+                    entity_title NVARCHAR(500) NULL,
+                    parent_lesson_id INT NULL,
+                    action_type NVARCHAR(40) NOT NULL,
+                    summary NVARCHAR(1000) NOT NULL,
+                    changed_fields NVARCHAR(500) NULL,
+                    before_data NVARCHAR(MAX) NULL,
+                    after_data NVARCHAR(MAX) NULL,
+                    created_at DATETIME2 NOT NULL CONSTRAINT DF_ccl_created_at DEFAULT SYSDATETIME()
+                );
+
+                CREATE INDEX IX_course_change_logs_course_id ON dbo.course_change_logs(course_id, created_at DESC);
+                CREATE INDEX IX_course_change_logs_actor_id ON dbo.course_change_logs(actor_id, created_at DESC);
+                CREATE INDEX IX_course_change_logs_created_at ON dbo.course_change_logs(created_at DESC);
             END
             """);
     }

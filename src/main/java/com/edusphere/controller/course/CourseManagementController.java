@@ -38,6 +38,9 @@ public class CourseManagementController {
     @Autowired(required = false)
     private com.edusphere.service.course.CourseCommentService courseCommentService;
 
+    @Autowired(required = false)
+    private com.edusphere.service.course.CourseChangeLogService changeLogService;
+
     public CourseManagementController(CourseManagementService service) {
         this(service, null);
     }
@@ -244,6 +247,14 @@ public class CourseManagementController {
     @GetMapping("/admin/courses/{id}/review")
     public String reviewDetail(@PathVariable Integer id, Model model) {
         model.addAttribute("course", service.adminCourseDetail(id));
+        if (changeLogService != null) {
+            boolean isUpdateSubmission = changeLogService.isUpdateAfterApproval(id);
+            model.addAttribute("isUpdateSubmission", isUpdateSubmission);
+            model.addAttribute("lessonReviewMap", changeLogService.buildCourseLessonReviewMap(id));
+            model.addAttribute("courseChangeLogs", isUpdateSubmission ? changeLogService.getChangesSinceLastApproval(id) : java.util.List.of());
+        } else {
+            model.addAttribute("isUpdateSubmission", false);
+        }
         return "admin/course-review-detail";
     }
 
