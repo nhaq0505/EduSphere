@@ -39,6 +39,17 @@ APP_BOOTSTRAP_ADMINPASSWORD=$admin_password
 APP_BASEURL=http://localhost:8080/EduSphere
 SETTINGS
 fi
+for setting in \
+    'APP_BASEURL=http://localhost:8080/EduSphere' \
+    'PAYOS_CLIENT_ID=' \
+    'PAYOS_API_KEY=' \
+    'PAYOS_CHECKSUM_KEY='; do
+    key=${setting%%=*}
+    if ! grep -q "^$key=" /etc/edusphere/edusphere.env; then
+        printf '%s\n' "$setting" >> /etc/edusphere/edusphere.env
+    fi
+done
+chmod 0600 /etc/edusphere/edusphere.env
 
 if ! docker container inspect edusphere-sqlserver >/dev/null 2>&1; then
     docker run --detach --name edusphere-sqlserver --restart unless-stopped \
