@@ -10,6 +10,7 @@ import com.edusphere.repository.account.UserRoleRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
@@ -22,8 +23,6 @@ import java.util.Date;
 /**
  * Tự động tạo tài khoản admin mặc định khi app khởi động lần đầu.
  * Chỉ tạo nếu email chưa tồn tại trong database.
- *
- * Tài khoản: admin@edusphere.vn / Admin@123456
  */
 @Component
 @Order(2)
@@ -32,8 +31,13 @@ public class AdminDataInitializer implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(AdminDataInitializer.class);
 
     private static final String ADMIN_EMAIL    = "admin@edusphere.vn";
-    private static final String ADMIN_PASSWORD = "Admin@123456";
     private static final String ADMIN_NAME     = "Quản trị viên";
+
+    @Value("${app.bootstrap.admin-password:Admin@123456}")
+    private String adminPassword;
+
+    @Value("${app.bootstrap.demo-accounts:true}")
+    private boolean demoAccounts;
 
     private final UserRepository     userRepository;
     private final RoleRepository     roleRepository;
@@ -53,8 +57,12 @@ public class AdminDataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        initDefaultAdmin();
-        initDemoAccounts();
+        if (!adminPassword.isBlank()) {
+            initDefaultAdmin();
+        }
+        if (demoAccounts) {
+            initDemoAccounts();
+        }
     }
 
     private void initDefaultAdmin() {
@@ -70,7 +78,7 @@ public class AdminDataInitializer implements ApplicationRunner {
             admin = new Users();
             admin.setFullName(ADMIN_NAME);
             admin.setEmail(ADMIN_EMAIL);
-            admin.setPasswordHash(passwordEncoder.encode(ADMIN_PASSWORD));
+            admin.setPasswordHash(passwordEncoder.encode(adminPassword));
             admin.setStatus("ACTIVE");
             admin.setCreatedAt(new Date());
             admin = userRepository.save(admin);
@@ -79,11 +87,7 @@ public class AdminDataInitializer implements ApplicationRunner {
             UserRoles userRole = new UserRoles(pk, new Date());
             userRoleRepository.save(userRole);
 
-            log.info("╔══════════════════════════════════════════════╗");
-            log.info("║  [AdminInit] Đã tạo tài khoản admin          ║");
-            log.info("║  Email   : {}              ║", ADMIN_EMAIL);
-            log.info("║  Password: {}                  ║", ADMIN_PASSWORD);
-            log.info("╚══════════════════════════════════════════════╝");
+            log.info("[AdminInit] Đã tạo tài khoản admin {}", ADMIN_EMAIL);
         } else {
             UserRolesPK pk = new UserRolesPK(admin.getUserId(), adminRole.getRoleId());
             if (!userRoleRepository.existsById(pk)) {
@@ -118,7 +122,7 @@ public class AdminDataInitializer implements ApplicationRunner {
 
             UserRolesPK pk = new UserRolesPK(user.getUserId(), role.getRoleId());
             userRoleRepository.save(new UserRoles(pk, new Date()));
-            log.info("[DemoInit] Đã tạo tài khoản demo: {} ({}) / pass: {}", email, roleName, password);
+            log.info("[DemoInit] Đã tạo tài khoản demo: {} ({})", email, roleName);
         } else {
             // Bảo toàn mật khẩu và trạng thái tài khoản nếu đã tồn tại trong DB (không ghi đè)
             UserRolesPK pk = new UserRolesPK(user.getUserId(), role.getRoleId());

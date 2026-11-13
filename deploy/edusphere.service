@@ -1,0 +1,31 @@
+[Unit]
+Description=EduSphere Spring Boot web application
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=edusphere
+Group=edusphere
+WorkingDirectory=/srv/edusphere
+EnvironmentFile=/etc/edusphere/edusphere.env
+Environment=SERVER_ADDRESS=127.0.0.1
+Environment=SERVER_FORWARD_HEADERS_STRATEGY=framework
+Environment=SERVER_ERROR_INCLUDEMESSAGE=never
+Environment=APP_BOOTSTRAP_DEMOACCOUNTS=false
+Environment=APP_UPLOAD_BASEDIR=/var/lib/edusphere/uploads
+Environment=APP_UPLOAD_DIR=/var/lib/edusphere/uploads/avatars
+Environment=SPRING_JPA_SHOWSQL=false
+Environment=LOGGING_LEVEL_COM_EDUSPHERE=INFO
+Environment=LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=INFO
+ExecStart=/usr/bin/java -Xms256m -Xmx1536m -jar /srv/edusphere/releases/current.war
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+StateDirectory=edusphere
+ReadWritePaths=/var/lib/edusphere
+
+[Install]
+WantedBy=multi-user.target
