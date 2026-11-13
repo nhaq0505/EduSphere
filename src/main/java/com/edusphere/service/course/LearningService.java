@@ -380,22 +380,7 @@ public class LearningService {
                     .orElse(null);
         }
 
-        Enrollment enrollment = null;
-        try {
-            enrollment = verifyEnrollment(studentId, courseId);
-        } catch (CourseActionException ex) {
-            // If student is not enrolled, check if target lesson (or first preview lesson) allows preview
-            if (targetLesson != null && Boolean.TRUE.equals(targetLesson.getIsPreview())) {
-                enrollment = null; // Preview allowed
-            } else if (targetLesson == null && !publishedLessons.isEmpty()) {
-                targetLesson = publishedLessons.stream()
-                        .filter(l -> Boolean.TRUE.equals(l.getIsPreview()))
-                        .findFirst()
-                        .orElseThrow(() -> ex);
-            } else {
-                throw ex;
-            }
-        }
+        Enrollment enrollment = verifyEnrollment(studentId, courseId);
 
         Course course = enrollment != null ? enrollment.getCourse()
                 : (courseRepository != null ? courseRepository.findById(courseId).orElse(null) : null);
@@ -425,30 +410,12 @@ public class LearningService {
         Lesson current;
         if (targetLesson != null) {
             current = targetLesson;
-            // Check prerequisite & unlock days if lesson is NOT a preview lesson
-            if (!Boolean.TRUE.equals(current.getIsPreview())) {
-                if (current.getPrerequisiteLesson() != null && !completedLessonIds.contains(current.getPrerequisiteLesson().getLessonId())) {
-                    throw new CourseActionException(HttpStatus.BAD_REQUEST,
-                            "Bạn cần hoàn thành bài học tiên quyết trước: " + current.getPrerequisiteLesson().getTitle());
-                }
-                if (current.getUnlockDaysAfterEnroll() != null && current.getUnlockDaysAfterEnroll() > 0
-                        && enrollment != null && enrollment.getEnrolledAt() != null) {
-                    if (LocalDateTime.now().isBefore(enrollment.getEnrolledAt().plusDays(current.getUnlockDaysAfterEnroll()))) {
-                        throw new CourseActionException(HttpStatus.BAD_REQUEST,
-                                "Bài học này sẽ mở khóa sau " + current.getUnlockDaysAfterEnroll() + " ngày kể từ khi ghi danh.");
-                    }
-                }
-            }
         } else {
-            // Mặc định bài chưa hoàn thành đầu tiên được mở khóa, nếu không có thì bài đầu tiên được mở khóa, hoặc bài đầu tiên
-            final Enrollment fEnrollment = enrollment;
+            // Mặc định mở bài chưa hoàn thành đầu tiên, nếu đã học hết thì mở bài đầu tiên
             current = publishedLessons.stream()
-                    .filter(l -> !completedLessonIds.contains(l.getLessonId()) && isLessonUnlocked(l, completedLessonIds, fEnrollment))
+                    .filter(l -> !completedLessonIds.contains(l.getLessonId()))
                     .findFirst()
-                    .orElseGet(() -> publishedLessons.stream()
-                            .filter(l -> isLessonUnlocked(l, completedLessonIds, fEnrollment))
-                            .findFirst()
-                            .orElse(publishedLessons.get(0)));
+                    .orElse(publishedLessons.get(0));
         }
 
         // Nếu bài học hiện tại KHÔNG có video và KHÔNG có Quiz PUBLISHED:
@@ -494,7 +461,7 @@ public class LearningService {
             Integer sId = l.getSection() != null ? l.getSection().getSectionId() : null;
             LessonItemView itemView = new LessonItemView(l.getLessonId(), l.getTitle(), l.getOrderIndex(), isComp, isCur,
                     l.getLessonType() != null ? l.getLessonType() : "ARTICLE",
-                    l.getVideoDuration(), Boolean.TRUE.equals(l.getIsPreview()), sId, sTitle, locked);
+                    l.getVideoDuration(), false, sId, sTitle, locked);
             lessonItemViews.add(itemView);
             if (isCur) {
                 currentLessonView = itemView;
@@ -534,7 +501,8 @@ public class LearningService {
         }
 
         boolean lessonCompleted = completedLessonIds.contains(current.getLessonId());
-        boolean isPreviewMode = (enrollment == null) || Boolean.TRUE.equals(current.getIsPreview());
+        // Chế độ xem trước chỉ dành cho giảng viên (getStudyContextForPreview); học viên luôn đã ghi danh ở đây
+        boolean isPreviewMode = false;
 
         // Tự động đồng bộ trạng thái video từ Bunny nếu đang PROCESSING (hữu ích khi chạy local không có Webhook)
         syncBunnyVideoStatusIfNeeded(current);
@@ -629,22 +597,6 @@ public class LearningService {
         }
     }
 
-    private boolean isLessonUnlocked(Lesson l, Set<Integer> completedLessonIds, Enrollment enrollment) {
-        if (Boolean.TRUE.equals(l.getIsPreview())) {
-            return true;
-        }
-        if (l.getPrerequisiteLesson() != null && !completedLessonIds.contains(l.getPrerequisiteLesson().getLessonId())) {
-            return false;
-        }
-        if (l.getUnlockDaysAfterEnroll() != null && l.getUnlockDaysAfterEnroll() > 0
-                && enrollment != null && enrollment.getEnrolledAt() != null) {
-            if (LocalDateTime.now().isBefore(enrollment.getEnrolledAt().plusDays(l.getUnlockDaysAfterEnroll()))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     @Transactional
     public StudyCourseView getStudyContextForPreview(Integer courseId, Integer lessonId, Integer instructorId) {
         Course course = courseRepository != null ? courseRepository.findById(courseId)
@@ -687,7 +639,7 @@ public class LearningService {
             Integer sId = l.getSection() != null ? l.getSection().getSectionId() : null;
             LessonItemView itemView = new LessonItemView(l.getLessonId(), l.getTitle(), l.getOrderIndex(), false, isCur,
                     l.getLessonType() != null ? l.getLessonType() : "ARTICLE",
-                    l.getVideoDuration(), Boolean.TRUE.equals(l.getIsPreview()), sId, sTitle, false);
+                    l.getVideoDuration(), false, sId, sTitle, false);
             lessonItemViews.add(itemView);
             if (isCur) currentLessonView = itemView;
         }
@@ -821,23 +773,6 @@ public class LearningService {
                     throw new CourseActionException(HttpStatus.BAD_REQUEST,
                             "Bạn cần hoàn thành bài kiểm tra (Quiz) của bài học này trước khi đánh dấu hoàn thành để chuyển sang bài tiếp theo.");
                 }
-            }
-        }
-
-        if (lesson.getPrerequisiteLesson() != null) {
-            boolean prereqDone = lessonCompletionRepository.existsByStudent_UserIdAndLesson_LessonId(
-                    studentId, lesson.getPrerequisiteLesson().getLessonId());
-            if (!prereqDone) {
-                throw new CourseActionException(HttpStatus.BAD_REQUEST,
-                        "Bạn cần hoàn thành bài học tiên quyết trước: " + lesson.getPrerequisiteLesson().getTitle());
-            }
-        }
-
-        if (lesson.getUnlockDaysAfterEnroll() != null && lesson.getUnlockDaysAfterEnroll() > 0
-                && enrollment.getEnrolledAt() != null) {
-            if (LocalDateTime.now().isBefore(enrollment.getEnrolledAt().plusDays(lesson.getUnlockDaysAfterEnroll()))) {
-                throw new CourseActionException(HttpStatus.BAD_REQUEST,
-                        "Bài học này sẽ mở khóa sau " + lesson.getUnlockDaysAfterEnroll() + " ngày kể từ khi ghi danh.");
             }
         }
 

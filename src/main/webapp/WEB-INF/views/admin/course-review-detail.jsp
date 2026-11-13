@@ -536,10 +536,6 @@
                                                             </c:choose>
                                                         </c:if>
 
-                                                        <!-- Preview badge -->
-                                                        <c:if test="${lesson.isPreview}">
-                                                            <span class="rev-lesson-item__badge rev-lesson-item__badge--preview">Xem thử</span>
-                                                        </c:if>
                                                         <span class="rev-lesson-toggle-btn" id="lessonToggleBtn-${lesson.lessonId}">
                                                             Xem nội dung
                                                         </span>
@@ -568,9 +564,6 @@
                                                             </c:if>
                                                             <c:if test="${not empty lesson.bunnyVideoId}">
                                                                 <span>· <strong>Bunny ID:</strong> <code><c:out value="${lesson.bunnyVideoId}"/></code></span>
-                                                            </c:if>
-                                                            <c:if test="${lesson.unlockDaysAfterEnroll != null and lesson.unlockDaysAfterEnroll > 0}">
-                                                                <span>· <strong>Mở sau:</strong> ${lesson.unlockDaysAfterEnroll} ngày</span>
                                                             </c:if>
                                                         </div>
 
@@ -617,11 +610,6 @@
                                                                     <span style="font-size:.82rem; color:#94A3B8; font-style:italic;">Bài học này không có nội dung văn bản.</span>
                                                                 </c:otherwise>
                                                             </c:choose>
-                                                            <c:if test="${not empty lesson.instructorNotes}">
-                                                                <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #E2E8F0; font-size:.8rem; color:#475569;">
-                                                                    <strong>Ghi chú giảng viên:</strong> <c:out value="${lesson.instructorNotes}"/>
-                                                                </div>
-                                                            </c:if>
                                                         </div>
 
                                                         <!-- 4. Tài liệu đính kèm (Materials) -->

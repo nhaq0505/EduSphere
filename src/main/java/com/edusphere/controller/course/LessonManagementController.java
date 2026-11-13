@@ -130,10 +130,6 @@ public class LessonManagementController {
         form.setAllowSeek(allowSeek);
         form.setQuizRequiresVideo(quizReqVideo);
         form.setMinWatchPercent(lesson.getMinWatchPercent() != null ? lesson.getMinWatchPercent() : 0);
-        form.setIsPreview(Boolean.TRUE.equals(lesson.getIsPreview()));
-        form.setUnlockDaysAfterEnroll(lesson.getUnlockDaysAfterEnroll());
-        form.setPrerequisiteLessonId(lesson.getPrerequisiteLesson() != null ? lesson.getPrerequisiteLesson().getLessonId() : null);
-        form.setInstructorNotes(lesson.getInstructorNotes());
 
         List<Lesson> allLessons = service.lessons(courseId, instructor.getUserId());
         List<Lesson> candidatePrereqs = allLessons.stream().filter(l -> !l.getLessonId().equals(lessonId)).toList();

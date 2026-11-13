@@ -295,7 +295,10 @@ public class LessonManagementService {
         if (url == null || url.length() > 2048 || !validHttpUrl(url))
             throw conflict("Đường dẫn tài liệu phải là URL http, https hợp lệ hoặc tệp tải lên từ hệ thống.");
         String type = form.getType();
-        if (type == null || !Set.of("DOCUMENT", "LINK", "VIDEO").contains(type))
+        if (type == null || type.isBlank()) {
+            type = "DOCUMENT";
+        }
+        if (!Set.of("DOCUMENT", "LINK", "VIDEO").contains(type))
             throw conflict("Loại tài liệu không hợp lệ.");
         // Tài liệu đính kèm là nội dung bổ sung — không cần bump course sang UPDATING/DRAFT
         // Học viên thấy tài liệu ngay lập tức mà không cần qua luồng duyệt lại
@@ -329,7 +332,10 @@ public class LessonManagementService {
         if (url == null || url.length() > 2048 || !validHttpUrl(url))
             throw conflict("Đường dẫn tài liệu phải là URL http, https hợp lệ hoặc tệp tải lên từ hệ thống.");
         String type = form.getType();
-        if (type == null || !Set.of("DOCUMENT", "LINK", "VIDEO").contains(type))
+        if (type == null || type.isBlank()) {
+            type = "DOCUMENT";
+        }
+        if (!Set.of("DOCUMENT", "LINK", "VIDEO").contains(type))
             throw conflict("Loại tài liệu không hợp lệ.");
 
         var beforeMat = changeLogService != null ? changeLogService.snapshotMaterial(material) : null;
@@ -460,17 +466,6 @@ public class LessonManagementService {
         lesson.setQuizRequiresVideo(quizReqVideo);
         int minPct = form.getMinWatchPercent() != null ? form.getMinWatchPercent() : 0;
         lesson.setMinWatchPercent(Math.max(0, Math.min(100, minPct)));
-
-        // Advanced Settings
-        lesson.setIsPreview(Boolean.TRUE.equals(form.getIsPreview()));
-        lesson.setUnlockDaysAfterEnroll(form.getUnlockDaysAfterEnroll());
-        if (form.getPrerequisiteLessonId() != null) {
-            Lesson prereq = lessons.findByLessonIdAndCourse_CourseId(form.getPrerequisiteLessonId(), courseId).orElse(null);
-            lesson.setPrerequisiteLesson(prereq);
-        } else {
-            lesson.setPrerequisiteLesson(null);
-        }
-        lesson.setInstructorNotes(trimmed(form.getInstructorNotes()));
     }
 
     private void bumpCourseToDraftIfPublishedOrApproved(Course course) {
