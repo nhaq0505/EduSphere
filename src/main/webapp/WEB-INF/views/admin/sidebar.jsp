@@ -27,6 +27,12 @@
         Duyệt khóa học
     </a>
 
+    <a class="adm-nav-item ${pageContext.request.servletPath.contains('course-change-log') ? 'adm-nav-item--active' : ''}"
+       href="${pageContext.request.contextPath}/admin/course-change-logs">
+        <span class="adm-nav-item__icon">📋</span>
+        Lịch sử thay đổi
+    </a>
+
     <a class="adm-nav-item ${pageContext.request.servletPath.contains('revenue.jsp') ? 'adm-nav-item--active' : ''}"
        href="${pageContext.request.contextPath}/admin/revenue">
         <span class="adm-nav-item__icon">💰</span>
