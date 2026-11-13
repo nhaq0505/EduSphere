@@ -173,92 +173,37 @@
             margin: 2px 0 0;
         }
         .pm-qr-body {
-            padding: 24px 20px;
+            padding: 32px 24px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 18px;
+            justify-content: center;
         }
 
         /* QR Code Container with Frame */
         .pm-qr-frame {
             position: relative;
-            padding: 8px;
+            padding: 12px;
             background: #ffffff;
-            border: 1.5px solid #E2E8F0;
-            border-radius: 16px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+            border: 2px solid #BAE0FD;
+            border-radius: 20px;
+            box-shadow: 0 8px 28px rgba(27, 154, 245, 0.08);
             display: flex;
             align-items: center;
             justify-content: center;
-            max-width: 270px;
+            max-width: 380px;
             width: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .pm-qr-frame:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(27, 154, 245, 0.12);
         }
         .pm-qr-img {
             width: 100%;
             height: auto;
-            border-radius: 10px;
-            display: block;
-        }
-
-        /* Bank Transfer Info Cards */
-        .pm-bank-info {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            background: #F8FAFC;
-            border: 1px solid #E2E8F0;
             border-radius: 12px;
-            padding: 12px 16px;
-            font-size: 0.82rem;
-        }
-        .pm-bank-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-        .pm-bank-label {
-            color: #64748B;
-            font-weight: 500;
-        }
-        .pm-bank-val-wrap {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .pm-bank-val {
-            font-weight: 700;
-            color: #0F172A;
-            font-family: inherit;
-        }
-        .pm-copy-btn {
-            background: #E0F2FE;
-            color: #0284C7;
-            border: none;
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .pm-copy-btn:hover {
-            background: #0284C7;
-            color: #ffffff;
-        }
-
-        /* PayOS Alternate Button */
-        .pm-alt-btn {
-            font-size: 0.8rem;
-            color: #0284C7;
-            text-decoration: none;
-            font-weight: 600;
-            margin-top: 4px;
-        }
-        .pm-alt-btn:hover {
-            text-decoration: underline;
+            display: block;
         }
 
         /* Right Column (Thông tin đơn hàng) */
@@ -535,52 +480,11 @@
                 </div>
 
                 <div class="pm-qr-body">
-                    <%-- Ảnh mã QR VietQR PRO --%>
+                    <%-- Ảnh mã QR VietQR PRO to rõ, tích hợp sẵn toàn bộ thông tin ngân hàng và số tiền --%>
                     <div class="pm-qr-frame">
                         <img src="${vietQrUrl}" alt="Mã thanh toán QR" class="pm-qr-img" id="qrImg"
-                             onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent('${checkoutUrl}');}">
+                             onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='https://api.qrserver.com/v1/create-qr-code/?size=380x380&data=' + encodeURIComponent('${checkoutUrl}');}">
                     </div>
-
-                    <%-- Thông tin chuyển khoản chi tiết kèm nút sao chép --%>
-                    <div class="pm-bank-info">
-                        <div class="pm-bank-row">
-                            <span class="pm-bank-label">Ngân hàng:</span>
-                            <span class="pm-bank-val">MB Bank (Quân Đội)</span>
-                        </div>
-                        <div class="pm-bank-row">
-                            <span class="pm-bank-label">Số tài khoản:</span>
-                            <div class="pm-bank-val-wrap">
-                                <span class="pm-bank-val" id="valAcc">${accountNumber}</span>
-                                <c:if test="${not empty accountNumber}">
-                                    <button class="pm-copy-btn" type="button" onclick="copyText('${accountNumber}')">Sao chép</button>
-                                </c:if>
-                            </div>
-                        </div>
-                        <div class="pm-bank-row">
-                            <span class="pm-bank-label">Chủ tài khoản:</span>
-                            <span class="pm-bank-val">${accountName}</span>
-                        </div>
-                        <div class="pm-bank-row">
-                            <span class="pm-bank-label">Số tiền:</span>
-                            <div class="pm-bank-val-wrap">
-                                <span class="pm-bank-val" style="color:#0284C7;"><fmt:formatNumber value="${amount}" type="number"/> đ</span>
-                                <button class="pm-copy-btn" type="button" onclick="copyText('${amount}')">Sao chép</button>
-                            </div>
-                        </div>
-                        <div class="pm-bank-row">
-                            <span class="pm-bank-label">Nội dung chuyển khoản:</span>
-                            <div class="pm-bank-val-wrap">
-                                <span class="pm-bank-val" style="color:#D97706;" id="valDesc">${description}</span>
-                                <button class="pm-copy-btn" type="button" onclick="copyText('${description}')">Sao chép</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <c:if test="${not empty checkoutUrl}">
-                        <a href="${checkoutUrl}" target="_blank" class="pm-alt-btn">
-                            Mở trang thanh toán dự phòng PayOS →
-                        </a>
-                    </c:if>
                 </div>
             </div>
         </div>
@@ -717,3 +621,4 @@ function showToast(msg) {
 
 </body>
 </html>
+
