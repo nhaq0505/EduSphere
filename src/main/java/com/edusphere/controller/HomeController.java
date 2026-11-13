@@ -32,6 +32,9 @@ public class HomeController {
     @GetMapping("/dashboard")
     public String dashboard(Authentication authentication) {
         if (authentication != null && authentication.isAuthenticated()) {
+            if (authentication.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_STUDENT"))) {
+                return "redirect:/student/dashboard";
+            }
             return "redirect:" + RoleLandingPage.forUser(authentication);
         }
         return "redirect:/login";

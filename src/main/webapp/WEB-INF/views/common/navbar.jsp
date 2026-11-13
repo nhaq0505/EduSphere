@@ -25,8 +25,11 @@
         <!-- Navigation Links -->
         <nav class="hn-nav" aria-label="Điều hướng chính">
             <a class="hn-nav__link ${isHome ? 'hn-nav__link--active' : ''}" href="${cp}/">Trang chủ</a>
-            <a class="hn-nav__link ${isCourses ? 'hn-nav__link--active' : ''}" href="${cp}/courses">Khóa học</a>
-            
+            <a class="hn-nav__link ${isCourses ? 'hn-nav__link--active' : ''}" href="${cp}/courses">Khám phá khóa học</a>
+            <sec:authorize access="hasRole('STUDENT')">
+                <a class="hn-nav__link" href="${cp}/student/dashboard">Dashboard</a>
+                <a class="hn-nav__link" href="${cp}/my-courses">Khóa học của tôi</a>
+            </sec:authorize>
             <sec:authorize access="hasRole('INSTRUCTOR')">
                 <a class="hn-nav__link" href="${cp}/instructor/courses">Giảng viên</a>
             </sec:authorize>

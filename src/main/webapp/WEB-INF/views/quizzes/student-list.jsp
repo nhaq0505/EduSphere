@@ -73,7 +73,7 @@
                                     <span>·</span>
                                     <span>🎯 Tối đa <strong><fmt:formatNumber value="${q.maxScore}" maxFractionDigits="1"/></strong> điểm</span>
                                     <span>·</span>
-                                    <span>🔄 <strong>${q.maxAttempts}</strong> lần làm</span>
+                                    <span>🔄 <strong>Không giới hạn</strong> lượt làm</span>
                                 </div>
                             </div>
 
