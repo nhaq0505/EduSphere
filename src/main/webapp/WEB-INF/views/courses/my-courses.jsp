@@ -265,13 +265,20 @@
         .cb-card__links {
             display: flex;
             align-items: center;
-            gap: 18px;
-            margin-bottom: 12px;
+            gap: 10px;
+            margin-bottom: 14px;
             flex-wrap: wrap;
+        }
+        .cb-card__links .hn-btn,
+        .cb-card__links .mc-btn-outline {
+            width: auto;
+            flex: 0 1 auto;
+            padding: 8px 14px;
+            font-size: 0.8rem;
         }
         .cb-card__link {
             color: #0056d2;
-            font-size: 0.88rem;
+            font-size: 0.85rem;
             font-weight: 700;
             text-decoration: none;
             cursor: pointer;
@@ -307,6 +314,9 @@
             padding: 4px 10px;
             border-radius: 999px;
             backdrop-filter: blur(4px);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
         .mc-card__progress-wrap {
             margin: 10px 0 14px;
@@ -436,7 +446,8 @@
             </button>
             <button type="button" class="cs-tab ${currentTab == 'certificates' ? 'active' : ''}"
                     onclick="switchTab('certificates', this)">
-                🏅 Kho chứng chỉ (Certificates)
+                <span class="mc-emoji">🏅</span>
+                <span>Kho chứng chỉ (Certificates)</span>
                 <span class="cs-tab__badge"><c:out value="${certCount}"/></span>
             </button>
         </div>
@@ -459,13 +470,19 @@
                                 <article class="mc-card">
                                     <div class="mc-card__thumb">
                                         <span class="mc-card__thumb-icon">📖</span>
-                                        <span class="mc-card__status mc-card__status--active">▶ Đang học</span>
+                                        <span class="mc-card__status mc-card__status--active">
+                                            <span class="mc-emoji">▶</span>
+                                            <span>Đang học</span>
+                                        </span>
                                     </div>
                                     <div class="mc-card__body">
                                         <h3 class="mc-card__title">
                                             <a href="${cp}/courses/${course.courseId}"><c:out value="${course.title}"/></a>
                                         </h3>
-                                        <p class="mc-card__instructor">👤 <c:out value="${course.instructorName}"/></p>
+                                        <p class="mc-card__instructor">
+                                            <span class="mc-emoji">👤</span>
+                                            <span><c:out value="${course.instructorName}"/></span>
+                                        </p>
                                         <div class="mc-card__progress-wrap">
                                             <div class="mc-card__progress-head">
                                                 <span>Tiến độ (<c:out value="${course.completedLessons}/${course.totalLessons}"/> bài)</span>
@@ -477,13 +494,15 @@
                                         </div>
                                         <div class="mc-card__actions">
                                             <a class="hn-btn hn-btn--primary mc-btn-sm" href="${cp}/courses/${course.courseId}/learn">
-                                                Tiếp tục học →
+                                                <span class="mc-btn-text">Tiếp tục học →</span>
                                             </a>
                                             <a class="hn-btn mc-btn-outline mc-btn-sm" href="${cp}/courses/${course.courseId}/results">
-                                                📊 Kết quả
+                                                <span class="mc-emoji">📊</span>
+                                                <span class="mc-btn-text">Kết quả</span>
                                             </a>
                                             <a class="hn-btn mc-btn-outline mc-btn-sm" href="${cp}/courses/${course.courseId}#course-reviews">
-                                                ⭐ Đánh giá
+                                                <span class="mc-emoji">⭐</span>
+                                                <span class="mc-btn-text">Đánh giá</span>
                                             </a>
                                         </div>
                                     </div>
@@ -511,16 +530,23 @@
                             <c:if test="${course.completed}">
                                 <article class="mc-card">
                                     <div class="mc-card__thumb">
-                                        <span class="mc-card__credit-pill">🎓 1 Chứng chỉ</span>
+                                        <span class="mc-card__credit-pill">
+                                            <span class="mc-emoji">🎓</span>
+                                            <span>1 Chứng chỉ</span>
+                                        </span>
                                         <span class="mc-card__thumb-icon">🏆</span>
-                                        <span class="mc-card__status mc-card__status--done">✅ Hoàn thành</span>
+                                        <span class="mc-card__status mc-card__status--done">
+                                            <span class="mc-emoji">✅</span>
+                                            <span>Hoàn thành</span>
+                                        </span>
                                     </div>
                                     <div class="mc-card__body">
                                         <h3 class="mc-card__title">
                                             <a href="${cp}/courses/${course.courseId}"><c:out value="${course.title}"/></a>
                                         </h3>
                                         <p class="mc-card__instructor">
-                                            👤 <c:out value="${course.instructorName}"/> • Completed <c:out value="${course.formattedCompletedMonthYear}"/>
+                                            <span class="mc-emoji">👤</span>
+                                            <span><c:out value="${course.instructorName}"/> • Completed <c:out value="${course.formattedCompletedMonthYear}"/></span>
                                         </p>
                                         <div class="mc-card__progress-wrap">
                                             <div class="mc-card__progress-head">
@@ -536,29 +562,33 @@
                                                 <c:when test="${not empty course.certificateId}">
                                                     <a class="hn-btn hn-btn--primary mc-btn-sm"
                                                        href="${cp}/certificates/${course.certificateId}">
-                                                        🎓 Xem Chứng chỉ
+                                                        <span class="mc-emoji">🎓</span>
+                                                        <span class="mc-btn-text">Xem chứng chỉ</span>
                                                     </a>
                                                     <a class="hn-btn mc-btn-outline mc-btn-sm"
-                                                       style="border-color:#0056d2;color:#0056d2;font-weight:700;"
+                                                       style="border-color:var(--blue);color:var(--blue-dark);"
                                                        href="${cp}/certificates/${course.certificateId}/download"
                                                        download="Chung-chi-EduSphere-${course.verificationCode}.png">
-                                                        🖼️ Tải ảnh
+                                                        <span class="mc-emoji">🖼️</span>
+                                                        <span class="mc-btn-text">Tải ảnh</span>
                                                     </a>
                                                 </c:when>
                                                 <c:otherwise>
                                                     <a class="hn-btn hn-btn--primary mc-btn-sm"
                                                        href="${cp}/courses/${course.courseId}/certificate">
-                                                        🎓 Nhận Chứng chỉ
+                                                        <span class="mc-emoji">🎓</span>
+                                                        <span class="mc-btn-text">Nhận chứng chỉ</span>
                                                     </a>
                                                 </c:otherwise>
                                             </c:choose>
                                             <a class="hn-btn mc-btn-outline mc-btn-sm"
                                                href="${cp}/courses/${course.courseId}/learn">
-                                                Ôn tập lại
+                                                <span class="mc-btn-text">Ôn tập lại</span>
                                             </a>
                                             <a class="hn-btn mc-btn-outline mc-btn-sm"
                                                href="${cp}/courses/${course.courseId}#course-reviews">
-                                                ⭐ Đánh giá
+                                                <span class="mc-emoji">⭐</span>
+                                                <span class="mc-btn-text">Đánh giá</span>
                                             </a>
                                         </div>
                                     </div>
@@ -591,10 +621,16 @@
                                     <span class="mc-card__thumb-icon">📖</span>
                                     <c:choose>
                                         <c:when test="${course.completed}">
-                                            <span class="mc-card__status mc-card__status--done">✅ Hoàn thành</span>
+                                            <span class="mc-card__status mc-card__status--done">
+                                                <span class="mc-emoji">✅</span>
+                                                <span>Hoàn thành</span>
+                                            </span>
                                         </c:when>
                                         <c:when test="${course.enrollmentStatus == 'ACTIVE'}">
-                                            <span class="mc-card__status mc-card__status--active">▶ Đang học</span>
+                                            <span class="mc-card__status mc-card__status--active">
+                                                <span class="mc-emoji">▶</span>
+                                                <span>Đang học</span>
+                                            </span>
                                         </c:when>
                                         <c:otherwise>
                                             <span class="mc-card__status mc-card__status--dropped">Đã rời</span>
@@ -609,7 +645,8 @@
                                         </a>
                                     </h3>
                                     <p class="mc-card__instructor">
-                                        👤 <c:out value="${course.instructorName}"/>
+                                        <span class="mc-emoji">👤</span>
+                                        <span><c:out value="${course.instructorName}"/></span>
                                     </p>
 
                                     <div class="mc-card__progress-wrap">
@@ -626,23 +663,26 @@
                                         <c:if test="${course.enrollmentStatus ne 'DROPPED'}">
                                             <a class="hn-btn hn-btn--primary mc-btn-sm"
                                                href="${cp}/courses/${course.courseId}/learn">
-                                                Vào học →
+                                                <span class="mc-btn-text">Vào học →</span>
                                             </a>
                                         </c:if>
                                         <c:if test="${course.completed}">
                                             <a class="hn-btn mc-btn-outline mc-btn-sm"
-                                               style="border-color:#2563eb;color:#2563eb;font-weight:700;"
+                                               style="border-color:var(--blue);color:var(--blue-dark);"
                                                href="${cp}/courses/${course.courseId}/certificate">
-                                                🎓 Chứng chỉ
+                                                <span class="mc-emoji">🎓</span>
+                                                <span class="mc-btn-text">Xem chứng chỉ</span>
                                             </a>
                                         </c:if>
                                         <a class="hn-btn mc-btn-outline mc-btn-sm"
                                            href="${cp}/courses/${course.courseId}/results">
-                                            📊 Kết quả
+                                            <span class="mc-emoji">📊</span>
+                                            <span class="mc-btn-text">Kết quả</span>
                                         </a>
                                         <a class="hn-btn mc-btn-outline mc-btn-sm"
                                            href="${cp}/courses/${course.courseId}#course-reviews">
-                                            ⭐ Đánh giá
+                                            <span class="mc-emoji">⭐</span>
+                                            <span class="mc-btn-text">Đánh giá</span>
                                         </a>
                                     </div>
                                 </div>
@@ -675,10 +715,10 @@
                                 <a class="cb-card__preview" href="${cp}/certificates/${cert.certificateId}" title="Xem chi tiết chứng chỉ">
                                     <div class="cb-card__preview-inner">
                                         <div class="cb-card__preview-ribbon">
-                                            <div class="cb-card__preview-seal">🎓</div>
+                                            <div class="cb-card__preview-seal"><span class="mc-emoji">🎓</span></div>
                                         </div>
                                         <div class="cb-card__preview-brand">
-                                            <span class="box">🎓</span>
+                                            <span class="box"><span class="mc-emoji">🎓</span></span>
                                             <span>EduSphere</span>
                                         </div>
                                         <div class="cb-card__preview-course">
@@ -699,20 +739,20 @@
                                 </h3>
 
                                 <!-- Action Buttons: Xem chứng chỉ | Tải ảnh chứng chỉ | LinkedIn -->
-                                <div class="cb-card__links" style="gap:10px;margin-bottom:14px;">
+                                <div class="cb-card__links">
                                     <a class="hn-btn hn-btn--primary mc-btn-sm"
-                                       style="padding:7px 14px;font-size:.82rem;"
                                        href="${cp}/certificates/${cert.certificateId}">
-                                        🎓 Xem chứng chỉ
+                                        <span class="mc-emoji">🎓</span>
+                                        <span class="mc-btn-text">Xem chứng chỉ</span>
                                     </a>
                                     <a class="hn-btn mc-btn-outline mc-btn-sm"
-                                       style="padding:7px 14px;font-size:.82rem;border-color:#0056d2;color:#0056d2;font-weight:700;"
+                                       style="border-color:var(--blue);color:var(--blue-dark);"
                                        href="${cp}/certificates/${cert.certificateId}/download"
                                        download="Chung-chi-EduSphere-${cert.verificationCode}.png">
-                                        🖼️ Tải ảnh chứng chỉ
+                                        <span class="mc-emoji">🖼️</span>
+                                        <span class="mc-btn-text">Tải ảnh</span>
                                     </a>
                                     <a class="cb-card__link"
-                                       style="font-size:.82rem;"
                                        target="_blank"
                                        rel="noopener"
                                        href="https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&amp;name=${fn:escapeXml(cert.courseTitle)}&amp;organizationName=EduSphere+Academy&amp;certId=${cert.verificationCode}">
