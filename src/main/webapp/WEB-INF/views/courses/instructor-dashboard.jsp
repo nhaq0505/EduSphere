@@ -360,29 +360,6 @@
                                 </a>
 
                                 <a class="ins-quick-item"
-                                   href="${pageContext.request.contextPath}/instructor/courses">
-                                    <div class="ins-quick-item__icon">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                            <polygon points="23,7 16,12 23,17" fill="none" stroke="white" stroke-width="2"/>
-                                            <rect x="1" y="5" width="15" height="14" rx="2" stroke="white" stroke-width="2"/>
-                                        </svg>
-                                    </div>
-                                    <span class="ins-quick-item__label">Quản lý video</span>
-                                </a>
-
-                                <a class="ins-quick-item"
-                                   href="${pageContext.request.contextPath}/instructor/courses">
-                                    <div class="ins-quick-item__icon" style="background:linear-gradient(135deg,#7C3AED,#6D28D9);">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="white" stroke-width="2"/>
-                                            <circle cx="9" cy="7" r="4" stroke="white" stroke-width="2"/>
-                                            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="white" stroke-width="2"/>
-                                        </svg>
-                                    </div>
-                                    <span class="ins-quick-item__label">Quản lý học viên</span>
-                                </a>
-
-                                <a class="ins-quick-item"
                                    href="${pageContext.request.contextPath}/instructor/revenue">
                                     <div class="ins-quick-item__icon" style="background:linear-gradient(135deg,#16A34A,#15803D);">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">

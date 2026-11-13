@@ -27,7 +27,7 @@
             <!-- Header -->
             <div style="margin-top: 12px; margin-bottom: 24px;">
                 <div style="font-size: 0.85rem; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.04em;">
-                    Theo dõi tiến độ học viên (UC39)
+                    Theo dõi tiến độ học viên
                 </div>
                 <h1 style="font-size: 1.7rem; font-weight: 800; color: #0f172a; margin: 4px 0 6px;">
                     <c:out value="${course.title}"/>
