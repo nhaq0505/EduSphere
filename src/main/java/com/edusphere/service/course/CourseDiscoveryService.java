@@ -117,8 +117,35 @@ public class CourseDiscoveryService {
     }
 
     @Transactional(readOnly = true)
+    public List<CourseView> featuredCourses(int limit) {
+        PageRequest pageable = PageRequest.of(0, Math.max(1, limit),
+                Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("courseId")));
+        Specification<Course> filters = (root, query, criteria) -> {
+            Predicate isPublishedOrUpdating = root.get("status").in(PUBLISHED, "UPDATING");
+            Predicate isSubmittedWithPriorPublish = criteria.and(
+                    criteria.equal(root.get("status"), "SUBMITTED"),
+                    criteria.isNotNull(root.get("publishedAt"))
+            );
+            return criteria.or(isPublishedOrUpdating, isSubmittedWithPriorPublish);
+        };
+        Page<Course> coursesPage = courseRepository.findAll(filters, pageable);
+        if (coursesPage.isEmpty()) {
+            PageRequest fallbackPageable = PageRequest.of(0, Math.max(1, limit),
+                    Sort.by(Sort.Order.desc("courseId")));
+            coursesPage = courseRepository.findAll(fallbackPageable);
+        }
+        Map<Integer, double[]> ratingMap = loadRatingStats(
+                coursesPage.getContent().stream().map(Course::getCourseId).toList());
+        return coursesPage.getContent().stream().map(c -> toListView(c, ratingMap.get(c.getCourseId()))).toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<Category> activeCategories() {
-        return categoryRepository.findByStatusOrderByNameAsc("ACTIVE");
+        List<Category> list = categoryRepository.findByStatusOrderByNameAsc("ACTIVE");
+        if (list.isEmpty()) {
+            return categoryRepository.findAll();
+        }
+        return list;
     }
 
     @Transactional(readOnly = true)

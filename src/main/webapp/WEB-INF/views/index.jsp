@@ -1,5 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -41,10 +43,6 @@
             <div class="hn-hero__actions">
                 <a class="hn-btn hn-btn--primary hn-btn--lg" href="${pageContext.request.contextPath}/courses">
                     Khám phá khóa học →
-                </a>
-                <a class="hn-btn hn-btn--outline hn-btn--lg" href="#">
-                    <span class="hn-play-icon">▶</span>
-                    Xem video giới thiệu
                 </a>
             </div>
         </div>
@@ -150,11 +148,86 @@
                 <p class="hn-courses-header__sub">• Những khóa học được nhiều người quan tâm nhất •</p>
             </div>
 
-            <!-- Grid courses (sẽ thêm data sau) -->
+            <!-- Grid courses -->
             <div class="hn-courses-body">
-                <div class="hn-course-grid">
-                    <!-- Khóa học sẽ được thêm sau -->
-                </div>
+                <c:choose>
+                    <c:when test="${not empty featuredCourses}">
+                        <div class="hn-course-grid">
+                            <c:forEach var="c" items="${featuredCourses}">
+                                <c:url var="detailUrl" value="/courses/${c.courseId}"/>
+                                <article class="hn-course-card">
+                                    <div class="hn-course-card__thumb">
+                                        <c:choose>
+                                            <c:when test="${not empty c.thumbnailUrl}">
+                                                <c:choose>
+                                                    <c:when test="${fn:startsWith(c.thumbnailUrl, 'http://') or fn:startsWith(c.thumbnailUrl, 'https://') or fn:startsWith(c.thumbnailUrl, pageContext.request.contextPath)}">
+                                                        <img src="<c:out value='${c.thumbnailUrl}'/>" alt="<c:out value='${c.title}'/>" class="hn-course-card__img" loading="lazy">
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <img src="${pageContext.request.contextPath}<c:out value='${c.thumbnailUrl}'/>" alt="<c:out value='${c.title}'/>" class="hn-course-card__img" loading="lazy">
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <div class="hn-course-card__thumb-placeholder">
+                                                    <span>📚</span>
+                                                </div>
+                                            </c:otherwise>
+                                        </c:choose>
+                                        <span class="hn-course-card__badge-label hn-course-card__badge-label--blue">
+                                            <c:out value="${c.levelLabel}"/>
+                                        </span>
+                                    </div>
+
+                                    <div class="hn-course-card__body">
+                                        <c:if test="${not empty c.categoryName}">
+                                            <span class="hn-course-card__cat"><c:out value="${c.categoryName}"/></span>
+                                        </c:if>
+                                        <h3 class="hn-course-card__name">
+                                            <a href="${detailUrl}"><c:out value="${c.title}"/></a>
+                                        </h3>
+                                        <div class="hn-course-card__rating">
+                                            <span class="hn-stars">★</span>
+                                            <span class="hn-course-card__rating-val">
+                                                <c:choose>
+                                                    <c:when test="${c.ratingCount > 0}">
+                                                        ${c.averageRating}
+                                                    </c:when>
+                                                    <c:otherwise>5.0</c:otherwise>
+                                                </c:choose>
+                                            </span>
+                                            <span class="hn-course-card__students">
+                                                <c:choose>
+                                                    <c:when test="${c.ratingCount > 0}">(${c.ratingCount} đánh giá)</c:when>
+                                                    <c:otherwise>• <c:out value="${c.instructorName}"/></c:otherwise>
+                                                </c:choose>
+                                            </span>
+                                        </div>
+                                        <div class="hn-course-card__footer">
+                                            <span class="hn-price">
+                                                <c:choose>
+                                                    <c:when test="${c.free}">Miễn phí</c:when>
+                                                    <c:otherwise>
+                                                        <fmt:formatNumber value="${c.price}" type="number" maxFractionDigits="0"/>đ
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </span>
+                                            <a class="hn-course-card__arrow" href="${detailUrl}" title="Xem chi tiết">→</a>
+                                        </div>
+                                    </div>
+                                </article>
+                            </c:forEach>
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <div style="text-align:center; padding: 48px 20px; color:#64748B;">
+                            <div style="font-size: 2.8rem; margin-bottom: 12px;">📚</div>
+                            <h3 style="font-size: 1.15rem; color:#1E293B; margin-bottom: 6px;">Đang cập nhật khóa học nổi bật</h3>
+                            <p style="font-size: 0.9rem; margin-bottom: 18px;">Các khóa học mới nhất đang được cập nhật và kiểm duyệt liên tục.</p>
+                            <a class="hn-btn hn-btn--primary" href="${pageContext.request.contextPath}/courses">Khám phá tất cả khóa học</a>
+                        </div>
+                    </c:otherwise>
+                </c:choose>
             </div><!-- /hn-courses-body -->
 
             <!-- Link xem tất cả -->
@@ -182,9 +255,93 @@
                 <a class="hn-link-more" href="${pageContext.request.contextPath}/courses">Xem tất cả →</a>
             </div>
 
-            <!-- Danh mục sẽ được thêm sau -->
+            <!-- Danh mục khoá học -->
             <div class="hn-cat-grid">
-                <!-- items sẽ thêm sau -->
+                <c:choose>
+                    <c:when test="${not empty categories}">
+                        <c:forEach var="cat" items="${categories}">
+                            <c:set var="cName" value="${fn:toLowerCase(cat.name)}"/>
+                            <c:set var="catIcon" value="📚"/>
+                            <c:choose>
+                                <c:when test="${fn:contains(cName, 'lập trình') or fn:contains(cName, 'code') or fn:contains(cName, 'cntt') or fn:contains(cName, 'công nghệ') or fn:contains(cName, 'phần mềm') or fn:contains(cName, 'java') or fn:contains(cName, 'web') or fn:contains(cName, 'python')}">
+                                    <c:set var="catIcon" value="💻"/>
+                                </c:when>
+                                <c:when test="${fn:contains(cName, 'thiết kế') or fn:contains(cName, 'đồ họa') or fn:contains(cName, 'ui') or fn:contains(cName, 'ux') or fn:contains(cName, 'design')}">
+                                    <c:set var="catIcon" value="🎨"/>
+                                </c:when>
+                                <c:when test="${fn:contains(cName, 'kinh doanh') or fn:contains(cName, 'kinh tế') or fn:contains(cName, 'marketing') or fn:contains(cName, 'quản trị') or fn:contains(cName, 'business')}">
+                                    <c:set var="catIcon" value="💼"/>
+                                </c:when>
+                                <c:when test="${fn:contains(cName, 'ngoại ngữ') or fn:contains(cName, 'tiếng') or fn:contains(cName, 'anh') or fn:contains(cName, 'language')}">
+                                    <c:set var="catIcon" value="🌐"/>
+                                </c:when>
+                                <c:when test="${fn:contains(cName, 'dữ liệu') or fn:contains(cName, 'data') or fn:contains(cName, 'ai') or fn:contains(cName, 'trí tuệ')}">
+                                    <c:set var="catIcon" value="🤖"/>
+                                </c:when>
+                                <c:when test="${fn:contains(cName, 'kỹ năng') or fn:contains(cName, 'phát triển') or fn:contains(cName, 'giao tiếp')}">
+                                    <c:set var="catIcon" value="🚀"/>
+                                </c:when>
+                                <c:when test="${fn:contains(cName, 'tài chính') or fn:contains(cName, 'kế toán') or fn:contains(cName, 'đầu tư')}">
+                                    <c:set var="catIcon" value="💰"/>
+                                </c:when>
+                                <c:when test="${fn:contains(cName, 'bảo mật') or fn:contains(cName, 'an ninh') or fn:contains(cName, 'an toàn')}">
+                                    <c:set var="catIcon" value="🛡️"/>
+                                </c:when>
+                                <c:when test="${fn:contains(cName, 'toán') or fn:contains(cName, 'khoa học')}">
+                                    <c:set var="catIcon" value="📐"/>
+                                </c:when>
+                                <c:when test="${fn:contains(cName, 'âm nhạc') or fn:contains(cName, 'nhạc') or fn:contains(cName, 'music')}">
+                                    <c:set var="catIcon" value="🎵"/>
+                                </c:when>
+                                <c:when test="${fn:contains(cName, 'ảnh') or fn:contains(cName, 'video') or fn:contains(cName, 'media')}">
+                                    <c:set var="catIcon" value="📷"/>
+                                </c:when>
+                                <c:otherwise>
+                                    <c:set var="catIcon" value="📚"/>
+                                </c:otherwise>
+                            </c:choose>
+
+                            <a href="${pageContext.request.contextPath}/courses?categoryId=${cat.categoryId}" class="hn-cat-item" title="Khóa học <c:out value='${cat.name}'/>">
+                                <div class="hn-cat-item__icon">${catIcon}</div>
+                                <span class="hn-cat-item__name"><c:out value="${cat.name}"/></span>
+                            </a>
+                        </c:forEach>
+                    </c:when>
+                    <c:otherwise>
+                        <a href="${pageContext.request.contextPath}/courses" class="hn-cat-item">
+                            <div class="hn-cat-item__icon">💻</div>
+                            <span class="hn-cat-item__name">Lập trình</span>
+                        </a>
+                        <a href="${pageContext.request.contextPath}/courses" class="hn-cat-item">
+                            <div class="hn-cat-item__icon">🎨</div>
+                            <span class="hn-cat-item__name">Thiết kế</span>
+                        </a>
+                        <a href="${pageContext.request.contextPath}/courses" class="hn-cat-item">
+                            <div class="hn-cat-item__icon">💼</div>
+                            <span class="hn-cat-item__name">Kinh doanh</span>
+                        </a>
+                        <a href="${pageContext.request.contextPath}/courses" class="hn-cat-item">
+                            <div class="hn-cat-item__icon">🌐</div>
+                            <span class="hn-cat-item__name">Ngoại ngữ</span>
+                        </a>
+                        <a href="${pageContext.request.contextPath}/courses" class="hn-cat-item">
+                            <div class="hn-cat-item__icon">🤖</div>
+                            <span class="hn-cat-item__name">AI & Data</span>
+                        </a>
+                        <a href="${pageContext.request.contextPath}/courses" class="hn-cat-item">
+                            <div class="hn-cat-item__icon">🚀</div>
+                            <span class="hn-cat-item__name">Kỹ năng mềm</span>
+                        </a>
+                        <a href="${pageContext.request.contextPath}/courses" class="hn-cat-item">
+                            <div class="hn-cat-item__icon">💰</div>
+                            <span class="hn-cat-item__name">Tài chính</span>
+                        </a>
+                        <a href="${pageContext.request.contextPath}/courses" class="hn-cat-item">
+                            <div class="hn-cat-item__icon">📚</div>
+                            <span class="hn-cat-item__name">Tất cả</span>
+                        </a>
+                    </c:otherwise>
+                </c:choose>
             </div>
 
         </div>
