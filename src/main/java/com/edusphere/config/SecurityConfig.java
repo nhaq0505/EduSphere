@@ -5,6 +5,7 @@ import com.edusphere.security.CustomUserDetailsService;
 import com.edusphere.security.RoleAwareAuthenticationSuccessHandler;
 import com.edusphere.security.oauth2.CustomOAuth2UserService;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
@@ -70,7 +72,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           ObjectProvider<ClientRegistrationRepository> registrations) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
@@ -98,6 +101,7 @@ public class SecurityConfig {
                 .requestMatchers("/courses/{courseId}/certificate", "/courses/{courseId}/certificate/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/courses/{courseId}/comments", "/courses/{courseId}/comments/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/study/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/student/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/admin/**").hasRole("ADMINISTRATOR")
                 .requestMatchers("/instructor/**").hasRole("INSTRUCTOR")
                 .anyRequest().authenticated()
@@ -117,23 +121,26 @@ public class SecurityConfig {
                 .deleteCookies("JSESSIONID")
                 .permitAll()
             )
-            // Google OAuth2 / OIDC Login
-            .oauth2Login(oauth2 -> oauth2
-                .loginPage("/login")
-                .userInfoEndpoint(userInfo -> userInfo
-                    .oidcUserService(oAuth2UserService)
-                )
-                .successHandler(authenticationSuccessHandler)
-                .failureUrl("/login?oauth2Error=true")
-            )
             .authenticationProvider(authenticationProvider())
             .csrf(csrf -> csrf.ignoringRequestMatchers(
                     "/payments/payos/webhook",
                     "/webhooks/bunny",
                     "/instructor/videos/upload",
                     "/instructor/videos/*/status",
-                    "/courses/*/lessons/*/watch-progress"))
+                    "/courses/*/lessons/*/watch-progress",
+                    "/instructor/courses/*/lessons/*/ai-materials/**"))
             .addFilterAfter(accountStateFilter, SecurityContextHolderFilter.class);
+
+        if (registrations.getIfAvailable() != null) {
+            http.oauth2Login(oauth2 -> oauth2
+                .loginPage("/login")
+                .userInfoEndpoint(userInfo -> userInfo
+                    .oidcUserService(oAuth2UserService)
+                )
+                .successHandler(authenticationSuccessHandler)
+                .failureUrl("/login?oauth2Error=true")
+            );
+        }
 
         return http.build();
     }

@@ -2,10 +2,12 @@ package com.edusphere.controller.course;
 
 import com.edusphere.dto.course.LessonItemView;
 import com.edusphere.dto.course.StudyCourseView;
+import com.edusphere.dto.course.ai.AiMaterialResultDto;
 import com.edusphere.security.CustomUserDetails;
 import com.edusphere.service.course.CourseActionException;
 import com.edusphere.service.course.CourseCommentService;
 import com.edusphere.service.course.LearningService;
+import com.edusphere.service.course.ai.AiMaterialService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,18 +20,21 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Controller
 @PreAuthorize("hasAnyRole('STUDENT', 'INSTRUCTOR', 'ADMINISTRATOR')")
 public class LessonStudyController {
 
     private final LearningService learningService;
+    private final AiMaterialService aiMaterialService;
 
     @Autowired(required = false)
     private CourseCommentService courseCommentService;
 
-    public LessonStudyController(LearningService learningService) {
+    public LessonStudyController(LearningService learningService, AiMaterialService aiMaterialService) {
         this.learningService = learningService;
+        this.aiMaterialService = aiMaterialService;
     }
 
     @GetMapping("/courses/{courseId}/learn")
@@ -77,9 +82,26 @@ public class LessonStudyController {
             Integer curLessonId = context.getCurrentLesson().getLessonId();
             Integer currentUserId = user != null ? user.getUserId() : null;
             model.addAttribute("lessonComments", courseCommentService.getLessonComments(courseId, curLessonId, currentUserId, sort));
-            model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(courseId, curLessonId));
+            model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(courseId, curLessonId, currentUserId));
             model.addAttribute("commentSort", sort);
         }
+
+        // Giai đoạn 6: Tải tài liệu AI của bài học cho học sinh (Read-only)
+        if (aiMaterialService != null && context.getCurrentLesson() != null) {
+            try {
+                Integer curLessonId = context.getCurrentLesson().getLessonId();
+                Integer currentUserId = user != null ? user.getUserId() : null;
+                Optional<AiMaterialResultDto> matOpt = aiMaterialService.getMaterial(courseId, curLessonId, currentUserId);
+                matOpt.ifPresent(m -> {
+                    if ("COMPLETED".equals(m.getStatus())) {
+                        model.addAttribute("aiMaterial", m);
+                    }
+                });
+            } catch (Exception ex) {
+                // Không để lỗi AI làm gián đoạn luồng xem bài học của học sinh
+            }
+        }
+
         return "courses/study";
     }
 

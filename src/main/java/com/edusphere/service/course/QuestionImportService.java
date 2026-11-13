@@ -14,6 +14,7 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFPictureData;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -94,16 +95,18 @@ public class QuestionImportService {
         }
         String lower = filename.toLowerCase(Locale.ROOT);
 
+        if (!lower.endsWith(".csv") && !lower.endsWith(".xlsx")
+                && !lower.endsWith(".xls") && !lower.endsWith(".docx")) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST, "Định dạng tệp không được hỗ trợ. Vui lòng tải file .csv, .xlsx hoặc .docx");
+        }
+
         try (InputStream is = file.getInputStream()) {
             if (lower.endsWith(".csv")) {
                 return parseCsv(is);
             } else if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
                 return parseExcel(is);
-            } else if (lower.endsWith(".docx")) {
-                return parseWordDocx(is);
-            } else {
-                throw new IllegalArgumentException("Định dạng tệp không được hỗ trợ. Vui lòng tải file .csv, .xlsx hoặc .docx");
             }
+            return parseWordDocx(is);
         } catch (Exception e) {
             log.error("Lỗi khi đọc file câu hỏi: {}", e.getMessage(), e);
             ImportResultDto res = new ImportResultDto();
@@ -122,17 +125,21 @@ public class QuestionImportService {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             String line;
             int lineNum = 0;
+            boolean downloadableTemplate = false;
             while ((line = reader.readLine()) != null) {
                 lineNum++;
                 line = line.trim();
                 if (line.isEmpty()) continue;
 
+                String[] cols = parseCsvLine(line);
                 // Bỏ qua header
                 if (lineNum == 1 && (line.toLowerCase().contains("nội dung") || line.toLowerCase().contains("content") || line.toLowerCase().contains("loại"))) {
+                    downloadableTemplate = hasDownloadableTemplateHeader(cols);
                     continue;
                 }
-
-                String[] cols = parseCsvLine(line);
+                if (downloadableTemplate) {
+                    cols = reorderDownloadableTemplate(cols);
+                }
                 if (cols.length < 2) {
                     result.getWarnings().add("Dòng " + lineNum + ": Bỏ qua vì không đủ thông tin.");
                     continue;
@@ -234,26 +241,33 @@ public class QuestionImportService {
         try (Workbook workbook = WorkbookFactory.create(is)) {
             Sheet sheet = workbook.getSheetAt(0);
             int rowIdx = 0;
+            boolean downloadableTemplate = false;
 
             for (Row row : sheet) {
                 rowIdx++;
                 if (row == null) continue;
 
-                // Bỏ qua header ở dòng 1
+                String[] cols = new String[10];
+                for (int index = 0; index < cols.length; index++) {
+                    cols[index] = getCellText(row.getCell(index));
+                }
+
                 if (rowIdx == 1) {
-                    String firstCell = getCellText(row.getCell(0));
-                    if (firstCell.toLowerCase().contains("nội dung") || firstCell.toLowerCase().contains("câu hỏi")) {
+                    downloadableTemplate = hasDownloadableTemplateHeader(cols);
+                    String firstCell = cols[0].toLowerCase(Locale.ROOT);
+                    if (downloadableTemplate || firstCell.contains("nội dung") || firstCell.contains("câu hỏi")) {
                         continue;
                     }
                 }
+                if (downloadableTemplate) {
+                    cols = reorderDownloadableTemplate(cols);
+                }
 
-                String content = getCellText(row.getCell(0));
+                String content = cols[0];
                 if (content.isEmpty()) continue;
 
-                String typeRaw = getCellText(row.getCell(1));
-                String diffRaw = getCellText(row.getCell(2));
-                String type = parseType(typeRaw);
-                String diff = parseDiff(diffRaw);
+                String type = parseType(cols[1]);
+                String diff = parseDiff(cols[2]);
 
                 ParsedQuestionDto q = ParsedQuestionDto.builder()
                         .content(content)
@@ -262,16 +276,16 @@ public class QuestionImportService {
                         .build();
 
                 if ("ESSAY".equals(type) || "SHORT_ANSWER".equals(type)) {
-                    q.setSampleEssayAnswer(getCellText(row.getCell(3)));
-                    q.setExplanation(getCellText(row.getCell(4)));
-                    String imgUrl = getCellText(row.getCell(5));
+                    q.setSampleEssayAnswer(cols[3]);
+                    q.setExplanation(cols[4]);
+                    String imgUrl = cols[5];
                     if (!imgUrl.isEmpty()) q.setImageUrl(imgUrl);
                 } else if ("TRUE_FALSE".equals(type)) {
-                    String optA = getCellText(row.getCell(3));
+                    String optA = cols[3];
                     if (optA.isEmpty()) optA = "Đúng";
-                    String optB = getCellText(row.getCell(4));
+                    String optB = cols[4];
                     if (optB.isEmpty()) optB = "Sai";
-                    String rawAns = getCellText(row.getCell(7));
+                    String rawAns = cols[7];
                     String tf = normalizeTrueFalse(rawAns);
                     if (tf == null) {
                         String upper = rawAns.toUpperCase(Locale.ROOT);
@@ -281,18 +295,18 @@ public class QuestionImportService {
                     addOption(q, optA, "TRUE".equalsIgnoreCase(tf), 1);
                     addOption(q, optB, "FALSE".equalsIgnoreCase(tf), 2);
 
-                    String explanation = getCellText(row.getCell(8));
-                    String imgUrl = getCellText(row.getCell(9));
+                    String explanation = cols[8];
+                    String imgUrl = cols[9];
                     q.setExplanation(explanation);
                     q.setImageUrl(imgUrl.isEmpty() ? null : imgUrl);
                 } else {
-                    String optA = getCellText(row.getCell(3));
-                    String optB = getCellText(row.getCell(4));
-                    String optC = getCellText(row.getCell(5));
-                    String optD = getCellText(row.getCell(6));
-                    String correct = getCellText(row.getCell(7)).toUpperCase();
-                    String explanation = getCellText(row.getCell(8));
-                    String imgUrl = getCellText(row.getCell(9));
+                    String optA = cols[3];
+                    String optB = cols[4];
+                    String optC = cols[5];
+                    String optD = cols[6];
+                    String correct = cols[7].toUpperCase();
+                    String explanation = cols[8];
+                    String imgUrl = cols[9];
 
                     addOption(q, optA, correct.contains("A") || correct.contains("1"), 1);
                     addOption(q, optB, correct.contains("B") || correct.contains("2"), 2);
@@ -314,6 +328,30 @@ public class QuestionImportService {
         result.setSuccessCount(list.size());
         result.setValidQuestions(list);
         return result;
+    }
+
+    private boolean hasDownloadableTemplateHeader(String[] columns) {
+        return columns.length >= 9
+                && columns[0].replace("\uFEFF", "").trim().equalsIgnoreCase("Content")
+                && columns[1].trim().equalsIgnoreCase("OptionA")
+                && columns[7].trim().equalsIgnoreCase("Type");
+    }
+
+    private String[] reorderDownloadableTemplate(String[] columns) {
+        String[] reordered = new String[10];
+        int[] sourceIndexes = {0, 7, 8, 1, 2, 3, 4, 5, 6};
+        for (int i = 0; i < sourceIndexes.length; i++) {
+            int sourceIndex = sourceIndexes[i];
+            reordered[i] = sourceIndex < columns.length ? columns[sourceIndex].trim() : "";
+        }
+        reordered[9] = "";
+        String type = parseType(reordered[1]);
+        if ("ESSAY".equals(type) || "SHORT_ANSWER".equals(type)) {
+            reordered[3] = reordered[7];
+            reordered[4] = reordered[8];
+            reordered[5] = "";
+        }
+        return reordered;
     }
 
     private String getCellText(Cell cell) {
@@ -418,7 +456,11 @@ public class QuestionImportService {
                         }
                     }
                 } else if (expMatcher.find() && current != null) {
-                    current.setExplanation(expMatcher.group(2).trim());
+                    String explanation = expMatcher.group(2).trim();
+                    current.setExplanation(explanation);
+                    if ("ESSAY".equals(current.getType()) && current.getSampleEssayAnswer() == null) {
+                        current.setSampleEssayAnswer(explanation);
+                    }
                 } else if (current != null) {
                     // Nối tiếp văn bản mô tả nếu đề bài nhiều dòng
                     if (current.getOptions().isEmpty()) {

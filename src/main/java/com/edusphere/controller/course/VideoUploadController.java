@@ -50,6 +50,9 @@ public class VideoUploadController {
     private final LessonRepository lessonRepository;
     private final LessonManagementService lessonService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.edusphere.service.course.CourseChangeLogService changeLogService;
+
     public VideoUploadController(BunnyStreamService bunnyService,
                                  LessonRepository lessonRepository,
                                  LessonManagementService lessonService) {
@@ -130,6 +133,9 @@ public class VideoUploadController {
         }
 
         try {
+            var beforeVideo = (lesson != null && changeLogService != null)
+                    ? changeLogService.snapshotVideo(lesson) : null;
+
             // Xác định tiêu đề video
             String videoTitle = (title != null && !title.isBlank())
                     ? title.trim()
@@ -157,6 +163,11 @@ public class VideoUploadController {
                 lesson.setLessonType("VIDEO");
                 lesson.setUpdatedAt(LocalDateTime.now());
                 lessonRepository.save(lesson);
+                if (changeLogService != null) {
+                    changeLogService.recordVideoDirectUpload(
+                            lesson, beforeVideo, changeLogService.snapshotVideo(lesson),
+                            originalName, file.getSize());
+                }
             }
 
             resp.put("success", true);

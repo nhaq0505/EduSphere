@@ -46,7 +46,8 @@ public class CourseCommentController {
             CourseComment saved = commentService.addComment(
                     courseId, lessonId, parentCommentId, user.getUserId(), content, rating);
             flash.addFlashAttribute("commentSuccess",
-                    parentCommentId != null ? "Đã gửi phản hồi của bạn." : "Đã đăng bình luận của bạn.");
+                    parentCommentId != null ? "Đã gửi phản hồi của bạn."
+                            : (lessonId != null ? "Đã gửi câu hỏi cho Giáo viên." : "Đã đăng bình luận của bạn."));
             return buildRedirectUrl(courseId, saved.getLesson() != null ? saved.getLesson().getLessonId() : lessonId);
         } catch (CourseActionException ex) {
             flash.addFlashAttribute("commentError", ex.getMessage());

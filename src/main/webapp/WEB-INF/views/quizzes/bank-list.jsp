@@ -171,6 +171,11 @@
                                     </div>
                                 </div>
                                 <div class="bank-actions">
+                                    <a class="ins-link-btn"
+                                       style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-color:#4f46e5;font-weight:700"
+                                       href="${pageContext.request.contextPath}/instructor/question-banks/${b.bankId}?openAi=true">
+                                        🤖 Tạo câu hỏi bằng AI
+                                    </a>
                                     <a class="ins-link-btn ins-link-btn--primary"
                                        href="${pageContext.request.contextPath}/instructor/question-banks/${b.bankId}">
                                         Quản lý câu hỏi

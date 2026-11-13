@@ -50,6 +50,13 @@ public class LessonManagementService {
     private final LearningHistoryRepository learningHistories;
     private final PersonalTaskRepository personalTasks;
 
+    @Autowired(required = false)
+    private CourseChangeLogService changeLogService;
+
+    public void setChangeLogService(CourseChangeLogService changeLogService) {
+        this.changeLogService = changeLogService;
+    }
+
     public LessonManagementService(CourseRepository courses, LessonRepository lessons,
                                    MaterialRepository materials, EnrollmentRepository enrollments,
                                    UserRepository users,
@@ -148,8 +155,12 @@ public class LessonManagementService {
         lesson.setCreatedAt(LocalDateTime.now());
         lesson = lessons.save(lesson);
 
+        if (changeLogService != null) {
+            changeLogService.recordLessonCreate(course, lesson);
+        }
+
         // Lưu tài liệu đính kèm nếu có
-        saveAttachedMaterial(lesson, instructorId, form);
+        saveAttachedMaterial(course, lesson, instructorId, form);
 
         return lesson.getLessonId();
     }
@@ -159,6 +170,9 @@ public class LessonManagementService {
         Course course = editableCourse(courseId, instructorId);
         Lesson lesson = lessons.findByLessonIdAndCourse_CourseId(lessonId, courseId)
                 .orElseThrow(() -> notFound("Không tìm thấy bài học."));
+        var beforeLesson = changeLogService != null ? changeLogService.snapshotLesson(lesson) : null;
+        var beforeVideo = changeLogService != null ? changeLogService.snapshotVideo(lesson) : null;
+
         List<Lesson> ordered = lessons.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
         int newOrder = form.getOrderIndex() == null ? lesson.getOrderIndex() : form.getOrderIndex();
         if (newOrder < 1 || newOrder > ordered.size()) throw conflict("Vị trí bài học không hợp lệ.");
@@ -172,8 +186,15 @@ public class LessonManagementService {
         lesson.setUpdatedAt(LocalDateTime.now());
         lessons.save(lesson);
 
+        if (changeLogService != null) {
+            changeLogService.recordLessonUpdate(
+                    course, lesson,
+                    beforeLesson, changeLogService.snapshotLesson(lesson),
+                    beforeVideo, changeLogService.snapshotVideo(lesson));
+        }
+
         // Lưu tài liệu đính kèm nếu có
-        saveAttachedMaterial(lesson, instructorId, form);
+        saveAttachedMaterial(course, lesson, instructorId, form);
     }
 
     @Transactional
@@ -181,6 +202,7 @@ public class LessonManagementService {
         Course course = editableCourse(courseId, instructorId);
         Lesson lesson = lessons.findByLessonIdAndCourse_CourseId(lessonId, courseId)
                 .orElseThrow(() -> notFound("Không tìm thấy bài học."));
+        var beforeLessonSnapshot = changeLogService != null ? changeLogService.snapshotLesson(lesson) : null;
 
         // Unlink prerequisiteLesson references
         List<Lesson> prereqDeps = lessons.findByPrerequisiteLesson_LessonId(lessonId);
@@ -259,6 +281,9 @@ public class LessonManagementService {
         lessons.saveAllAndFlush(remaining);
 
         bumpCourseToDraftIfPublishedOrApproved(course);
+        if (changeLogService != null) {
+            changeLogService.recordLessonDelete(course, lesson, beforeLessonSnapshot);
+        }
     }
 
     @Transactional
@@ -284,12 +309,44 @@ public class LessonManagementService {
         int maxOrder = existing.stream().mapToInt(Material::getOrderIndex).max().orElse(0);
         material.setOrderIndex(maxOrder + 1);
         material.setUploadedBy(users.getReferenceById(instructorId));
-        materials.save(material);
+        Material saved = materials.save(material);
+        if (changeLogService != null) {
+            changeLogService.recordMaterialCreate(course, lesson, saved);
+        }
+    }
+
+    @Transactional
+    public void updateMaterial(Integer courseId, Integer lessonId, Integer materialId, Integer instructorId, MaterialForm form) {
+        Course course = editableCourse(courseId, instructorId);
+        Lesson lesson = lessons.findByLessonIdAndCourse_CourseId(lessonId, courseId)
+                .orElseThrow(() -> notFound("Không tìm thấy bài học."));
+        Material material = materials.findById(materialId)
+                .orElseThrow(() -> notFound("Không tìm thấy tài liệu."));
+        if (material.getLesson() == null || !material.getLesson().getLessonId().equals(lessonId)) {
+            throw notFound("Không tìm thấy tài liệu.");
+        }
+        String url = trimmed(form.getFileUrl());
+        if (url == null || url.length() > 2048 || !validHttpUrl(url))
+            throw conflict("Đường dẫn tài liệu phải là URL http, https hợp lệ hoặc tệp tải lên từ hệ thống.");
+        String type = form.getType();
+        if (type == null || !Set.of("DOCUMENT", "LINK", "VIDEO").contains(type))
+            throw conflict("Loại tài liệu không hợp lệ.");
+
+        var beforeMat = changeLogService != null ? changeLogService.snapshotMaterial(material) : null;
+        material.setTitle(requiredTitle(form.getTitle()));
+        material.setType(type);
+        material.setFileUrl(url);
+        Material saved = materials.save(material);
+        lesson.setUpdatedAt(LocalDateTime.now());
+        if (changeLogService != null) {
+            changeLogService.recordMaterialUpdate(course, lesson, saved, beforeMat, changeLogService.snapshotMaterial(saved));
+        }
     }
 
     @Transactional
     public void deleteMaterial(Integer courseId, Integer lessonId, Integer materialId, Integer instructorId) {
-        lesson(courseId, lessonId, instructorId);
+        Course course = ownedCourse(courseId, instructorId);
+        Lesson lesson = lesson(courseId, lessonId, instructorId);
         Material material = materials.findById(materialId)
                 .orElseThrow(() -> notFound("Không tìm thấy tài liệu."));
         if (material.getLesson() == null
@@ -298,6 +355,7 @@ public class LessonManagementService {
                 || !material.getLesson().getCourse().getCourseId().equals(courseId)) {
             throw notFound("Không tìm thấy tài liệu.");
         }
+        var beforeMatSnapshot = changeLogService != null ? changeLogService.snapshotMaterial(material) : null;
         // Xóa tài liệu đính kèm — không cần bump course status
         materials.delete(material);
         materials.flush();
@@ -312,9 +370,12 @@ public class LessonManagementService {
             remaining.get(i).setOrderIndex(i + 1);
         }
         materials.saveAllAndFlush(remaining);
+        if (changeLogService != null) {
+            changeLogService.recordMaterialDelete(course, lesson, beforeMatSnapshot);
+        }
     }
 
-    private void saveAttachedMaterial(Lesson lesson, Integer instructorId, LessonForm form) {
+    private void saveAttachedMaterial(Course course, Lesson lesson, Integer instructorId, LessonForm form) {
         String url = trimmed(form.getMaterialUrl());
         if (url == null || url.isBlank()) {
             return;
@@ -343,7 +404,10 @@ public class LessonManagementService {
         int currentOrder = materials.findByLesson_LessonIdOrderByOrderIndexAsc(lesson.getLessonId()).size();
         material.setOrderIndex(currentOrder + 1);
         material.setUploadedBy(users.getReferenceById(instructorId));
-        materials.save(material);
+        Material saved = materials.save(material);
+        if (changeLogService != null) {
+            changeLogService.recordMaterialCreate(course, lesson, saved);
+        }
     }
 
     private void applyLessonForm(Lesson lesson, LessonForm form, Integer courseId) {
@@ -387,8 +451,13 @@ public class LessonManagementService {
             lesson.setVideoStatus("NONE");
         }
         lesson.setVideoDuration(form.getVideoDuration());
-        lesson.setAllowSeek(form.getAllowSeek() != null ? form.getAllowSeek() : true);
-        lesson.setQuizRequiresVideo(Boolean.TRUE.equals(form.getQuizRequiresVideo()));
+        boolean quizReqVideo = Boolean.TRUE.equals(form.getQuizRequiresVideo());
+        boolean allowSeek = form.getAllowSeek() != null ? form.getAllowSeek() : !quizReqVideo;
+        if (quizReqVideo && allowSeek) {
+            allowSeek = false;
+        }
+        lesson.setAllowSeek(allowSeek);
+        lesson.setQuizRequiresVideo(quizReqVideo);
         int minPct = form.getMinWatchPercent() != null ? form.getMinWatchPercent() : 0;
         lesson.setMinWatchPercent(Math.max(0, Math.min(100, minPct)));
 

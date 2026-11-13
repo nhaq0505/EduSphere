@@ -61,10 +61,8 @@ public class AiQuestionRagService {
     private final LessonRepository lessonRepository;
     private final ObjectMapper objectMapper;
 
-    @Value("${ai.rag.api-key:}")
     private String defaultApiKey;
 
-    @Value("${ai.rag.model:gemini-2.0-flash}")
     private String defaultModel;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -87,11 +85,9 @@ public class AiQuestionRagService {
             String modelInput) {
 
         String resolvedApiKey = resolveApiKey(apiKeyInput);
-        String resolvedModel = (modelInput != null && !modelInput.isBlank()) ? modelInput.trim() : defaultModel;
         int safeCount = Math.max(1, Math.min(20, questionCount));
 
         // Bước 1: Thu thập toàn bộ tài liệu gốc từ bài học, tệp đính kèm và văn bản nhập tay
-        Map<String, String> sourceDocuments = collectKnowledgeDocuments(courseId, lessonIds, documentFile, customContext);
         if (sourceDocuments.isEmpty()) {
             throw new CourseActionException(HttpStatus.BAD_REQUEST,
                     "Không có dữ liệu ngữ cảnh để thực hiện RAG. Vui lòng chọn bài học trong khóa học, tải lên tệp tài liệu (.docx/.txt) hoặc dán nội dung bài giảng.");
@@ -140,7 +136,6 @@ public class AiQuestionRagService {
             Integer courseId,
             List<Integer> lessonIds,
             MultipartFile documentFile,
-            String customContext) {
 
         Map<String, String> docs = new LinkedHashMap<>();
 
@@ -153,10 +148,8 @@ public class AiQuestionRagService {
                     courseIntro.append(course.getDescription().trim()).append("\n");
                 }
                 if (course.getObjectives() != null && !course.getObjectives().isBlank()) {
-                    courseIntro.append("Mục tiêu khóa học: ").append(course.getObjectives().trim());
                 }
                 if (!courseIntro.isEmpty()) {
-                    docs.put("Khóa học: " + course.getTitle(), courseIntro.toString());
                 }
             }
 
@@ -177,7 +170,6 @@ public class AiQuestionRagService {
                     lessonText.append("Ghi chú trọng tâm: ").append(lesson.getInstructorNotes().trim());
                 }
                 if (!lessonText.isEmpty()) {
-                    docs.put("Bài học: " + lesson.getTitle(), lessonText.toString());
                 }
             }
         }
@@ -404,11 +396,8 @@ public class AiQuestionRagService {
     }
 
     /**
-     * Gọi Google Gemini API (generateContent) và yêu cầu trả về JSON chuẩn.
      */
     private String callGeminiApi(String apiKey, String model, String systemPrompt, String userPrompt) throws Exception {
-        String geminiModel = model.toLowerCase(Locale.ROOT).startsWith("gemini") ? model : "gemini-2.0-flash";
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + geminiModel + ":generateContent?key=" + apiKey;
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("systemInstruction", Map.of(
@@ -422,7 +411,6 @@ public class AiQuestionRagService {
                 "temperature", 0.3,
                 "responseMimeType", "application/json"
         ));
-
         String requestBody = objectMapper.writeValueAsString(payload);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -432,17 +420,8 @@ public class AiQuestionRagService {
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            log.warn("Gemini API trả về HTTP {}: {}", response.statusCode(), response.body());
-            throw new CourseActionException(HttpStatus.BAD_GATEWAY,
-                    "Gemini API trả về lỗi (HTTP " + response.statusCode() + "). Vui lòng kiểm tra lại API Key hoặc hạn mức sử dụng.");
-        }
 
-        JsonNode root = objectMapper.readTree(response.body());
         JsonNode textNode = root.at("/candidates/0/content/parts/0/text");
-        if (textNode.isMissingNode() || textNode.asText().isBlank()) {
-            throw new CourseActionException(HttpStatus.BAD_GATEWAY, "Gemini API không trả về nội dung JSON hợp lệ.");
-        }
         return textNode.asText();
     }
 
@@ -641,15 +620,7 @@ public class AiQuestionRagService {
         if (defaultApiKey != null && !defaultApiKey.isBlank()) {
             return defaultApiKey.trim();
         }
-        String envGemini = System.getenv("GEMINI_API_KEY");
-        if (envGemini != null && !envGemini.isBlank()) {
-            return envGemini.trim();
         }
-        String envOpenAi = System.getenv("OPENAI_API_KEY");
-        if (envOpenAi != null && !envOpenAi.isBlank()) {
-            return envOpenAi.trim();
-        }
-        return "";
     }
 
     private String cleanJsonFence(String raw) {

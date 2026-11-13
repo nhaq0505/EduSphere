@@ -240,10 +240,10 @@
                         <div style="font-size:2rem; margin-bottom:8px;">📁</div>
                         <h3 style="margin:0 0 6px; color:#B45309; font-weight:800;">Chưa có cấu trúc chương mục nào!</h3>
                         <p style="margin:0 0 16px; font-size:.88rem; color:#92400E; max-width:480px; margin-inline:auto;">
-                            Bắt đầu bằng việc thêm <strong>Chương 1</strong>, sau đó thêm các bài học video, bài viết và tài liệu vào chương đó.
+                            Bắt đầu bằng việc thêm <strong>chương đầu tiên</strong>, sau đó thêm các bài học video, bài viết và tài liệu vào chương đó.
                         </p>
                         <button class="ins-btn-primary" style="display:inline-flex; width:auto; padding:9px 20px;" onclick="openSectionModal()">
-                            ➕ Bắt đầu tạo Chương 1
+                            ➕ Bắt đầu tạo chương mới
                         </button>
                     </div>
                 </c:when>
@@ -609,7 +609,7 @@
                     <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
                     <div class="ins-field" style="margin-bottom:14px;">
                         <label for="secTitle">Tên chương <span style="color:#EF4444">*</span></label>
-                        <input type="text" name="title" id="secTitle" required maxlength="255" placeholder="VD: Chương 1: Giới thiệu tổng quan & Môi trường lập trình"/>
+                        <input type="text" name="title" id="secTitle" required maxlength="255" placeholder="VD: Giới thiệu tổng quan & Môi trường lập trình"/>
                     </div>
                     <div class="ins-field" style="margin-bottom:18px;">
                         <label for="secDesc">Mô tả chương (Tùy chọn)</label>

@@ -38,6 +38,9 @@ public class CourseManagementController {
     @Autowired(required = false)
     private com.edusphere.service.course.CourseCommentService courseCommentService;
 
+    @Autowired(required = false)
+    private com.edusphere.service.course.CourseChangeLogService changeLogService;
+
     public CourseManagementController(CourseManagementService service) {
         this(service, null);
     }
@@ -146,6 +149,7 @@ public class CourseManagementController {
     @GetMapping("/instructor/courses/{id}/preview")
     public String previewAsStudent(@PathVariable Integer id,
                                    @RequestParam(required = false) Integer lessonId,
+                                   @RequestParam(value = "sort", defaultValue = "newest") String sort,
                                    @AuthenticationPrincipal CustomUserDetails user,
                                    Model model) {
         if (learningService != null) {
@@ -154,8 +158,10 @@ public class CourseManagementController {
             model.addAttribute("studyContext", studyContext);
             if (courseCommentService != null && studyContext.getCurrentLesson() != null) {
                 Integer curLessonId = studyContext.getCurrentLesson().getLessonId();
-                model.addAttribute("lessonComments", courseCommentService.getLessonComments(id, curLessonId, user != null ? user.getUserId() : null, "newest"));
-                model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(id, curLessonId));
+                Integer currentUserId = user != null ? user.getUserId() : null;
+                model.addAttribute("lessonComments", courseCommentService.getLessonComments(id, curLessonId, currentUserId, sort));
+                model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(id, curLessonId, currentUserId));
+                model.addAttribute("commentSort", sort);
             }
             return "courses/study";
         }
@@ -165,9 +171,10 @@ public class CourseManagementController {
     @GetMapping("/instructor/courses/{id}/preview/lessons/{lessonId}")
     public String previewLessonAsStudent(@PathVariable Integer id,
                                          @PathVariable Integer lessonId,
+                                         @RequestParam(value = "sort", defaultValue = "newest") String sort,
                                          @AuthenticationPrincipal CustomUserDetails user,
                                          Model model) {
-        return previewAsStudent(id, lessonId, user, model);
+        return previewAsStudent(id, lessonId, sort, user, model);
     }
 
     @GetMapping("/instructor/courses/{id}/edit")
@@ -240,6 +247,14 @@ public class CourseManagementController {
     @GetMapping("/admin/courses/{id}/review")
     public String reviewDetail(@PathVariable Integer id, Model model) {
         model.addAttribute("course", service.adminCourseDetail(id));
+        if (changeLogService != null) {
+            boolean isUpdateSubmission = changeLogService.isUpdateAfterApproval(id);
+            model.addAttribute("isUpdateSubmission", isUpdateSubmission);
+            model.addAttribute("lessonReviewMap", changeLogService.buildCourseLessonReviewMap(id));
+            model.addAttribute("courseChangeLogs", isUpdateSubmission ? changeLogService.getChangesSinceLastApproval(id) : java.util.List.of());
+        } else {
+            model.addAttribute("isUpdateSubmission", false);
+        }
         return "admin/course-review-detail";
     }
 

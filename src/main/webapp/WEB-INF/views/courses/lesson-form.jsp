@@ -107,7 +107,7 @@
                             <form:option value="" label="-- Chọn chương mục hoặc để mục chung --"/>
                             <c:forEach var="sec" items="${sections}">
                                 <c:if test="${not empty sec.sectionId}">
-                                    <form:option value="${sec.sectionId}" label="Chương ${sec.orderIndex}: ${sec.title}"/>
+                                    <form:option value="${sec.sectionId}" label="${sec.title}"/>
                                 </c:if>
                             </c:forEach>
                         </form:select>
@@ -193,7 +193,8 @@
                         </div>
                         <div class="ins-field" style="margin-top:8px;">
                             <label class="switch-label">
-                                <form:checkbox path="allowSeek" id="allowSeek"/>
+                                <form:checkbox path="allowSeek" id="allowSeek"
+                                               onchange="onAllowSeekChange(this.checked)"/>
                                 <span>Cho phép học viên tua video tới đoạn chưa xem (Tắt để bắt buộc xem tuần tự)</span>
                             </label>
                             <span class="ins-field__hint" style="margin-left:26px;">Học viên vẫn có thể tua lui xem lại dù tắt tùy chọn này.</span>
@@ -202,7 +203,7 @@
                         <div class="ins-field" style="margin-top:12px;">
                             <label class="switch-label">
                                 <form:checkbox path="quizRequiresVideo" id="quizRequiresVideo"
-                                               onchange="toggleMinWatch(this.checked)"/>
+                                               onchange="onQuizRequiresVideoChange(this.checked)"/>
                                 <span>🔒 Bắt buộc xem video đủ % mới được làm Quiz</span>
                             </label>
                             <span class="ins-field__hint" style="margin-left:26px;">Nếu bật, học viên phải xem đủ số % video bên dưới thì nút làm Quiz mới mở khóa.</span>
@@ -395,6 +396,37 @@ function toggleMinWatch(checked) {
     var field = document.getElementById('minWatchField');
     if (field) field.style.display = checked ? 'block' : 'none';
 }
+
+function onAllowSeekChange(checked) {
+    if (checked) {
+        var quizCheckbox = document.getElementById('quizRequiresVideo');
+        if (quizCheckbox && quizCheckbox.checked) {
+            quizCheckbox.checked = false;
+            toggleMinWatch(false);
+        }
+    }
+}
+
+function onQuizRequiresVideoChange(checked) {
+    if (checked) {
+        var seekCheckbox = document.getElementById('allowSeek');
+        if (seekCheckbox && seekCheckbox.checked) {
+            seekCheckbox.checked = false;
+        }
+    }
+    toggleMinWatch(checked);
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+    var seekCheckbox = document.getElementById('allowSeek');
+    var quizCheckbox = document.getElementById('quizRequiresVideo');
+    if (seekCheckbox && quizCheckbox && seekCheckbox.checked && quizCheckbox.checked) {
+        seekCheckbox.checked = false;
+    }
+    if (quizCheckbox) {
+        toggleMinWatch(quizCheckbox.checked);
+    }
+});
 
 function insertTag(open, close) {
     var ta = document.getElementById('content');

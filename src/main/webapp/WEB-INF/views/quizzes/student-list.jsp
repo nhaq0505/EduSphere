@@ -20,7 +20,7 @@
     <main class="quiz-shell">
         <a class="quiz-back-link" href="${pageContext.request.contextPath}/courses/${courseId}/learn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Quay lại bài học
+            Quay lại khóa học
         </a>
 
         <!-- Page Header -->
@@ -73,7 +73,7 @@
                                     <span>·</span>
                                     <span>🎯 Tối đa <strong><fmt:formatNumber value="${q.maxScore}" maxFractionDigits="1"/></strong> điểm</span>
                                     <span>·</span>
-                                    <span>🔄 <strong>${q.maxAttempts}</strong> lần làm</span>
+                                    <span>🔄 <strong>Không giới hạn</strong> lượt làm</span>
                                 </div>
                             </div>
 

@@ -223,9 +223,6 @@
                             🚀 Tạo Quiz cho khóa này
                         </a>
                     </c:if>
-                    <button type="button" class="ins-btn-primary" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);border-color:#4f46e5" onclick="openAiRagModal()">
-                        🤖 Tạo bằng AI (RAG)
-                    </button>
                     <button type="button" class="ins-btn-primary" style="background:#059669;border-color:#059669" onclick="openImportModal()">
                         📥 Nhập từ tệp (Word/Excel/CSV)
                     </button>
@@ -267,10 +264,7 @@
                         <p style="color:#64748b;max-width:460px;margin:0 auto 20px">
                             Bạn có thể tải lên tệp Word (.docx) chứa câu hỏi có hình ảnh, bảng Excel (.xlsx), CSV hoặc tự soạn thảo thủ công.
                         </p>
-                        <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
-                            <button type="button" class="ins-btn-primary" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);border-color:#4f46e5;width:auto" onclick="openAiRagModal()">
-                                🤖 Tạo câu hỏi bằng AI (RAG)
-                            </button>
+                        <div style="display:flex;justify-content:center;gap:12px">
                             <button type="button" class="ins-btn-primary" style="background:#059669;border-color:#059669;width:auto" onclick="openImportModal()">
                                 📥 Tải lên tệp Word / Excel / CSV
                             </button>
@@ -492,182 +486,6 @@
     </div>
 </div>
 
-<%-- MODAL TẠO CÂU HỎI BẰNG AI (RAG) & KIỂM DUYỆT CỦA GIẢNG VIÊN --%>
-<div class="modal-overlay" id="aiRagModal">
-    <div class="modal-box" style="max-width:740px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px">
-            <div>
-                <h2 style="margin:0 0 4px;font-size:1.3rem;font-weight:800;color:#0f172a">
-                    🤖 Tạo câu hỏi bằng AI theo cơ chế RAG
-                </h2>
-                <p style="color:#64748b;font-size:0.86rem;margin:0">
-                    Hệ thống tự động phân đoạn (Chunking) &amp; truy xuất các đoạn kiến thức liên quan nhất (Top-K Retrieval) từ bài giảng/tài liệu, sau đó gọi Model AI qua API Key để sinh bản nháp cho <strong>Giảng viên kiểm duyệt cuối cùng</strong>.
-                </p>
-            </div>
-        </div>
-
-        <form method="post"
-              action="${pageContext.request.contextPath}/instructor/question-banks/${bank.bankId}/ai-generate"
-              enctype="multipart/form-data"
-              onsubmit="document.getElementById('aiSubmitBtn').disabled=true; document.getElementById('aiSubmitBtn').textContent='⏳ Đang truy xuất RAG & gọi Model AI...';">
-            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
-
-            <%-- KHỐI 1: CẤU HÌNH MODEL & API KEY --%>
-            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:16px">
-                <div style="font-size:0.84rem;font-weight:800;color:#334155;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em">
-                    🔑 1. Cấu hình Model AI &amp; API Key
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:12px">
-                    <div>
-                        <label style="display:block;font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:4px">Model AI</label>
-                        <select name="aiModel" class="form-control" style="padding:8px 10px;font-size:0.88rem">
-                            <option value="gemini-2.0-flash" ${savedAiModel == 'gemini-2.0-flash' ? 'selected' : ''}>Google Gemini 2.0 Flash (Khuyên dùng)</option>
-                            <option value="gemini-2.5-flash" ${savedAiModel == 'gemini-2.5-flash' ? 'selected' : ''}>Google Gemini 2.5 Flash</option>
-                            <option value="gemini-1.5-flash" ${savedAiModel == 'gemini-1.5-flash' ? 'selected' : ''}>Google Gemini 1.5 Flash</option>
-                            <option value="gpt-4o-mini" ${savedAiModel == 'gpt-4o-mini' ? 'selected' : ''}>OpenAI GPT-4o mini</option>
-                            <option value="llama-3.3-70b-versatile" ${savedAiModel == 'llama-3.3-70b-versatile' ? 'selected' : ''}>Groq Llama 3.3 70B</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display:block;font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:4px">
-                            API Key (Gemini / OpenAI / Groq)
-                        </label>
-                        <input type="password" name="apiKey" class="form-control"
-                               style="padding:8px 10px;font-size:0.88rem"
-                               value="<c:out value='${savedAiApiKey}'/>"
-                               placeholder="Nhập API Key (VD: AIzaSy... hoặc sk-... / gsk_...)"/>
-                    </div>
-                </div>
-                <div style="font-size:0.76rem;color:#64748b;margin-top:6px">
-                    💡 API Key được lưu tạm trong phiên làm việc của bạn để không phải nhập lại nhiều lần (hoặc tự động dùng <code>ai.rag.api-key</code> nếu đã cấu hình trên server).
-                </div>
-            </div>
-
-            <%-- KHỐI 2: NGUỒN TRI THỨC ĐẦU VÀO CHO RAG --%>
-            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px 16px;margin-bottom:16px">
-                <div style="font-size:0.84rem;font-weight:800;color:#1e40af;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em">
-                    📚 2. Nguồn tri thức RAG (Chọn 1 hoặc kết hợp nhiều nguồn)
-                </div>
-
-                <div class="form-group" style="margin-bottom:12px">
-                    <label style="font-size:0.84rem">Nguồn A — Trích xuất từ Khóa học &amp; Bài giảng trong hệ thống:</label>
-                    <select name="sourceCourseId" id="ragCourseSelect" class="form-control"
-                            style="padding:8px 12px;font-size:0.88rem;background:#fff"
-                            onchange="loadLessonsForRagCourse(this.value)">
-                        <option value="">-- Không lấy từ khóa học (Chỉ dùng tệp / văn bản bên dưới) --</option>
-                        <c:forEach var="c" items="${courses}">
-                            <option value="${c.courseId}" ${bank.course != null and bank.course.courseId == c.courseId ? 'selected' : ''}>
-                                📘 <c:out value="${c.title}"/>
-                            </option>
-                        </c:forEach>
-                    </select>
-
-                    <div id="ragLessonsBox" style="margin-top:8px;max-height:130px;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:8px 12px;font-size:0.84rem">
-                        <c:choose>
-                            <c:when test="${not empty bankLessons}">
-                                <div style="font-weight:700;color:#334155;margin-bottom:4px">Chọn bài học làm ngữ cảnh RAG (Để trống = Lấy toàn bộ khóa học):</div>
-                                <c:forEach var="ls" items="${bankLessons}">
-                                    <label style="display:flex;align-items:center;gap:8px;font-weight:500;margin:4px 0;cursor:pointer">
-                                        <input type="checkbox" name="lessonIds" value="${ls.lessonId}" checked/>
-                                        <span>Bài ${ls.orderIndex}: <c:out value="${ls.title}"/></span>
-                                    </label>
-                                </c:forEach>
-                            </c:when>
-                            <c:otherwise>
-                                <span style="color:#64748b">Chọn một khóa học ở trên để hiển thị danh sách bài giảng.</span>
-                            </c:otherwise>
-                        </c:choose>
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin-bottom:12px">
-                    <label style="font-size:0.84rem">Nguồn B — Đính kèm tệp giáo trình / tài liệu (.docx, .txt, .md):</label>
-                    <input type="file" name="documentFile" class="form-control" accept=".docx,.txt,.md,.csv"
-                           style="padding:7px 10px;font-size:0.85rem;background:#fff"/>
-                </div>
-
-                <div class="form-group" style="margin-bottom:0">
-                    <label style="font-size:0.84rem">Nguồn C — Dán trực tiếp nội dung bài giảng / kiến thức trọng tâm:</label>
-                    <textarea name="customContext" class="form-control" rows="3"
-                              style="font-size:0.86rem;background:#fff"
-                              placeholder="Dán nội dung giáo trình, định nghĩa, công thức hoặc đoạn văn bản cần tạo câu hỏi vào đây..."></textarea>
-                </div>
-            </div>
-
-            <%-- KHỐI 3: TRUY VẤN RAG & CẤU HÌNH CÂU HỎI --%>
-            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:16px">
-                <div style="font-size:0.84rem;font-weight:800;color:#334155;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em">
-                    🎯 3. Truy vấn trọng tâm (RAG Query) &amp; Cấu hình câu hỏi
-                </div>
-
-                <div class="form-group" style="margin-bottom:12px">
-                    <label style="font-size:0.84rem">Chủ đề / Trọng tâm cần tập trung (Dùng để RAG xếp hạng &amp; lọc Top-K đoạn văn bản sát nhất):</label>
-                    <input type="text" name="topicPrompt" class="form-control"
-                           style="padding:8px 12px;font-size:0.88rem"
-                           placeholder="VD: Tập trung vào Dependency Injection, @Transactional và phân quyền Spring Security..."/>
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
-                    <div>
-                        <label style="display:block;font-size:0.8rem;font-weight:700;color:#374151;margin-bottom:4px">Số lượng câu</label>
-                        <input type="number" name="questionCount" class="form-control" value="5" min="1" max="20"
-                               style="padding:8px 10px;font-size:0.88rem" required/>
-                    </div>
-                    <div>
-                        <label style="display:block;font-size:0.8rem;font-weight:700;color:#374151;margin-bottom:4px">Loại câu hỏi</label>
-                        <select name="questionType" class="form-control" style="padding:8px 10px;font-size:0.88rem">
-                            <option value="SINGLE_CHOICE">Trắc nghiệm 1 đáp án</option>
-                            <option value="MIXED">Kết hợp đa dạng</option>
-                            <option value="MULTIPLE_CHOICE">Nhiều đáp án đúng</option>
-                            <option value="TRUE_FALSE">Đúng / Sai</option>
-                            <option value="ESSAY">Tự luận kèm đáp án mẫu</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display:block;font-size:0.8rem;font-weight:700;color:#374151;margin-bottom:4px">Độ khó</label>
-                        <select name="difficulty" class="form-control" style="padding:8px 10px;font-size:0.88rem">
-                            <option value="MIXED">Phân bổ Dễ - TB - Khó</option>
-                            <option value="EASY">Dễ (Easy)</option>
-                            <option value="MEDIUM">Trung bình (Medium)</option>
-                            <option value="HARD">Khó (Hard)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label style="display:block;font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:4px">Lưu vào Chuyên đề sau khi duyệt:</label>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                        <select name="categoryId" class="form-control" style="padding:8px 10px;font-size:0.86rem">
-                            <option value="">-- Chung toàn bộ ngân hàng --</option>
-                            <c:forEach var="cat" items="${categories}">
-                                <option value="${cat.categoryId}" ${selectedCategoryId == cat.categoryId ? 'selected' : ''}>
-                                    📁 <c:out value="${cat.name}"/>
-                                </option>
-                            </c:forEach>
-                        </select>
-                        <input type="text" name="newCategoryName" class="form-control"
-                               style="padding:8px 10px;font-size:0.86rem"
-                               placeholder="Hoặc nhập tên chuyên đề mới..."/>
-                    </div>
-                </div>
-            </div>
-
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px">
-                <span style="font-size:0.8rem;color:#475569">
-                    🛡️ <strong>An toàn:</strong> Câu hỏi sinh ra sẽ mở ở màn hình <strong>Kiểm duyệt nháp</strong> để bạn sửa và duyệt trước khi lưu.
-                </span>
-                <div style="display:flex;gap:10px">
-                    <button type="button" class="ins-link-btn" onclick="closeAiRagModal()">Hủy</button>
-                    <button type="submit" id="aiSubmitBtn" class="ins-btn-primary"
-                            style="background:linear-gradient(135deg,#4f46e5,#7c3aed);border-color:#4f46e5;width:auto;white-space:nowrap">
-                        ✨ Sinh câu hỏi nháp &amp; Kiểm duyệt
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
 <%-- ZOOM IMAGE MODAL --%>
 <div class="modal-overlay" id="imageZoomModal" onclick="closeZoomModal()">
     <div style="position:relative;max-width:90vw;max-height:90vh">
@@ -698,37 +516,6 @@
     }
     function openCategoryModal() { document.getElementById('categoryModal').classList.add('active'); }
     function closeCategoryModal() { document.getElementById('categoryModal').classList.remove('active'); }
-    function openAiRagModal() { document.getElementById('aiRagModal').classList.add('active'); }
-    function closeAiRagModal() { document.getElementById('aiRagModal').classList.remove('active'); }
-
-    function loadLessonsForRagCourse(courseId) {
-        var box = document.getElementById('ragLessonsBox');
-        if (!box) return;
-        if (!courseId) {
-            box.innerHTML = '<span style="color:#64748b">Chọn một khóa học ở trên để hiển thị danh sách bài giảng.</span>';
-            return;
-        }
-        box.innerHTML = '<span style="color:#6366f1">Đang tải danh sách bài giảng...</span>';
-        fetch('${pageContext.request.contextPath}/instructor/question-banks/api/courses/' + courseId + '/lessons')
-            .then(function(r) { return r.json(); })
-            .then(function(list) {
-                if (!list || list.length === 0) {
-                    box.innerHTML = '<span style="color:#64748b">Khóa học này chưa có bài giảng nào.</span>';
-                    return;
-                }
-                var html = '<div style="font-weight:700;color:#334155;margin-bottom:4px">Chọn bài học làm ngữ cảnh RAG:</div>';
-                list.forEach(function(ls, idx) {
-                    html += '<label style="display:flex;align-items:center;gap:8px;font-weight:500;margin:4px 0;cursor:pointer">'
-                        + '<input type="checkbox" name="lessonIds" value="' + ls.lessonId + '" checked/>'
-                        + '<span>Bài ' + (idx + 1) + ': ' + ls.title + '</span>'
-                        + '</label>';
-                });
-                box.innerHTML = html;
-            })
-            .catch(function() {
-                box.innerHTML = '<span style="color:#ef4444">Không thể tải danh sách bài học.</span>';
-            });
-    }
 
     function toggleNewCategoryInput() {
         var newGrp = document.getElementById('newCategoryGroup');

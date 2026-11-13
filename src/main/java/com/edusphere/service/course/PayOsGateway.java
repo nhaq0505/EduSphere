@@ -1,5 +1,7 @@
 package com.edusphere.service.course;
 
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,20 +17,33 @@ import java.net.URI;
 import java.util.Locale;
 
 @Service
+@Slf4j
 public class PayOsGateway {
     private final String clientId;
     private final String apiKey;
     private final String checksumKey;
     private final String baseUrl;
 
-    public PayOsGateway(@Value("${PAYOS_CLIENT_ID:}") String clientId,
-                        @Value("${PAYOS_API_KEY:}") String apiKey,
-                        @Value("${PAYOS_CHECKSUM_KEY:}") String checksumKey,
+    public PayOsGateway(@Value("${payos.client-id}") String clientId,
+                        @Value("${payos.api-key}") String apiKey,
+                        @Value("${payos.checksum-key}") String checksumKey,
                         @Value("${app.base-url}") String baseUrl) {
         this.clientId = clientId;
         this.apiKey = apiKey;
         this.checksumKey = checksumKey;
         this.baseUrl = baseUrl.replaceAll("/+$", "");
+    }
+
+    @PostConstruct
+    void reportConfiguration() {
+        if (isConfigured()) {
+            log.info("PayOS credentials are configured");
+        } else {
+            log.warn("PayOS is disabled. Set PAYOS_CLIENT_ID, PAYOS_API_KEY, and PAYOS_CHECKSUM_KEY in the service environment");
+        }
+        if (!baseUrl.toLowerCase(Locale.ROOT).startsWith("https://")) {
+            log.warn("PayOS return and cancel URLs are not using HTTPS: {}", baseUrl);
+        }
     }
 
     public CreatePaymentLinkResponse create(long orderCode, long amount) {
@@ -53,6 +68,7 @@ public class PayOsGateway {
             }
             return link;
         } catch (PayOSException ex) {
+            log.error("PayOS could not create payment link: {}", safeMessage(ex));
             throw new CourseActionException(HttpStatus.BAD_GATEWAY, "Không tạo được link thanh toán. Vui lòng thử lại.");
         } finally {
             client.close();
@@ -64,6 +80,7 @@ public class PayOsGateway {
         try {
             return client.paymentRequests().get(orderCode);
         } catch (PayOSException ex) {
+            log.error("PayOS could not retrieve payment status: {}", safeMessage(ex));
             throw new CourseActionException(HttpStatus.BAD_GATEWAY, "Không kiểm tra được trạng thái thanh toán.");
         } finally {
             client.close();
@@ -89,6 +106,15 @@ public class PayOsGateway {
                     "Chưa cấu hình PayOS. Cần PAYOS_CLIENT_ID, PAYOS_API_KEY và PAYOS_CHECKSUM_KEY.");
         }
         return new PayOS(clientId, apiKey, checksumKey);
+    }
+
+    private String safeMessage(PayOSException exception) {
+        String message = exception.getMessage();
+        if (message == null || message.isBlank()) return exception.getClass().getSimpleName();
+        if (clientId != null && !clientId.isBlank()) message = message.replace(clientId, "[redacted]");
+        if (apiKey != null && !apiKey.isBlank()) message = message.replace(apiKey, "[redacted]");
+        if (checksumKey != null && !checksumKey.isBlank()) message = message.replace(checksumKey, "[redacted]");
+        return message;
     }
 
     private boolean isPayOsCheckoutUrl(String value) {

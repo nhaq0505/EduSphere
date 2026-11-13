@@ -1,4 +1,4 @@
-﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>${isEdit ? 'Sửa' : 'Thêm'} nhiệm vụ — EduSphere</title>
@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/home.css">
 <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/planning-new.css">
 </head><body>
-<jsp:include page="/WEB-INF/views/planning/planning-navbar.jsp"/>
+<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 <div class="pl-shell" style="max-width:820px;">
 <a href="${pageContext.request.contextPath}/study/plans/${plan.planId}" style="color:#64748b;text-decoration:none;font-size:.87rem;font-weight:600;display:inline-flex;align-items:center;gap:5px;margin-bottom:20px;">
     ← Quay lại: <strong><c:out value="${plan.title}"/></strong>

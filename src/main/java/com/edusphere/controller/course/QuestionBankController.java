@@ -1,24 +1,17 @@
 package com.edusphere.controller.course;
 
-import com.edusphere.dto.quiz.AiRagGenerationResultDto;
 import com.edusphere.dto.quiz.BankQuestionForm;
 import com.edusphere.dto.quiz.ImportResultDto;
-import com.edusphere.dto.quiz.ParsedQuestionDto;
-import com.edusphere.dto.quiz.ParsedQuestionDto.ParsedOptionDto;
 import com.edusphere.dto.quiz.QuestionBankForm;
 import com.edusphere.entity.course.BankAnswerOption;
 import com.edusphere.entity.course.BankQuestion;
-import com.edusphere.entity.course.Lesson;
 import com.edusphere.entity.course.QuestionBank;
 import com.edusphere.repository.course.CourseRepository;
-import com.edusphere.repository.course.LessonRepository;
 import com.edusphere.security.CustomUserDetails;
-import com.edusphere.service.course.AiQuestionRagService;
 import com.edusphere.service.course.CourseActionException;
 import com.edusphere.service.course.FileUploadService;
 import com.edusphere.service.course.QuestionBankService;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,9 +54,7 @@ public class QuestionBankController {
 
     private final QuestionBankService questionBankService;
     private final CourseRepository courseRepository;
-    private final LessonRepository lessonRepository;
     private final FileUploadService fileUploadService;
-    private final AiQuestionRagService aiQuestionRagService;
 
     // ==========================================
     // 1. DANH SÁCH NGÂN HÀNG CỦA GIẢNG VIÊN
@@ -104,25 +95,17 @@ public class QuestionBankController {
     public String viewBank(@PathVariable Integer bankId,
                            @RequestParam(required = false) Integer categoryId,
                            @AuthenticationPrincipal CustomUserDetails user,
-                           HttpSession session,
                            Model model) {
         Integer instructorId = user.getUserId();
         QuestionBank bank = questionBankService.getBank(bankId, instructorId);
         var categories = questionBankService.listCategories(bankId, instructorId);
         var questions = questionBankService.listQuestions(bankId, instructorId, categoryId);
 
-        List<Lesson> bankLessons = bank.getCourse() != null
-                ? lessonRepository.findByCourse_CourseIdOrderByOrderIndexAsc(bank.getCourse().getCourseId())
-                : List.of();
-
         model.addAttribute("bank", bank);
         model.addAttribute("categories", categories);
         model.addAttribute("questions", questions);
         model.addAttribute("selectedCategoryId", categoryId);
         model.addAttribute("courses", courseRepository.findByInstructor_UserIdOrderByCreatedAtDesc(instructorId));
-        model.addAttribute("bankLessons", bankLessons);
-        model.addAttribute("savedAiApiKey", session.getAttribute("INSTRUCTOR_AI_API_KEY"));
-        model.addAttribute("savedAiModel", session.getAttribute("INSTRUCTOR_AI_MODEL"));
         return "quizzes/bank-detail";
     }
 
@@ -341,192 +324,7 @@ public class QuestionBankController {
     }
 
     // ==========================================
-    // 5. TẠO CÂU HỎI BẰNG AI (RAG) & GIẢNG VIÊN KIỂM DUYỆT CUỐI
-    // ==========================================
-
-    /**
-     * API lấy danh sách bài học của một khóa học để giảng viên chọn làm nguồn ngữ cảnh RAG.
-     */
-    @GetMapping("/api/courses/{courseId}/lessons")
-    @ResponseBody
-    public List<Map<String, Object>> getCourseLessonsApi(@PathVariable Integer courseId,
-                                                         @AuthenticationPrincipal CustomUserDetails user) {
-        List<Lesson> lessons = lessonRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Lesson lesson : lessons) {
-            Map<String, Object> item = new HashMap<>();
-            item.put("lessonId", lesson.getLessonId());
-            item.put("title", lesson.getTitle());
-            item.put("hasContent", (lesson.getContent() != null && !lesson.getContent().isBlank())
-                    || (lesson.getInstructorNotes() != null && !lesson.getInstructorNotes().isBlank()));
-            result.add(item);
-        }
-        return result;
-    }
-
-    /**
-     * Bước 1: Thực hiện RAG (truy xuất ngữ cảnh từ bài học/tài liệu) + gọi Model AI qua API Key để sinh câu hỏi nháp,
-     * sau đó chuyển sang màn hình Kiểm duyệt dành cho Giảng viên (chưa lưu vào DB).
-     */
-    @PostMapping("/{bankId}/ai-generate")
-    public String generateQuestionsWithAiRag(
-            @PathVariable Integer bankId,
-            @RequestParam(required = false) Integer sourceCourseId,
-            @RequestParam(required = false) List<Integer> lessonIds,
-            @RequestParam(value = "documentFile", required = false) MultipartFile documentFile,
-            @RequestParam(required = false) String customContext,
-            @RequestParam(required = false) String topicPrompt,
-            @RequestParam(defaultValue = "MIXED") String questionType,
-            @RequestParam(defaultValue = "MIXED") String difficulty,
-            @RequestParam(defaultValue = "5") int questionCount,
-            @RequestParam(required = false) Integer categoryId,
-            @RequestParam(required = false) String newCategoryName,
-            @RequestParam(required = false) String apiKey,
-            @RequestParam(defaultValue = "gemini-2.0-flash") String aiModel,
-            @AuthenticationPrincipal CustomUserDetails user,
-            HttpSession session,
-            Model model,
-            RedirectAttributes flash) {
-
-        Integer instructorId = user.getUserId();
-        QuestionBank bank = questionBankService.getBank(bankId, instructorId);
-
-        if (apiKey != null && !apiKey.isBlank()) {
-            session.setAttribute("INSTRUCTOR_AI_API_KEY", apiKey.trim());
-        }
-        if (aiModel != null && !aiModel.isBlank()) {
-            session.setAttribute("INSTRUCTOR_AI_MODEL", aiModel.trim());
-        }
-        String effectiveApiKey = (apiKey != null && !apiKey.isBlank())
-                ? apiKey.trim()
-                : (String) session.getAttribute("INSTRUCTOR_AI_API_KEY");
-
-        try {
-            AiRagGenerationResultDto ragResult = aiQuestionRagService.generateDraftQuestionsWithRag(
-                    sourceCourseId,
-                    lessonIds,
-                    documentFile,
-                    customContext,
-                    topicPrompt,
-                    questionType,
-                    difficulty,
-                    questionCount,
-                    effectiveApiKey,
-                    aiModel
-            );
-            ragResult.setTargetCategoryId(categoryId);
-            ragResult.setNewCategoryName(newCategoryName);
-
-            model.addAttribute("bank", bank);
-            model.addAttribute("categories", questionBankService.listCategories(bankId, instructorId));
-            model.addAttribute("ragResult", ragResult);
-            return "quizzes/ai-review";
-        } catch (CourseActionException ex) {
-            flash.addFlashAttribute("error", ex.getMessage());
-            return "redirect:/instructor/question-banks/" + bankId;
-        } catch (Exception ex) {
-            log.error("Lỗi khi tạo câu hỏi bằng AI RAG: ", ex);
-            flash.addFlashAttribute("error", "Lỗi khi gọi AI tạo câu hỏi: " + ex.getMessage());
-            return "redirect:/instructor/question-banks/" + bankId;
-        }
-    }
-
-    /**
-     * Bước 2 (Kiểm duyệt cuối của Giảng viên): Nhận danh sách các câu hỏi đã được Giảng viên tick duyệt
-     * và chỉnh sửa trên màn hình Kiểm duyệt, lưu chính thức vào Ngân hàng câu hỏi.
-     */
-    @PostMapping("/{bankId}/ai-approve")
-    public String approveAiQuestions(
-            @PathVariable Integer bankId,
-            @RequestParam(required = false) Integer categoryId,
-            @RequestParam(required = false) String newCategoryName,
-            @RequestParam(value = "approvedIndices", required = false) List<Integer> approvedIndices,
-            @RequestParam(value = "contents", required = false) List<String> contents,
-            @RequestParam(value = "types", required = false) List<String> types,
-            @RequestParam(value = "difficulties", required = false) List<String> difficulties,
-            @RequestParam(value = "scores", required = false) List<String> scores,
-            @RequestParam(value = "optionAs", required = false) List<String> optionAs,
-            @RequestParam(value = "optionBs", required = false) List<String> optionBs,
-            @RequestParam(value = "optionCs", required = false) List<String> optionCs,
-            @RequestParam(value = "optionDs", required = false) List<String> optionDs,
-            @RequestParam(value = "correctAnswers", required = false) List<String> correctAnswers,
-            @RequestParam(value = "explanations", required = false) List<String> explanations,
-            @RequestParam(value = "sampleEssayAnswers", required = false) List<String> sampleEssayAnswers,
-            @AuthenticationPrincipal CustomUserDetails user,
-            RedirectAttributes flash) {
-
-        if (approvedIndices == null || approvedIndices.isEmpty()) {
-            flash.addFlashAttribute("warning", "Bạn chưa chọn câu hỏi nào để phê duyệt vào ngân hàng.");
-            return "redirect:/instructor/question-banks/" + bankId;
-        }
-
-        List<ParsedQuestionDto> approvedList = new ArrayList<>();
-        for (Integer idx : approvedIndices) {
-            if (idx == null || contents == null || idx < 0 || idx >= contents.size()) {
-                continue;
-            }
-            String content = getAt(contents, idx);
-            if (content == null || content.isBlank()) {
-                continue;
-            }
-            String type = getAt(types, idx);
-            if (type == null || type.isBlank()) type = "SINGLE_CHOICE";
-
-            String difficulty = getAt(difficulties, idx);
-            if (difficulty == null || difficulty.isBlank()) difficulty = "MEDIUM";
-
-            java.math.BigDecimal score = java.math.BigDecimal.valueOf(1.0);
-            try {
-                String rawScore = getAt(scores, idx);
-                if (rawScore != null && !rawScore.isBlank()) {
-                    score = new java.math.BigDecimal(rawScore.trim());
-                }
-            } catch (Exception ignored) {
-            }
-
-            String correct = getAt(correctAnswers, idx);
-            if (correct == null || correct.isBlank()) correct = "A";
-            correct = correct.trim().toUpperCase(java.util.Locale.ROOT);
-
-            List<ParsedOptionDto> options = new ArrayList<>();
-            if ("SINGLE_CHOICE".equals(type) || "MULTIPLE_CHOICE".equals(type)) {
-                String[] opts = {getAt(optionAs, idx), getAt(optionBs, idx), getAt(optionCs, idx), getAt(optionDs, idx)};
-                String[] labels = {"A", "B", "C", "D"};
-                for (int i = 0; i < opts.length; i++) {
-                    if (opts[i] != null && !opts[i].isBlank()) {
-                        boolean isCorr = correct.contains(labels[i]);
-                        options.add(new ParsedOptionDto(opts[i].trim(), isCorr, i + 1));
-                    }
-                }
-            }
-
-            approvedList.add(ParsedQuestionDto.builder()
-                    .content(content.trim())
-                    .type(type)
-                    .difficultyLevel(difficulty)
-                    .defaultScore(score)
-                    .correctAnswer(correct)
-                    .explanation(getAt(explanations, idx))
-                    .sampleEssayAnswer(getAt(sampleEssayAnswers, idx))
-                    .options(options)
-                    .build());
-        }
-
-        int savedCount = questionBankService.saveApprovedAiQuestions(
-                bankId, user.getUserId(), categoryId, newCategoryName, approvedList);
-
-        flash.addFlashAttribute("success",
-                "Đã kiểm duyệt và lưu thành công " + savedCount + " câu hỏi từ AI (RAG) vào ngân hàng câu hỏi!");
-        return "redirect:/instructor/question-banks/" + bankId;
-    }
-
-    private String getAt(List<String> list, int idx) {
-        if (list == null || idx < 0 || idx >= list.size()) return null;
-        return list.get(idx);
-    }
-
-    // ==========================================
-    // 6. REST API CHO QUIZ BUILDER (LẤY CÂU HỎI THEO BANK)
+    // 5. REST API CHO QUIZ BUILDER (LẤY CÂU HỎI THEO BANK)
     // ==========================================
 
     @GetMapping("/api/{bankId}/questions")

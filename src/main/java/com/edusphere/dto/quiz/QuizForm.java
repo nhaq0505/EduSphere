@@ -25,8 +25,7 @@ public class QuizForm {
 
     private Integer timeLimitMinutes;
 
-    @Min(value = 1, message = "Số lần làm tối thiểu là 1")
-    private Integer maxAttempts = 1;
+    private Integer maxAttempts = 999;
 
     /** ISO datetime string: yyyy-MM-dd'T'HH:mm */
     private String startTime;

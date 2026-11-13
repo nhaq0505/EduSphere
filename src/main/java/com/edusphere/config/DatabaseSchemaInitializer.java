@@ -128,6 +128,38 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         ALTER TABLE dbo.certificates ADD total_hours INT NULL CONSTRAINT DF_certificates_hours DEFAULT 18;
                 END
                 """);
+
+            // Tự động tạo hoặc nâng cấp bảng lesson_ai_materials (Tài liệu học tập AI)
+            jdbcTemplate.execute("""
+                IF OBJECT_ID(N'dbo.lesson_ai_materials', N'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.lesson_ai_materials (
+                        id INT IDENTITY(1,1) PRIMARY KEY,
+                        lesson_id INT NOT NULL,
+                        task_id NVARCHAR(100) NULL,
+                        status NVARCHAR(30) NOT NULL CONSTRAINT DF_lam_status DEFAULT N'PENDING',
+                        original_transcript NVARCHAR(MAX) NULL,
+                        corrected_transcript NVARCHAR(MAX) NULL,
+                        summary NVARCHAR(MAX) NULL,
+                        key_points NVARCHAR(MAX) NULL,
+                        terms NVARCHAR(MAX) NULL,
+                        conclusion NVARCHAR(MAX) NULL,
+                        ai_model NVARCHAR(100) NULL,
+                        error_message NVARCHAR(1000) NULL,
+                        created_at DATETIME2 NOT NULL CONSTRAINT DF_lam_created DEFAULT SYSDATETIME(),
+                        updated_at DATETIME2 NULL,
+                        CONSTRAINT UQ_lesson_ai_materials_lesson UNIQUE (lesson_id),
+                        CONSTRAINT FK_lesson_ai_materials_lesson FOREIGN KEY (lesson_id) REFERENCES dbo.lessons(lesson_id) ON DELETE CASCADE
+                    );
+                END
+                ELSE
+                BEGIN
+                    IF COL_LENGTH('dbo.lesson_ai_materials', 'task_id') IS NULL
+                        ALTER TABLE dbo.lesson_ai_materials ADD task_id NVARCHAR(100) NULL;
+                    IF COL_LENGTH('dbo.lesson_ai_materials', 'error_message') IS NULL
+                        ALTER TABLE dbo.lesson_ai_materials ADD error_message NVARCHAR(1000) NULL;
+                END
+                """);
         } catch (Exception ex) {
             log.debug("[DbAutoMigration] Bỏ qua bước pre-Hibernate migration: {}", ex.getMessage());
         }
@@ -141,6 +173,8 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
             syncCheckConstraints();
             syncTrueFalseAnswers();
             ensureDefaultCategories();
+            ensureStudentStudyLogsTable();
+            ensureCourseChangeLogsTable();
             log.info("[DbAutoMigration] Tự động migration schema, CHECK constraints và dữ liệu nền hoàn tất.");
         } catch (Exception ex) {
             log.warn("[DbAutoMigration] Bỏ qua đồng bộ SQL Server đặc thù: {}", ex.getMessage());
@@ -302,6 +336,17 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                     CHECK (amount > 0);
             END
             """);
+
+        // 7. CK_lesson_ai_materials_status: hỗ trợ PENDING, PROCESSING, COMPLETED, FAILED
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.lesson_ai_materials', N'U') IS NOT NULL
+            BEGIN
+                IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_lesson_ai_materials_status' AND parent_object_id = OBJECT_ID(N'dbo.lesson_ai_materials'))
+                    ALTER TABLE dbo.lesson_ai_materials DROP CONSTRAINT CK_lesson_ai_materials_status;
+                ALTER TABLE dbo.lesson_ai_materials WITH CHECK ADD CONSTRAINT CK_lesson_ai_materials_status
+                    CHECK (status IN (N'PENDING', N'PROCESSING', N'COMPLETED', N'FAILED'));
+            END
+            """);
     }
 
     private void syncTrueFalseAnswers() {
@@ -366,6 +411,98 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         (N'Lập trình Di động', N'Phát triển ứng dụng iOS, Android và Đa nền tảng', N'ACTIVE'),
                         (N'Cơ sở dữ liệu & Hệ thống', N'SQL Server, DevOps, Cloud và Kiến trúc phần mềm', N'ACTIVE');
                 END
+            END
+            """);
+    }
+
+    /**
+     * Tự động tạo bảng student_study_logs (nếu chưa có) để lưu số giờ học của học viên,
+     * đồng thời đồng bộ dữ liệu xem video sẵn có từ lesson_watch_progress khi bảng mới được tạo.
+     */
+    private void ensureStudentStudyLogsTable() {
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.student_study_logs', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.student_study_logs (
+                    log_id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    student_id INT NOT NULL,
+                    course_id INT NOT NULL,
+                    study_date DATE NOT NULL,
+                    duration_seconds INT NOT NULL CONSTRAINT DF_student_study_logs_duration DEFAULT 0,
+                    updated_at DATETIME2 NOT NULL CONSTRAINT DF_student_study_logs_updated DEFAULT SYSDATETIME(),
+                    CONSTRAINT UQ_student_study_logs_student_course_date UNIQUE (student_id, course_id, study_date),
+                    CONSTRAINT FK_student_study_logs_student FOREIGN KEY (student_id) REFERENCES dbo.users(user_id),
+                    CONSTRAINT FK_student_study_logs_course FOREIGN KEY (course_id) REFERENCES dbo.courses(course_id)
+                );
+            END
+            """);
+
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.student_study_logs', N'U') IS NOT NULL
+               AND OBJECT_ID(N'dbo.lesson_watch_progress', N'U') IS NOT NULL
+               AND OBJECT_ID(N'dbo.lessons', N'U') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM dbo.student_study_logs)
+                BEGIN
+                    INSERT INTO dbo.student_study_logs (student_id, course_id, study_date, duration_seconds, updated_at)
+                    SELECT
+                        lwp.student_id,
+                        lwp.course_id,
+                        CAST(lwp.updated_at AS DATE) AS study_date,
+                        SUM(
+                            CASE
+                                WHEN ISNULL(l.video_duration, 0) > 0 THEN
+                                    CAST((CASE WHEN l.video_duration > 60 THEN l.video_duration ELSE l.video_duration * 60 END) * ISNULL(lwp.watch_percent, 0) / 100.0 AS INT)
+                                ELSE ISNULL(lwp.last_position, 0)
+                            END
+                        ) AS duration_seconds,
+                        MAX(lwp.updated_at) AS updated_at
+                    FROM dbo.lesson_watch_progress lwp
+                    JOIN dbo.lessons l ON lwp.lesson_id = l.lesson_id
+                    WHERE ISNULL(lwp.watch_percent, 0) > 0 OR ISNULL(lwp.last_position, 0) > 0
+                    GROUP BY lwp.student_id, lwp.course_id, CAST(lwp.updated_at AS DATE)
+                    HAVING SUM(
+                        CASE
+                            WHEN ISNULL(l.video_duration, 0) > 0 THEN
+                                CAST((CASE WHEN l.video_duration > 60 THEN l.video_duration ELSE l.video_duration * 60 END) * ISNULL(lwp.watch_percent, 0) / 100.0 AS INT)
+                            ELSE ISNULL(lwp.last_position, 0)
+                        END
+                    ) > 0;
+                END
+            END
+            """);
+    }
+
+    /**
+     * Tự động tạo bảng course_change_logs (nếu chưa có) để lưu toàn bộ lịch sử thay đổi khóa học cho Admin.
+     */
+    private void ensureCourseChangeLogsTable() {
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.course_change_logs', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.course_change_logs (
+                    log_id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    course_id INT NOT NULL,
+                    course_title NVARCHAR(255) NULL,
+                    actor_id INT NOT NULL,
+                    actor_name NVARCHAR(255) NULL,
+                    actor_email NVARCHAR(255) NULL,
+                    actor_role NVARCHAR(30) NULL CONSTRAINT DF_ccl_actor_role DEFAULT N'INSTRUCTOR',
+                    entity_type NVARCHAR(40) NOT NULL,
+                    entity_id INT NULL,
+                    entity_title NVARCHAR(500) NULL,
+                    parent_lesson_id INT NULL,
+                    action_type NVARCHAR(40) NOT NULL,
+                    summary NVARCHAR(1000) NOT NULL,
+                    changed_fields NVARCHAR(500) NULL,
+                    before_data NVARCHAR(MAX) NULL,
+                    after_data NVARCHAR(MAX) NULL,
+                    created_at DATETIME2 NOT NULL CONSTRAINT DF_ccl_created_at DEFAULT SYSDATETIME()
+                );
+
+                CREATE INDEX IX_course_change_logs_course_id ON dbo.course_change_logs(course_id, created_at DESC);
+                CREATE INDEX IX_course_change_logs_actor_id ON dbo.course_change_logs(actor_id, created_at DESC);
+                CREATE INDEX IX_course_change_logs_created_at ON dbo.course_change_logs(created_at DESC);
             END
             """);
     }

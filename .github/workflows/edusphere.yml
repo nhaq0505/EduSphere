@@ -1,0 +1,68 @@
+name: EduSphere CI and deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - run: mvn --batch-mode verify
+      - uses: actions/upload-artifact@v7
+        with:
+          name: edusphere-war
+          path: target/*.war
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: edusphere-vps
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: edusphere-war
+          path: release
+      - name: Deploy verified WAR via SSH
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ vars.VPS_HOST }}
+          DEPLOY_USER: ${{ vars.VPS_DEPLOY_USER }}
+          KNOWN_HOST: ${{ vars.VPS_KNOWN_HOST }}
+          PRIVATE_KEY: ${{ secrets.VPS_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$DEPLOY_HOST" || -z "$DEPLOY_USER" || -z "$KNOWN_HOST" || -z "$PRIVATE_KEY" ]]; then
+            echo 'Configure the VPS host, deploy user, pinned host key and deployment key.' >&2
+            exit 1
+          fi
+          ssh_dir=$(mktemp -d)
+          trap 'rm -rf "$ssh_dir"' EXIT
+          umask 077
+          printf '%s\n' "$PRIVATE_KEY" > "$ssh_dir/deploy_key"
+          printf '%s\n' "$KNOWN_HOST" > "$ssh_dir/known_hosts"
+          war_files=(release/*.war)
+          [[ ${#war_files[@]} -eq 1 && -s "${war_files[0]}" ]]
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            -o UserKnownHostsFile="$ssh_dir/known_hosts" -i "$ssh_dir/deploy_key" \
+            -- "$DEPLOY_USER@$DEPLOY_HOST" < "${war_files[0]}"

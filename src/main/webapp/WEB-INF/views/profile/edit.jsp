@@ -1,4 +1,4 @@
-﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c"    uri="jakarta.tags.core" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="sec"  uri="http://www.springframework.org/security/tags" %>
@@ -26,6 +26,7 @@
 </sec:authorize>
 
 <sec:authorize access="!hasRole('INSTRUCTOR')">
+<jsp:include page="/WEB-INF/views/common/navbar.jsp"/>
 <div style="min-height:100vh;background:#F4F7FC;padding:40px 24px 80px;">
     <div style="max-width:560px;margin:0 auto;">
     <a href="${pageContext.request.contextPath}/profile"

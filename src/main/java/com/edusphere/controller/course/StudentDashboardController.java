@@ -11,19 +11,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class StudentDashboardController {
 
-    private final StudentDashboardService dashboardService;
 
-    public StudentDashboardController(StudentDashboardService dashboardService) {
-        this.dashboardService = dashboardService;
     }
 
-    @GetMapping("/dashboard")
-    public String dashboard(@AuthenticationPrincipal CustomUserDetails user, Model model) {
         if (user == null) {
             return "redirect:/login";
         }
-        StudentDashboardView view = dashboardService.build(user.getUserId(), user.getFullName());
-        model.addAttribute("dash", view);
-        return "courses/dashboard";
     }
 }

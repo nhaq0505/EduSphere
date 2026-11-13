@@ -54,7 +54,7 @@ public class Quiz {
     private Integer timeLimitMinutes;
 
     @Column(name = "max_attempts", nullable = false)
-    private Integer maxAttempts = 1;
+    private Integer maxAttempts = 999;
 
     @Column(name = "start_time")
     private LocalDateTime startTime;

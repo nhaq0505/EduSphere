@@ -91,7 +91,7 @@
             <div class="ins-form-card__header">
                 <div class="ins-form-card__eyebrow">🧑‍🏫 Bước 1: Khởi tạo thông tin khóa học</div>
                 <h1><c:choose><c:when test="${not empty course}">Chỉnh sửa khóa học (v${course.versionNo})</c:when><c:otherwise>Tạo khóa học mới</c:otherwise></c:choose></h1>
-                <p>Điền tiêu đề, mô tả, ảnh bìa, video giới thiệu và các yêu cầu để khởi tạo khóa học chất lượng cao.</p>
+                <p>Điền tiêu đề, mô tả, ảnh bìa và các yêu cầu để khởi tạo khóa học chất lượng cao.</p>
             </div>
             <div class="ins-form-card__body">
                 <c:if test="${not empty course && (course.status == 'APPROVED' || course.status == 'PUBLISHED')}">
@@ -146,46 +146,21 @@
                         <form:errors path="price" cssClass="ins-field__error"/>
                     </div>
 
-                    <div class="ins-field">
-                        <label for="credits">Số tín chỉ tích lũy (Credits) <span style="color:#EF4444">*</span></label>
-                        <form:input path="credits" id="credits" type="number" min="1" max="30" step="1"/>
-                        <span class="ins-field__hint">Số tín chỉ học viên sẽ nhận được sau khi hoàn thành 100% khóa học (mặc định: 3 tín chỉ).</span>
-                        <form:errors path="credits" cssClass="ins-field__error"/>
-                    </div>
-
-                    <!-- Bước 1 Media: Thumbnail & Promo Video (Hỗ trợ cả tải file từ máy tính lẫn dán link URL) -->
-                    <div class="ins-form-grid" style="margin-top:16px;">
-
-                        <!-- Thumbnail -->
-                        <div class="ins-field">
-                            <label for="thumbnailUrl">Ảnh bìa khóa học (Thumbnail)</label>
-                            <div class="upload-row">
-                                <form:input path="thumbnailUrl" id="thumbnailUrl" placeholder="Dán link ảnh hoặc bấm nút tải file..." oninput="updateThumbPreview()"/>
-                                <button type="button" class="upload-btn" onclick="document.getElementById('thumbFileInput').click()">
-                                    📤 Tải ảnh từ máy
-                                </button>
-                                <input type="file" id="thumbFileInput" accept="image/*" style="display:none;" onchange="uploadFileAsync(this, 'thumbnail', 'thumbnailUrl', 'thumbStatus', updateThumbPreview)"/>
-                            </div>
-                            <div id="thumbStatus" class="upload-status"></div>
-                            <span class="ins-field__hint">Hỗ trợ tải trực tiếp ảnh từ máy tính (.jpg, .png, .webp) hoặc dán link ảnh từ bên ngoài.</span>
-                            <div class="ins-preview-box" id="thumbBox">
-                                <img id="thumbImg" src="" alt="Thumbnail Preview" onload="this.style.display='block'" onerror="this.style.display='none'"/>
-                                <span id="thumbPlaceholder" style="font-size:.8rem; color:#94A3B8;">Chưa có ảnh xem trước</span>
-                            </div>
+                    <!-- Bước 1 Media: Thumbnail (Hỗ trợ cả tải file từ máy tính lẫn dán link URL) -->
+                    <div class="ins-field" style="margin-top:16px;">
+                        <label for="thumbnailUrl">Ảnh bìa khóa học (Thumbnail)</label>
+                        <div class="upload-row">
+                            <form:input path="thumbnailUrl" id="thumbnailUrl" placeholder="Dán link ảnh hoặc bấm nút tải file..." oninput="updateThumbPreview()"/>
+                            <button type="button" class="upload-btn" onclick="document.getElementById('thumbFileInput').click()">
+                                📤 Tải ảnh từ máy
+                            </button>
+                            <input type="file" id="thumbFileInput" accept="image/*" style="display:none;" onchange="uploadFileAsync(this, 'thumbnail', 'thumbnailUrl', 'thumbStatus', updateThumbPreview)"/>
                         </div>
-
-                        <!-- Promo Video -->
-                        <div class="ins-field">
-                            <label for="promoVideoUrl">Video giới thiệu (Promo Video / Trailer)</label>
-                            <div class="upload-row">
-                                <form:input path="promoVideoUrl" id="promoVideoUrl" placeholder="Dán link YouTube hoặc tải video MP4..."/>
-                                <button type="button" class="upload-btn" onclick="document.getElementById('videoFileInput').click()">
-                                    📤 Tải video từ máy
-                                </button>
-                                <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/mov" style="display:none;" onchange="uploadFileAsync(this, 'video', 'promoVideoUrl', 'videoStatus', null)"/>
-                            </div>
-                            <div id="videoStatus" class="upload-status"></div>
-                            <span class="ins-field__hint">Hỗ trợ tải video MP4 từ máy tính hoặc dán link YouTube/Vimeo giới thiệu khóa học.</span>
+                        <div id="thumbStatus" class="upload-status"></div>
+                        <span class="ins-field__hint">Hỗ trợ tải trực tiếp ảnh từ máy tính (.jpg, .png, .webp) hoặc dán link ảnh từ bên ngoài.</span>
+                        <div class="ins-preview-box" id="thumbBox">
+                            <img id="thumbImg" src="" alt="Thumbnail Preview" onload="this.style.display='block'" onerror="this.style.display='none'"/>
+                            <span id="thumbPlaceholder" style="font-size:.8rem; color:#94A3B8;">Chưa có ảnh xem trước</span>
                         </div>
                     </div>
 

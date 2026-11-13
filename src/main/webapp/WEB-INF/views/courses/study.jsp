@@ -331,19 +331,6 @@
                            style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:#FAF5FF; border:1.5px solid #D8B4FE; color:#7E22CE; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
                             <span>❓</span> Danh sách Quiz của khóa học
                         </a>
-                        <c:choose>
-                            <c:when test="${study.courseCompleted}">
-                                <a href="${pageContext.request.contextPath}/courses/${study.courseId}/certificate"
-                                   style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:linear-gradient(135deg,#0056d2,#1d4ed8); color:#ffffff; font-weight:700; text-decoration:none; border-radius:10px; box-shadow:0 4px 12px rgba(0,86,210,.25);">
-                                    <span>🎓</span> Xem Chứng chỉ &amp; ${study.courseCredits} Tín chỉ
-                                </a>
-                            </c:when>
-                            <c:otherwise>
-                                <div style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:6px; font-size:.78rem; padding:8px 12px; background:#F8FAFC; border:1px dashed #CBD5E1; color:#475569; font-weight:600; border-radius:10px;">
-                                    <span>🎓</span> Hoàn thành 100% để nhận <strong>${study.courseCredits} tín chỉ</strong>
-                                </div>
-                            </c:otherwise>
-                        </c:choose>
                         <a style="display:none">
                         </a>
                         <div style="display:flex; gap:8px;">
@@ -486,11 +473,90 @@
                                 <div class="lesson-body"><c:out value="${study.lessonContent}"/></div>
                             </c:if>
 
-                            <c:if test="${empty study.lessonContent and empty study.materials}">
-                                <p style="color:#64748B;font-size:0.88rem;margin:8px 0 16px;">
-                                    Hãy theo dõi trọn vẹn video bài giảng ở trên để nắm vững kiến thức trọng tâm!
-                                </p>
-                            </c:if>
+                            <%-- GIAI ĐOẠN 6: TÀI LIỆU HỌC TẬP TỔNG HỢP BỞI AI DÀNH CHO HỌC VIÊN --%>
+                            <c:choose>
+                                <c:when test="${not empty aiMaterial and aiMaterial.status eq 'COMPLETED'}">
+                                    <div class="study-ai-card">
+                                        <div class="study-ai-card__header">
+                                            <div class="study-ai-card__brand">
+                                                <div class="study-ai-card__icon">🤖</div>
+                                                <div>
+                                                    <div class="study-ai-card__title">
+                                                        Tài liệu học tập tổng hợp bởi AI
+                                                        <span class="study-ai-card__badge">Tự động</span>
+                                                    </div>
+                                                    <div class="study-ai-card__sub">
+                                                        Phân tích và tóm lược từ video bài giảng bằng AI (Faster-Whisper &amp; Qwen 2.5:3B)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="study-ai-card__model">
+                                                Mô hình: <strong><c:out value="${aiMaterial.aiModel}"/></strong>
+                                            </div>
+                                        </div>
+
+                                        <div class="study-ai-grid">
+                                            <!-- 1. SUMMARY -->
+                                            <c:if test="${not empty aiMaterial.summary}">
+                                                <div class="study-ai-sec study-ai-sec--summary">
+                                                    <div class="study-ai-sec__head">
+                                                        <span>📝</span> 1. TÓM TẮT NỘI DUNG CHÍNH (SUMMARY)
+                                                    </div>
+                                                    <div class="study-ai-sec__body"><c:out value="${aiMaterial.summary}"/></div>
+                                                </div>
+                                            </c:if>
+
+                                            <!-- 2. KEY POINTS -->
+                                            <c:if test="${not empty aiMaterial.keyPoints}">
+                                                <div class="study-ai-sec study-ai-sec--keypoints">
+                                                    <div class="study-ai-sec__head">
+                                                        <span>💡</span> 2. KIẾN THỨC TRỌNG TÂM CẦN NHỚ (KEY POINTS)
+                                                    </div>
+                                                    <div class="study-ai-sec__body"><c:out value="${aiMaterial.keyPoints}"/></div>
+                                                </div>
+                                            </c:if>
+
+                                            <!-- 3. TERMS -->
+                                            <c:if test="${not empty aiMaterial.terms}">
+                                                <div class="study-ai-sec study-ai-sec--terms">
+                                                    <div class="study-ai-sec__head">
+                                                        <span>📖</span> 3. THUẬT NGỮ CHUYÊN NGÀNH &amp; CÚ PHÁP (TERMS)
+                                                    </div>
+                                                    <div class="study-ai-sec__body"><c:out value="${aiMaterial.terms}"/></div>
+                                                </div>
+                                            </c:if>
+
+                                            <!-- 4. CONCLUSION -->
+                                            <c:if test="${not empty aiMaterial.conclusion}">
+                                                <div class="study-ai-sec study-ai-sec--conclusion">
+                                                    <div class="study-ai-sec__head">
+                                                        <span>🎯</span> 4. TỔNG KẾT BÀI HỌC (CONCLUSION)
+                                                    </div>
+                                                    <div class="study-ai-sec__body"><c:out value="${aiMaterial.conclusion}"/></div>
+                                                </div>
+                                            </c:if>
+                                        </div>
+
+                                        <!-- Accordion xem Transcript bài giảng -->
+                                        <c:if test="${not empty aiMaterial.correctedTranscript}">
+                                            <details class="study-ai-transcript-box">
+                                                <summary>
+                                                    <span>📜</span> Xem chi tiết toàn bộ bản ghi lời thoại bài giảng (Transcript có mốc thời gian)
+                                                </summary>
+                                                <div class="study-ai-transcript-content"><c:out value="${aiMaterial.correctedTranscript}"/></div>
+                                            </details>
+                                        </c:if>
+                                    </div>
+                                </c:when>
+
+                                <c:otherwise>
+                                    <c:if test="${empty study.lessonContent and empty study.materials}">
+                                        <p style="color:#64748B;font-size:0.88rem;margin:8px 0 16px;">
+                                            Hãy theo dõi trọn vẹn video bài giảng ở trên để nắm vững kiến thức trọng tâm!
+                                        </p>
+                                    </c:if>
+                                </c:otherwise>
+                            </c:choose>
 
                             <c:if test="${not empty study.materials}">
                                 <div class="materials-section" style="margin-top:20px;">
@@ -505,7 +571,14 @@
                                         <c:forEach var="mat" items="${study.materials}">
                                             <c:set var="fullMatUrl" value="${mat.fileUrl}"/>
                                             <c:if test="${not empty fullMatUrl and not (fn:startsWith(fullMatUrl, 'http://') or fn:startsWith(fullMatUrl, 'https://'))}">
-                                                <c:set var="fullMatUrl" value="${pageContext.request.contextPath}${fullMatUrl}"/>
+                                                <c:choose>
+                                                    <c:when test="${not empty pageContext.request.contextPath and fn:startsWith(fullMatUrl, pageContext.request.contextPath)}">
+                                                        <%-- Already has context path --%>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <c:set var="fullMatUrl" value="${pageContext.request.contextPath}${fullMatUrl}"/>
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </c:if>
                                             <div class="material-item" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:12px 16px; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:10px; background:#fff;">
                                                 <div style="display:flex; align-items:center; gap:12px; min-width:0;">
@@ -636,7 +709,7 @@
                                                         📝 <c:out value="${qv.title}"/>
                                                     </div>
                                                     <div style="font-size:.82rem;color:#64748B;margin-bottom:12px;">
-                                                        ⏱ ${qv.timeLimitMinutes != null ? qv.timeLimitMinutes : 'Không giới hạn'} phút &bull; Tối đa ${qv.maxAttempts} lần
+                                                        ⏱ ${qv.timeLimitMinutes != null ? qv.timeLimitMinutes : 'Không giới hạn'} phút &bull; Không giới hạn lượt làm
                                                         <c:if test="${qv.myAttemptCount > 0}"> &bull; <strong>Đã làm ${qv.myAttemptCount} lần</strong></c:if>
                                                     </div>
                                                     <a class="study-btn study-btn--primary" href="${pageContext.request.contextPath}/courses/${study.courseId}/quizzes/${qv.quizId}">
@@ -728,42 +801,39 @@
                             </div>
                         </c:if>
                     </div>
-                    <%-- ══ Banner Nhận Tín Chỉ & Chứng Chỉ khi hoàn thành khóa học ══ --%>
+                    <%-- ══ Banner Hoàn thành khóa học (chuyển về Dashboard xem giờ học) ══ --%>
                     <c:if test="${(study.courseCompleted or courseCompleted) and not study.previewMode}">
                         <div style="margin-top:20px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1.5px solid #60a5fa;border-radius:16px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-shadow:0 4px 16px rgba(37,99,235,.08);">
                             <div style="display:flex;align-items:center;gap:14px;">
                                 <div style="width:52px;height:52px;border-radius:14px;background:#0056d2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.75rem;flex-shrink:0;">
-                                    🎓
+                                    🎉
                                 </div>
                                 <div>
                                     <div style="font-size:1.05rem;font-weight:800;color:#1e3a8a;margin-bottom:3px;">
-                                        Chúc mừng bạn đã hoàn thành khóa học! (+${study.courseCredits} Tín chỉ)
+                                        Chúc mừng bạn đã hoàn thành khóa học!
                                     </div>
                                     <div style="font-size:.86rem;color:#334155;">
-                                        Chứng chỉ điện tử và <strong>${study.courseCredits} tín chỉ tích lũy</strong> của bạn đã sẵn sàng trong Kho tín chỉ.
+                                        Tiến độ và tổng số giờ học của bạn đã được cập nhật trên Dashboard học viên.
                                     </div>
                                 </div>
                             </div>
-                            <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/certificate/claim" style="margin:0;">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <button type="submit"
-                                        style="background:#0056d2;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,86,210,.25);">
-                                    🏅 Xem Chứng chỉ &amp; Nhận ${study.courseCredits} Tín chỉ →
-                                </button>
-                            </form>
+                            <a href="${pageContext.request.contextPath}/student/dashboard"
+                               style="background:#0056d2;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-family:inherit;font-size:.9rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,86,210,.25);">
+                                📊 Xem Dashboard học tập →
+                            </a>
                         </div>
                     </c:if>
 
-                    <%-- ══ HỎI ĐÁP & BÌNH LUẬN BÀI GIẢNG (Phong cách VietJack) ══ --%>
+                    <%-- ══ TRAO ĐỔI RIÊNG GIỮA HỌC VIÊN VÀ GIÁO VIÊN ══ --%>
                     <c:if test="${not empty study.currentLesson}">
                         <section id="comments-section" style="margin-top:24px;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 2px 10px rgba(15,23,42,.04);">
                             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e2e8f0;">
                                 <div>
                                     <div style="font-size:.75rem;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">
-                                        HỎI ĐÁP &amp; THẢO LUẬN BÀI HỌC
+                                        TRAO ĐỔI VỚI GIÁO VIÊN
                                     </div>
                                     <h3 style="margin:0;font-size:1.15rem;font-weight:800;color:#0f172a;">
-                                        💬 Bình luận dưới bài giảng (${not empty lessonCommentCount ? lessonCommentCount : 0})
+                                        💬 Trao đổi bài học (${not empty lessonCommentCount ? lessonCommentCount : 0})
                                     </h3>
                                 </div>
                                 <div style="display:flex;gap:8px;">
@@ -789,28 +859,37 @@
                                 </div>
                             </c:if>
 
-                            <%-- Form đặt câu hỏi / bình luận dưới bài giảng --%>
-                            <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments"
-                                  style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:14px 16px;margin-bottom:22px;">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
-                                <textarea name="content" required maxlength="3000"
-                                          style="width:100%;box-sizing:border-box;border:none;background:transparent;outline:none;resize:vertical;min-height:68px;font-family:inherit;font-size:.9rem;color:#0f172a;line-height:1.5;"
-                                          placeholder="Bạn có câu hỏi hoặc phần nào chưa rõ trong bài giảng &quot;${fn:escapeXml(study.currentLesson.title)}&quot;? Hãy bình luận tại đây để Giảng viên và các bạn cùng giải đáp nhé..."></textarea>
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;flex-wrap:wrap;gap:8px;">
-                                    <span style="font-size:.76rem;color:#64748b;">💡 Đặt câu hỏi rõ ràng giúp Giảng viên hỗ trợ bạn nhanh nhất.</span>
-                                    <button type="submit"
-                                            style="background:#2563eb;color:#ffffff;border:none;border-radius:8px;padding:8px 18px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
-                                        💬 Gửi câu hỏi / Bình luận
-                                    </button>
-                                </div>
-                            </form>
+                            <c:choose>
+                                <c:when test="${study.previewMode}">
+                                    <div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;padding:12px 16px;border-radius:10px;margin-bottom:20px;font-size:.86rem;font-weight:600;">
+                                        👨‍🏫 Chế độ Giáo viên: Dưới đây là các câu hỏi của từng học viên trong bài giảng này. Nhấn <strong>"💬 Trả lời"</strong> ở từng mục để phản hồi riêng cho học viên đó.
+                                    </div>
+                                </c:when>
+                                <c:otherwise>
+                                    <%-- Form gửi trao đổi riêng với giáo viên --%>
+                                    <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments"
+                                          style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:14px 16px;margin-bottom:22px;">
+                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                        <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
+                                        <textarea name="content" required maxlength="3000"
+                                                  style="width:100%;box-sizing:border-box;border:none;background:transparent;outline:none;resize:vertical;min-height:68px;font-family:inherit;font-size:.9rem;color:#0f172a;line-height:1.5;"
+                                                  placeholder="Bạn có câu hỏi hoặc phần nào chưa rõ trong bài giảng &quot;${fn:escapeXml(study.currentLesson.title)}&quot;? Hãy nhắn tại đây để trao đổi riêng với Giáo viên nhé..."></textarea>
+                                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;flex-wrap:wrap;gap:8px;">
+                                            <span style="font-size:.76rem;color:#64748b;">🔒 Nội dung trao đổi riêng tư giữa bạn và Giáo viên phụ trách khóa học.</span>
+                                            <button type="submit"
+                                                    style="background:#2563eb;color:#ffffff;border:none;border-radius:8px;padding:8px 18px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+                                                💬 Gửi cho Giáo viên
+                                            </button>
+                                        </div>
+                                    </form>
+                                </c:otherwise>
+                            </c:choose>
 
-                            <%-- Danh sách bình luận bài học --%>
+                            <%-- Danh sách trao đổi bài học --%>
                             <c:choose>
                                 <c:when test="${empty lessonComments}">
                                     <div style="text-align:center;padding:24px 12px;color:#64748b;font-size:.9rem;">
-                                        Chưa có câu hỏi hay bình luận nào ở bài giảng này. Hãy đặt câu hỏi đầu tiên nếu bạn cần hỗ trợ!
+                                        Chưa có trao đổi nào ở bài giảng này. Hãy gửi câu hỏi nếu bạn cần Giáo viên hỗ trợ riêng!
                                     </div>
                                 </c:when>
                                 <c:otherwise>
@@ -820,7 +899,7 @@
                                                  style="border:1px solid ${cmt.pinned ? '#fde68a' : '#e2e8f0'};background:${cmt.pinned ? '#fffbeb' : '#ffffff'};border-radius:12px;padding:14px 16px;">
                                                 <c:if test="${cmt.pinned}">
                                                     <div style="font-size:.74rem;font-weight:700;color:#b45309;margin-bottom:6px;">
-                                                        📌 Câu trả lời / Bình luận được ghim bởi Giảng viên
+                                                        📌 Trao đổi được ghim bởi Giáo viên
                                                     </div>
                                                 </c:if>
                                                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
@@ -882,7 +961,7 @@
                                                         <input type="hidden" name="parentCommentId" value="${cmt.commentId}">
                                                         <textarea name="content" required maxlength="3000"
                                                                   style="width:100%;box-sizing:border-box;border:none;background:transparent;outline:none;resize:vertical;min-height:52px;font-family:inherit;font-size:.86rem;color:#0f172a;"
-                                                                  placeholder="Trả lời bình luận của ${fn:escapeXml(cmt.authorName)}..."></textarea>
+                                                                  placeholder="Trả lời riêng cho ${fn:escapeXml(cmt.authorName)}..."></textarea>
                                                         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
                                                             <button type="button" onclick="toggleLessonReply(${cmt.commentId})"
                                                                     style="background:none;border:none;font-size:.8rem;color:#64748b;cursor:pointer;font-weight:600;">Hủy</button>
@@ -1091,13 +1170,13 @@
                                         </c:when>
                                         <%-- Bài cuối cùng của khóa học --%>
                                         <c:otherwise>
-                                            <a href="${pageContext.request.contextPath}/courses/${study.courseId}/certificate"
+                                            <a href="${pageContext.request.contextPath}/student/dashboard"
                                                id="rightQuizBtn"
                                                class="btn-quiz-cta ${isLessonTargetReached ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
                                                data-has-quiz="false"
-                                               data-target-url="${pageContext.request.contextPath}/courses/${study.courseId}/certificate">
-                                                <span id="rightQuizBtnIcon">🎓</span>
-                                                <span id="rightQuizBtnLabel">Nhận Chứng chỉ &amp; ${study.courseCredits} Tín chỉ</span>
+                                               data-target-url="${pageContext.request.contextPath}/student/dashboard">
+                                                <span id="rightQuizBtnIcon">📊</span>
+                                                <span id="rightQuizBtnLabel">Hoàn thành &amp; Xem Dashboard</span>
                                             </a>
                                         </c:otherwise>
                                     </c:choose>
@@ -1154,6 +1233,19 @@
 <script>
 // ── Material In-Web Preview Script ──
 function openMaterialPreview(title, url, type, origName) {
+    if (!url) return;
+
+    // Chuẩn hóa URL tài liệu: khử trùng lặp contextPath và đảm bảo đúng endpoint static /uploads/
+    var ctx = '${pageContext.request.contextPath}';
+    if (ctx && ctx.length > 0) {
+        while (url.indexOf(ctx + ctx + '/') === 0) {
+            url = url.substring(ctx.length);
+        }
+        if (url.indexOf('/') === 0 && url.indexOf(ctx + '/') !== 0 && !url.match(/^https?:\/\//i)) {
+            url = ctx + url;
+        }
+    }
+
     var modal = document.getElementById('materialPreviewModal');
     var titleElem = document.getElementById('matModalTitle');
     var subElem = document.getElementById('matModalSub');
@@ -1161,10 +1253,21 @@ function openMaterialPreview(title, url, type, origName) {
     var downloadBtn = document.getElementById('matModalDownloadBtn');
     var contentElem = document.getElementById('matModalContent');
 
+    var cleanFileName = origName;
+    if (!cleanFileName && url) {
+        var parts = url.split('/');
+        var rawName = parts[parts.length - 1].split('?')[0];
+        try {
+            cleanFileName = decodeURIComponent(rawName).replace(/^\d+_[a-f0-9]+_/i, '');
+        } catch (e) {
+            cleanFileName = rawName.replace(/^\d+_[a-f0-9]+_/i, '');
+        }
+    }
+
     titleElem.textContent = title;
-    subElem.textContent = origName ? ('Tệp: ' + origName) : url;
+    subElem.textContent = cleanFileName ? ('Tệp: ' + cleanFileName) : url;
     downloadBtn.href = url;
-    downloadBtn.setAttribute('download', origName || title);
+    downloadBtn.setAttribute('download', cleanFileName || origName || title);
 
     var lowerUrl = url.toLowerCase();
     var lowerOrig = (origName || '').toLowerCase();

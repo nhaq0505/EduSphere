@@ -26,6 +26,13 @@ public class CourseSectionService {
     private final CourseRepository courseRepository;
     private final LessonRepository lessonRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private CourseChangeLogService changeLogService;
+
+    public void setChangeLogService(CourseChangeLogService changeLogService) {
+        this.changeLogService = changeLogService;
+    }
+
     public CourseSectionService(CourseSectionRepository sectionRepository,
                                 CourseRepository courseRepository,
                                 LessonRepository lessonRepository) {
@@ -71,28 +78,39 @@ public class CourseSectionService {
         section.setCreatedAt(LocalDateTime.now());
         section.setUpdatedAt(LocalDateTime.now());
 
-        return sectionRepository.save(section);
+        CourseSection saved = sectionRepository.save(section);
+        if (changeLogService != null) {
+            changeLogService.recordSectionCreate(course, saved);
+        }
+        return saved;
     }
 
     @Transactional
     public CourseSection updateSection(Integer courseId, Integer sectionId, Integer instructorId, SectionForm form) {
-        verifyOwnership(courseId, instructorId);
+        Course course = verifyOwnership(courseId, instructorId);
         CourseSection section = sectionRepository.findBySectionIdAndCourse_CourseId(sectionId, courseId)
                 .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy chương này trong khóa học."));
 
+        var before = changeLogService != null ? changeLogService.snapshotSection(section) : null;
         section.setTitle(form.getTitle().trim());
         if (form.getDescription() != null) {
             section.setDescription(form.getDescription().trim());
         }
         section.setUpdatedAt(LocalDateTime.now());
-        return sectionRepository.save(section);
+        CourseSection saved = sectionRepository.save(section);
+        if (changeLogService != null) {
+            changeLogService.recordSectionUpdate(course, saved, before, changeLogService.snapshotSection(saved));
+        }
+        return saved;
     }
 
     @Transactional
     public void deleteSection(Integer courseId, Integer sectionId, Integer instructorId) {
-        verifyOwnership(courseId, instructorId);
+        Course course = verifyOwnership(courseId, instructorId);
         CourseSection section = sectionRepository.findBySectionIdAndCourse_CourseId(sectionId, courseId)
                 .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy chương mục."));
+
+        var beforeSnapshot = changeLogService != null ? changeLogService.snapshotSection(section) : null;
 
         // Unlink lessons in this section so lessons are not accidentally deleted
         List<Lesson> lessons = lessonRepository.findBySection_SectionIdOrderByOrderIndexAsc(sectionId);
@@ -102,12 +120,18 @@ public class CourseSectionService {
         }
 
         sectionRepository.delete(section);
+        if (changeLogService != null) {
+            changeLogService.recordSectionDelete(course, beforeSnapshot);
+        }
     }
 
     @Transactional
     public void reorderSections(Integer courseId, Integer instructorId, List<Integer> sectionIds) {
-        verifyOwnership(courseId, instructorId);
+        Course course = verifyOwnership(courseId, instructorId);
         if (sectionIds == null || sectionIds.isEmpty()) return;
+
+        List<CourseSection> beforeList = sectionRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
+        String beforeOrder = formatSectionOrder(beforeList);
 
         for (int i = 0; i < sectionIds.size(); i++) {
             Integer sId = sectionIds.get(i);
@@ -119,12 +143,17 @@ public class CourseSectionService {
                 sectionRepository.save(s);
             }
         }
+        if (changeLogService != null) {
+            List<CourseSection> afterList = sectionRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
+            changeLogService.recordSectionReorder(course, beforeOrder, formatSectionOrder(afterList));
+        }
     }
 
     @Transactional
     public void moveSection(Integer courseId, Integer sectionId, Integer instructorId, String direction) {
-        verifyOwnership(courseId, instructorId);
+        Course course = verifyOwnership(courseId, instructorId);
         List<CourseSection> sections = sectionRepository.findByCourse_CourseIdOrderByOrderIndexAsc(courseId);
+        String beforeOrder = formatSectionOrder(sections);
         int idx = -1;
         for (int i = 0; i < sections.size(); i++) {
             if (Objects.equals(sections.get(i).getSectionId(), sectionId)) {
@@ -146,6 +175,16 @@ public class CourseSectionService {
             s.setUpdatedAt(LocalDateTime.now());
             sectionRepository.save(s);
         }
+        if (changeLogService != null) {
+            changeLogService.recordSectionReorder(course, beforeOrder, formatSectionOrder(sections));
+        }
+    }
+
+    private String formatSectionOrder(List<CourseSection> list) {
+        if (list == null || list.isEmpty()) return "";
+        return list.stream()
+                .map(s -> s.getOrderIndex() + ". " + s.getTitle())
+                .collect(java.util.stream.Collectors.joining(" | "));
     }
 
     private Course verifyOwnership(Integer courseId, Integer instructorId) {
