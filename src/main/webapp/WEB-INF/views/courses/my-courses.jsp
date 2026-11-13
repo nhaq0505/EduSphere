@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${cp}/assets/css/home.css">
-    <link rel="stylesheet" href="${cp}/assets/css/my-courses.css">
+    <link rel="stylesheet" href="${cp}/assets/css/my-courses.css?v=20261114">
     <style>
         /* Coursera-style Tabs & Certificates Repository (Image 1) */
         .mc-credit-banner {
@@ -468,8 +468,8 @@
                         <c:forEach var="course" items="${courses}">
                             <c:if test="${not course.completed and course.enrollmentStatus == 'ACTIVE'}">
                                 <article class="mc-card">
-                                    <div class="mc-card__thumb">
-                                        <span class="mc-card__thumb-icon">📖</span>
+                                    <div class="mc-card__thumb${not empty course.thumbnailUrl ? ' mc-card__thumb--img' : ''}">
+                                        <c:choose><c:when test="${not empty course.thumbnailUrl}"><img class="mc-card__thumb-img" src="<c:out value='${course.thumbnailUrl}'/>" alt="" loading="lazy"></c:when><c:otherwise><span class="mc-card__thumb-icon">📖</span></c:otherwise></c:choose>
                                         <span class="mc-card__status mc-card__status--active">
                                             <span class="mc-emoji">▶</span>
                                             <span>Đang học</span>
@@ -529,12 +529,12 @@
                         <c:forEach var="course" items="${courses}">
                             <c:if test="${course.completed}">
                                 <article class="mc-card">
-                                    <div class="mc-card__thumb">
+                                    <div class="mc-card__thumb${not empty course.thumbnailUrl ? ' mc-card__thumb--img' : ''}">
                                         <span class="mc-card__credit-pill">
                                             <span class="mc-emoji">🎓</span>
                                             <span>1 Chứng chỉ</span>
                                         </span>
-                                        <span class="mc-card__thumb-icon">🏆</span>
+                                        <c:choose><c:when test="${not empty course.thumbnailUrl}"><img class="mc-card__thumb-img" src="<c:out value='${course.thumbnailUrl}'/>" alt="" loading="lazy"></c:when><c:otherwise><span class="mc-card__thumb-icon">🏆</span></c:otherwise></c:choose>
                                         <span class="mc-card__status mc-card__status--done">
                                             <span class="mc-emoji">✅</span>
                                             <span>Hoàn thành</span>
@@ -617,8 +617,8 @@
                     <div class="mc-grid">
                         <c:forEach var="course" items="${courses}">
                             <article class="mc-card">
-                                <div class="mc-card__thumb">
-                                    <span class="mc-card__thumb-icon">📖</span>
+                                <div class="mc-card__thumb${not empty course.thumbnailUrl ? ' mc-card__thumb--img' : ''}">
+                                    <c:choose><c:when test="${not empty course.thumbnailUrl}"><img class="mc-card__thumb-img" src="<c:out value='${course.thumbnailUrl}'/>" alt="" loading="lazy"></c:when><c:otherwise><span class="mc-card__thumb-icon">📖</span></c:otherwise></c:choose>
                                     <c:choose>
                                         <c:when test="${course.completed}">
                                             <span class="mc-card__status mc-card__status--done">
