@@ -202,6 +202,11 @@ public class CourseCommentService {
             }
         }
 
+        if (lesson != null && parent == null && canModerate(course, author)) {
+            throw new CourseActionException(HttpStatus.BAD_REQUEST,
+                    "Để trao đổi riêng với học viên, vui lòng nhấn \"Trả lời\" dưới câu hỏi của học viên đó.");
+        }
+
         CourseComment comment = new CourseComment();
         comment.setCourse(course);
         comment.setLesson(lesson);
@@ -230,6 +235,14 @@ public class CourseCommentService {
                 .orElseThrow(() -> new CourseActionException(HttpStatus.NOT_FOUND, "Không tìm thấy bình luận."));
         Users user = userRepository.findById(userId)
                 .orElseThrow(() -> new CourseActionException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập lại."));
+
+        if (comment.getLesson() != null && !canModerate(comment.getCourse(), user)) {
+            CourseComment root = comment.getParent() != null ? comment.getParent() : comment;
+            Integer rootAuthorId = root.getAuthor() != null ? root.getAuthor().getUserId() : null;
+            if (!Objects.equals(rootAuthorId, userId)) {
+                throw new CourseActionException(HttpStatus.FORBIDDEN, "Bạn không có quyền tương tác với trao đổi riêng của học viên khác.");
+            }
+        }
 
         Optional<CourseCommentLike> existing = likeRepository.findByComment_CommentIdAndUser_UserId(commentId, userId);
         boolean liked;

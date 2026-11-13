@@ -852,22 +852,31 @@
                                 </div>
                             </c:if>
 
-                            <%-- Form gửi trao đổi riêng với giáo viên --%>
-                            <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments"
-                                  style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:14px 16px;margin-bottom:22px;">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
-                                <textarea name="content" required maxlength="3000"
-                                          style="width:100%;box-sizing:border-box;border:none;background:transparent;outline:none;resize:vertical;min-height:68px;font-family:inherit;font-size:.9rem;color:#0f172a;line-height:1.5;"
-                                          placeholder="Bạn có câu hỏi hoặc phần nào chưa rõ trong bài giảng &quot;${fn:escapeXml(study.currentLesson.title)}&quot;? Hãy nhắn tại đây để trao đổi riêng với Giáo viên nhé..."></textarea>
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;flex-wrap:wrap;gap:8px;">
-                                    <span style="font-size:.76rem;color:#64748b;">🔒 Nội dung trao đổi riêng tư giữa bạn và Giáo viên phụ trách khóa học.</span>
-                                    <button type="submit"
-                                            style="background:#2563eb;color:#ffffff;border:none;border-radius:8px;padding:8px 18px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
-                                        💬 Gửi cho Giáo viên
-                                    </button>
-                                </div>
-                            </form>
+                            <c:choose>
+                                <c:when test="${study.previewMode}">
+                                    <div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;padding:12px 16px;border-radius:10px;margin-bottom:20px;font-size:.86rem;font-weight:600;">
+                                        👨‍🏫 Chế độ Giáo viên: Dưới đây là các câu hỏi của từng học viên trong bài giảng này. Nhấn <strong>"💬 Trả lời"</strong> ở từng mục để phản hồi riêng cho học viên đó.
+                                    </div>
+                                </c:when>
+                                <c:otherwise>
+                                    <%-- Form gửi trao đổi riêng với giáo viên --%>
+                                    <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/comments"
+                                          style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:14px 16px;margin-bottom:22px;">
+                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                                        <input type="hidden" name="lessonId" value="${study.currentLesson.lessonId}">
+                                        <textarea name="content" required maxlength="3000"
+                                                  style="width:100%;box-sizing:border-box;border:none;background:transparent;outline:none;resize:vertical;min-height:68px;font-family:inherit;font-size:.9rem;color:#0f172a;line-height:1.5;"
+                                                  placeholder="Bạn có câu hỏi hoặc phần nào chưa rõ trong bài giảng &quot;${fn:escapeXml(study.currentLesson.title)}&quot;? Hãy nhắn tại đây để trao đổi riêng với Giáo viên nhé..."></textarea>
+                                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;flex-wrap:wrap;gap:8px;">
+                                            <span style="font-size:.76rem;color:#64748b;">🔒 Nội dung trao đổi riêng tư giữa bạn và Giáo viên phụ trách khóa học.</span>
+                                            <button type="submit"
+                                                    style="background:#2563eb;color:#ffffff;border:none;border-radius:8px;padding:8px 18px;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;">
+                                                💬 Gửi cho Giáo viên
+                                            </button>
+                                        </div>
+                                    </form>
+                                </c:otherwise>
+                            </c:choose>
 
                             <%-- Danh sách trao đổi bài học --%>
                             <c:choose>

@@ -146,6 +146,7 @@ public class CourseManagementController {
     @GetMapping("/instructor/courses/{id}/preview")
     public String previewAsStudent(@PathVariable Integer id,
                                    @RequestParam(required = false) Integer lessonId,
+                                   @RequestParam(value = "sort", defaultValue = "newest") String sort,
                                    @AuthenticationPrincipal CustomUserDetails user,
                                    Model model) {
         if (learningService != null) {
@@ -155,8 +156,9 @@ public class CourseManagementController {
             if (courseCommentService != null && studyContext.getCurrentLesson() != null) {
                 Integer curLessonId = studyContext.getCurrentLesson().getLessonId();
                 Integer currentUserId = user != null ? user.getUserId() : null;
-                model.addAttribute("lessonComments", courseCommentService.getLessonComments(id, curLessonId, currentUserId, "newest"));
+                model.addAttribute("lessonComments", courseCommentService.getLessonComments(id, curLessonId, currentUserId, sort));
                 model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(id, curLessonId, currentUserId));
+                model.addAttribute("commentSort", sort);
             }
             return "courses/study";
         }
@@ -166,9 +168,10 @@ public class CourseManagementController {
     @GetMapping("/instructor/courses/{id}/preview/lessons/{lessonId}")
     public String previewLessonAsStudent(@PathVariable Integer id,
                                          @PathVariable Integer lessonId,
+                                         @RequestParam(value = "sort", defaultValue = "newest") String sort,
                                          @AuthenticationPrincipal CustomUserDetails user,
                                          Model model) {
-        return previewAsStudent(id, lessonId, user, model);
+        return previewAsStudent(id, lessonId, sort, user, model);
     }
 
     @GetMapping("/instructor/courses/{id}/edit")

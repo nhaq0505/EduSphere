@@ -362,6 +362,13 @@ public class LearningService {
 
     @Transactional
     public StudyCourseView getStudyContext(Integer courseId, Integer lessonId, Integer studentId) {
+        if (courseRepository != null && studentId != null) {
+            Course maybeCourse = courseRepository.findById(courseId).orElse(null);
+            if (maybeCourse != null && maybeCourse.getInstructor() != null
+                    && Objects.equals(maybeCourse.getInstructor().getUserId(), studentId)) {
+                return getStudyContextForPreview(courseId, lessonId, studentId);
+            }
+        }
         List<Lesson> publishedLessons = lessonRepository.findByCourse_CourseIdAndStatusOrderByOrderIndexAsc(courseId, PUBLISHED);
 
         // Check if specific lesson was requested

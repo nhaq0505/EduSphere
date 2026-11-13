@@ -82,7 +82,7 @@ public class LessonStudyController {
             Integer curLessonId = context.getCurrentLesson().getLessonId();
             Integer currentUserId = user != null ? user.getUserId() : null;
             model.addAttribute("lessonComments", courseCommentService.getLessonComments(courseId, curLessonId, currentUserId, sort));
-            model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(courseId, curLessonId));
+            model.addAttribute("lessonCommentCount", courseCommentService.countLessonComments(courseId, curLessonId, currentUserId));
             model.addAttribute("commentSort", sort);
         }
 
