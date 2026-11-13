@@ -331,19 +331,6 @@
                            style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:#FAF5FF; border:1.5px solid #D8B4FE; color:#7E22CE; font-weight:700; text-decoration:none; border-radius:10px; transition:all .15s;">
                             <span>❓</span> Danh sách Quiz của khóa học
                         </a>
-                        <c:choose>
-                            <c:when test="${study.courseCompleted}">
-                                <a href="${pageContext.request.contextPath}/courses/${study.courseId}/certificate"
-                                   style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; font-size:.84rem; padding:10px 14px; background:linear-gradient(135deg,#0056d2,#1d4ed8); color:#ffffff; font-weight:700; text-decoration:none; border-radius:10px; box-shadow:0 4px 12px rgba(0,86,210,.25);">
-                                    <span>🎓</span> Xem Chứng chỉ &amp; ${study.courseCredits} Tín chỉ
-                                </a>
-                            </c:when>
-                            <c:otherwise>
-                                <div style="width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:6px; font-size:.78rem; padding:8px 12px; background:#F8FAFC; border:1px dashed #CBD5E1; color:#475569; font-weight:600; border-radius:10px;">
-                                    <span>🎓</span> Hoàn thành 100% để nhận <strong>${study.courseCredits} tín chỉ</strong>
-                                </div>
-                            </c:otherwise>
-                        </c:choose>
                         <a style="display:none">
                         </a>
                         <div style="display:flex; gap:8px;">
@@ -728,29 +715,26 @@
                             </div>
                         </c:if>
                     </div>
-                    <%-- ══ Banner Nhận Tín Chỉ & Chứng Chỉ khi hoàn thành khóa học ══ --%>
+                    <%-- ══ Banner Hoàn thành khóa học (chuyển về Dashboard xem giờ học) ══ --%>
                     <c:if test="${(study.courseCompleted or courseCompleted) and not study.previewMode}">
                         <div style="margin-top:20px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1.5px solid #60a5fa;border-radius:16px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-shadow:0 4px 16px rgba(37,99,235,.08);">
                             <div style="display:flex;align-items:center;gap:14px;">
                                 <div style="width:52px;height:52px;border-radius:14px;background:#0056d2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.75rem;flex-shrink:0;">
-                                    🎓
+                                    🎉
                                 </div>
                                 <div>
                                     <div style="font-size:1.05rem;font-weight:800;color:#1e3a8a;margin-bottom:3px;">
-                                        Chúc mừng bạn đã hoàn thành khóa học! (+${study.courseCredits} Tín chỉ)
+                                        Chúc mừng bạn đã hoàn thành khóa học!
                                     </div>
                                     <div style="font-size:.86rem;color:#334155;">
-                                        Chứng chỉ điện tử và <strong>${study.courseCredits} tín chỉ tích lũy</strong> của bạn đã sẵn sàng trong Kho tín chỉ.
+                                        Tiến độ và tổng số giờ học của bạn đã được cập nhật trên Dashboard học viên.
                                     </div>
                                 </div>
                             </div>
-                            <form method="post" action="${pageContext.request.contextPath}/courses/${study.courseId}/certificate/claim" style="margin:0;">
-                                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                                <button type="submit"
-                                        style="background:#0056d2;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,86,210,.25);">
-                                    🏅 Xem Chứng chỉ &amp; Nhận ${study.courseCredits} Tín chỉ →
-                                </button>
-                            </form>
+                            <a href="${pageContext.request.contextPath}/student/dashboard"
+                               style="background:#0056d2;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-family:inherit;font-size:.9rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,86,210,.25);">
+                                📊 Xem Dashboard học tập →
+                            </a>
                         </div>
                     </c:if>
 
@@ -1091,13 +1075,13 @@
                                         </c:when>
                                         <%-- Bài cuối cùng của khóa học --%>
                                         <c:otherwise>
-                                            <a href="${pageContext.request.contextPath}/courses/${study.courseId}/certificate"
+                                            <a href="${pageContext.request.contextPath}/student/dashboard"
                                                id="rightQuizBtn"
                                                class="btn-quiz-cta ${isLessonTargetReached ? 'btn-quiz-cta--active' : 'btn-quiz-cta--locked'}"
                                                data-has-quiz="false"
-                                               data-target-url="${pageContext.request.contextPath}/courses/${study.courseId}/certificate">
-                                                <span id="rightQuizBtnIcon">🎓</span>
-                                                <span id="rightQuizBtnLabel">Nhận Chứng chỉ &amp; ${study.courseCredits} Tín chỉ</span>
+                                               data-target-url="${pageContext.request.contextPath}/student/dashboard">
+                                                <span id="rightQuizBtnIcon">📊</span>
+                                                <span id="rightQuizBtnLabel">Hoàn thành &amp; Xem Dashboard</span>
                                             </a>
                                         </c:otherwise>
                                     </c:choose>

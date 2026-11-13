@@ -141,6 +141,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
             syncCheckConstraints();
             syncTrueFalseAnswers();
             ensureDefaultCategories();
+            ensureStudentStudyLogsTable();
             log.info("[DbAutoMigration] Tự động migration schema, CHECK constraints và dữ liệu nền hoàn tất.");
         } catch (Exception ex) {
             log.warn("[DbAutoMigration] Bỏ qua đồng bộ SQL Server đặc thù: {}", ex.getMessage());
@@ -365,6 +366,64 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
                         (N'Khoa học Dữ liệu & AI', N'Phân tích dữ liệu, Machine Learning và Trí tuệ nhân tạo', N'ACTIVE'),
                         (N'Lập trình Di động', N'Phát triển ứng dụng iOS, Android và Đa nền tảng', N'ACTIVE'),
                         (N'Cơ sở dữ liệu & Hệ thống', N'SQL Server, DevOps, Cloud và Kiến trúc phần mềm', N'ACTIVE');
+                END
+            END
+            """);
+    }
+
+    /**
+     * Tự động tạo bảng student_study_logs (nếu chưa có) để lưu số giờ học của học viên,
+     * đồng thời đồng bộ dữ liệu xem video sẵn có từ lesson_watch_progress khi bảng mới được tạo.
+     */
+    private void ensureStudentStudyLogsTable() {
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.student_study_logs', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.student_study_logs (
+                    log_id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    student_id INT NOT NULL,
+                    course_id INT NOT NULL,
+                    study_date DATE NOT NULL,
+                    duration_seconds INT NOT NULL CONSTRAINT DF_student_study_logs_duration DEFAULT 0,
+                    updated_at DATETIME2 NOT NULL CONSTRAINT DF_student_study_logs_updated DEFAULT SYSDATETIME(),
+                    CONSTRAINT UQ_student_study_logs_student_course_date UNIQUE (student_id, course_id, study_date),
+                    CONSTRAINT FK_student_study_logs_student FOREIGN KEY (student_id) REFERENCES dbo.users(user_id),
+                    CONSTRAINT FK_student_study_logs_course FOREIGN KEY (course_id) REFERENCES dbo.courses(course_id)
+                );
+            END
+            """);
+
+        jdbcTemplate.execute("""
+            IF OBJECT_ID(N'dbo.student_study_logs', N'U') IS NOT NULL
+               AND OBJECT_ID(N'dbo.lesson_watch_progress', N'U') IS NOT NULL
+               AND OBJECT_ID(N'dbo.lessons', N'U') IS NOT NULL
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM dbo.student_study_logs)
+                BEGIN
+                    INSERT INTO dbo.student_study_logs (student_id, course_id, study_date, duration_seconds, updated_at)
+                    SELECT
+                        lwp.student_id,
+                        lwp.course_id,
+                        CAST(lwp.updated_at AS DATE) AS study_date,
+                        SUM(
+                            CASE
+                                WHEN ISNULL(l.video_duration, 0) > 0 THEN
+                                    CAST((CASE WHEN l.video_duration > 60 THEN l.video_duration ELSE l.video_duration * 60 END) * ISNULL(lwp.watch_percent, 0) / 100.0 AS INT)
+                                ELSE ISNULL(lwp.last_position, 0)
+                            END
+                        ) AS duration_seconds,
+                        MAX(lwp.updated_at) AS updated_at
+                    FROM dbo.lesson_watch_progress lwp
+                    JOIN dbo.lessons l ON lwp.lesson_id = l.lesson_id
+                    WHERE ISNULL(lwp.watch_percent, 0) > 0 OR ISNULL(lwp.last_position, 0) > 0
+                    GROUP BY lwp.student_id, lwp.course_id, CAST(lwp.updated_at AS DATE)
+                    HAVING SUM(
+                        CASE
+                            WHEN ISNULL(l.video_duration, 0) > 0 THEN
+                                CAST((CASE WHEN l.video_duration > 60 THEN l.video_duration ELSE l.video_duration * 60 END) * ISNULL(lwp.watch_percent, 0) / 100.0 AS INT)
+                            ELSE ISNULL(lwp.last_position, 0)
+                        END
+                    ) > 0;
                 END
             END
             """);

@@ -353,9 +353,9 @@
         <!-- Page header -->
         <div class="mc-page-head">
             <div>
-                <span class="mc-page-head__eyebrow">Không gian học viên &amp; Tích lũy tín chỉ</span>
-                <h1 class="mc-page-head__title">Khóa học &amp; Kho tín chỉ của tôi</h1>
-                <p class="mc-page-head__sub">Theo dõi tiến độ học tập, nhận tín chỉ và quản lý chứng chỉ hoàn thành khóa học.</p>
+                <span class="mc-page-head__eyebrow">Không gian học viên</span>
+                <h1 class="mc-page-head__title">Khóa học của tôi</h1>
+                <p class="mc-page-head__sub">Theo dõi tiến độ học tập và tiếp tục các khóa học bạn đã tham gia.</p>
             </div>
             <a class="hn-btn hn-btn--primary" href="${cp}/courses">
                 + Khám phá thêm khóa học
@@ -387,15 +387,8 @@
             <div class="mc-stat-card mc-stat-card--highlight">
                 <div class="mc-stat-card__icon">🎓</div>
                 <div>
-                    <div class="mc-stat-card__val"><c:out value="${not empty totalCreditsEarned ? totalCreditsEarned : 0}"/> Tín chỉ</div>
-                    <div class="mc-stat-card__lbl">Tổng tín chỉ đã tích lũy</div>
-                </div>
-            </div>
-            <div class="mc-stat-card">
-                <div class="mc-stat-card__icon">📜</div>
-                <div>
-                    <div class="mc-stat-card__val"><c:out value="${certCount}"/></div>
-                    <div class="mc-stat-card__lbl">Chứng chỉ đã cấp</div>
+                    <div class="mc-stat-card__val"><c:out value="${not empty courses ? fn:length(courses) : 0}"/></div>
+                    <div class="mc-stat-card__lbl">Tổng khóa học đã tham gia</div>
                 </div>
             </div>
             <div class="mc-stat-card">
@@ -414,8 +407,8 @@
             </div>
         </div>
 
-        <!-- Coursera-style Horizontal Tabs (matching Screenshot 1) -->
-        <c:set var="currentTab" value="${not empty activeTab ? activeTab : 'all'}"/>
+        <!-- Coursera-style Horizontal Tabs -->
+        <c:set var="currentTab" value="${not empty activeTab and activeTab != 'certificates' ? activeTab : 'all'}"/>
         <div class="cs-tabs" role="tablist">
             <button type="button" class="cs-tab ${currentTab == 'in-progress' ? 'active' : ''}"
                     onclick="switchTab('in-progress', this)">
@@ -431,11 +424,6 @@
                     onclick="switchTab('all', this)">
                 Saved / All
                 <span class="cs-tab__badge"><c:out value="${not empty courses ? fn:length(courses) : 0}"/></span>
-            </button>
-            <button type="button" class="cs-tab ${currentTab == 'certificates' ? 'active' : ''}"
-                    onclick="switchTab('certificates', this)">
-                Certificates &amp; Badges
-                <span class="cs-tab__badge"><c:out value="${certCount}"/></span>
             </button>
         </div>
 
@@ -531,21 +519,7 @@
                                             </div>
                                         </div>
                                         <div class="mc-card__actions">
-                                            <c:choose>
-                                                <c:when test="${not empty course.certificateId}">
-                                                    <a class="hn-btn hn-btn--primary mc-btn-sm"
-                                                       href="${cp}/certificates/${course.certificateId}">
-                                                        🎓 Xem Chứng chỉ
-                                                    </a>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <a class="hn-btn hn-btn--primary mc-btn-sm"
-                                                       href="${cp}/courses/${course.courseId}/certificate">
-                                                        🎓 Nhận Chứng chỉ &amp; Tín chỉ
-                                                    </a>
-                                                </c:otherwise>
-                                            </c:choose>
-                                            <a class="hn-btn mc-btn-outline mc-btn-sm"
+                                            <a class="hn-btn hn-btn--primary mc-btn-sm"
                                                href="${cp}/courses/${course.courseId}/learn">
                                                 Ôn tập lại
                                             </a>
@@ -621,13 +595,6 @@
                                             <a class="hn-btn hn-btn--primary mc-btn-sm"
                                                href="${cp}/courses/${course.courseId}/learn">
                                                 Vào học →
-                                            </a>
-                                        </c:if>
-                                        <c:if test="${course.completed}">
-                                            <a class="hn-btn mc-btn-outline mc-btn-sm"
-                                               style="border-color:#2563eb;color:#2563eb;font-weight:700;"
-                                               href="${cp}/courses/${course.courseId}/certificate">
-                                                🎓 Chứng chỉ
                                             </a>
                                         </c:if>
                                         <a class="hn-btn mc-btn-outline mc-btn-sm"
@@ -736,7 +703,7 @@
             <h4>Khóa học</h4>
             <a href="${cp}/courses">Tất cả khóa học</a>
             <a href="${cp}/my-courses">Khóa học của tôi</a>
-            <a href="${cp}/certificates">Kho tín chỉ &amp; Chứng chỉ</a>
+            <a href="${cp}/student/dashboard">Dashboard</a>
         </div>
         <div class="hn-footer__col">
             <h4>Tài khoản</h4>

@@ -45,6 +45,10 @@
         <nav class="hn-nav">
             <a class="hn-nav__link" href="${pageContext.request.contextPath}/">Trang chủ</a>
             <a class="hn-nav__link" href="${pageContext.request.contextPath}/courses">Khóa học</a>
+            <sec:authorize access="hasRole('STUDENT')">
+                <a class="hn-nav__link" href="${pageContext.request.contextPath}/student/dashboard">Dashboard</a>
+                <a class="hn-nav__link" href="${pageContext.request.contextPath}/study/plans">Kế Hoạch &amp; Tiến Độ</a>
+            </sec:authorize>
             <sec:authorize access="hasRole('ADMINISTRATOR')">
                 <a class="hn-nav__link" href="${pageContext.request.contextPath}/admin/users">Quản trị</a>
             </sec:authorize>

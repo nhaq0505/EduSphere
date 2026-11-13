@@ -98,6 +98,7 @@ public class SecurityConfig {
                 .requestMatchers("/courses/{courseId}/certificate", "/courses/{courseId}/certificate/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/courses/{courseId}/comments", "/courses/{courseId}/comments/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/study/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
+                .requestMatchers("/student/**").hasAnyRole("STUDENT", "INSTRUCTOR", "ADMINISTRATOR")
                 .requestMatchers("/admin/**").hasRole("ADMINISTRATOR")
                 .requestMatchers("/instructor/**").hasRole("INSTRUCTOR")
                 .anyRequest().authenticated()

@@ -14,6 +14,7 @@ import com.edusphere.entity.course.Question;
 import com.edusphere.entity.course.LessonWatchProgress;
 import com.edusphere.entity.course.Quiz;
 import com.edusphere.entity.course.QuizAttempt;
+import com.edusphere.entity.course.StudentStudyLog;
 import com.edusphere.entity.account.Users;
 import com.edusphere.repository.course.AssignmentRepository;
 import com.edusphere.repository.course.CourseRepository;
@@ -25,6 +26,7 @@ import com.edusphere.repository.course.MaterialRepository;
 import com.edusphere.repository.course.QuestionRepository;
 import com.edusphere.repository.course.QuizAttemptRepository;
 import com.edusphere.repository.course.QuizRepository;
+import com.edusphere.repository.course.StudentStudyLogRepository;
 import com.edusphere.repository.course.SubmissionRepository;
 import com.edusphere.repository.account.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.net.URI;
 import java.util.ArrayList;
@@ -71,6 +74,9 @@ public class LearningService {
 
     @Autowired(required = false)
     private CertificateService certificateService;
+
+    @Autowired(required = false)
+    private StudentStudyLogRepository studentStudyLogRepository;
 
     public LearningService(LessonRepository lessonRepository,
                            EnrollmentRepository enrollmentRepository,
@@ -198,6 +204,7 @@ public class LearningService {
 
         // 2. Parse các khoảng đã xem trước đó
         List<int[]> intervals = parseIntervals(wp.getWatchedSegments());
+        int previousWatchedSecs = calculateTotalWatchedSeconds(intervals);
 
         // 3. Nếu có gửi khoảng [startSec, endSec] hợp lệ -> gộp vào danh sách khoảng đã xem
         if (startSec != null && endSec != null) {
@@ -225,6 +232,10 @@ public class LearningService {
 
         // 4. Tính tổng số giây đã xem duy nhất (không cộng trùng, không tính pause/buffer)
         int totalWatchedSecs = calculateTotalWatchedSeconds(intervals);
+        int deltaWatchedSecs = Math.max(0, totalWatchedSecs - previousWatchedSecs);
+        if (deltaWatchedSecs > 0) {
+            recordStudySeconds(student, lesson.getCourse(), deltaWatchedSecs);
+        }
 
         // 5. Tính phần trăm tiến độ
         int newPercent = 0;
@@ -1000,6 +1011,30 @@ public class LearningService {
         v.setPassingScore(q.getPassingScore());
         v.setInProgressAttemptId(inProgressId);
         return v;
+    }
+
+    private void recordStudySeconds(Users student, Course course, int addedSeconds) {
+        if (studentStudyLogRepository == null || student == null || course == null || addedSeconds <= 0) {
+            return;
+        }
+        try {
+            LocalDate today = LocalDate.now();
+            StudentStudyLog logEntry = studentStudyLogRepository
+                    .findByStudent_UserIdAndCourse_CourseIdAndStudyDate(student.getUserId(), course.getCourseId(), today)
+                    .orElseGet(() -> {
+                        StudentStudyLog created = new StudentStudyLog();
+                        created.setStudent(student);
+                        created.setCourse(course);
+                        created.setStudyDate(today);
+                        created.setDurationSeconds(0);
+                        return created;
+                    });
+            int current = logEntry.getDurationSeconds() != null ? logEntry.getDurationSeconds() : 0;
+            logEntry.setDurationSeconds(current + addedSeconds);
+            studentStudyLogRepository.save(logEntry);
+        } catch (Exception ignored) {
+            // Không làm gián đoạn luồng học bài nếu ghi log giờ học gặp lỗi
+        }
     }
 
     private String safeUrl(String value) {
