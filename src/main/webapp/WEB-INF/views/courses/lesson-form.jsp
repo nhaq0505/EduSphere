@@ -107,7 +107,7 @@
                             <form:option value="" label="-- Chọn chương mục hoặc để mục chung --"/>
                             <c:forEach var="sec" items="${sections}">
                                 <c:if test="${not empty sec.sectionId}">
-                                    <form:option value="${sec.sectionId}" label="Chương ${sec.orderIndex}: ${sec.title}"/>
+                                    <form:option value="${sec.sectionId}" label="${sec.title}"/>
                                 </c:if>
                             </c:forEach>
                         </form:select>

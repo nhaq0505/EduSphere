@@ -306,7 +306,7 @@ public final class StudyCourseView {
         for (LessonItemView item : lessonList) {
             String title = (item.getSectionTitle() != null && !item.getSectionTitle().isBlank())
                     ? item.getSectionTitle()
-                    : "Chương 1: " + (defaultCourseTitle != null ? defaultCourseTitle : "Nội dung khóa học");
+                    : (defaultCourseTitle != null ? defaultCourseTitle : "Nội dung khóa học");
             grouped.computeIfAbsent(title, k -> new ArrayList<>()).add(item);
             if (item.getSectionId() != null) {
                 idMap.putIfAbsent(title, item.getSectionId());
