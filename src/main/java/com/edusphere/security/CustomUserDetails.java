@@ -23,6 +23,9 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
  */
 public class CustomUserDetails implements UserDetails, OidcUser {
 
+    // Cố định để phiên đã lưu ra đĩa vẫn đọc lại được sau khi deploy bản mới
+    private static final long serialVersionUID = 1L;
+
     private final Users user;
     private final Collection<? extends GrantedAuthority> authorities;
 
